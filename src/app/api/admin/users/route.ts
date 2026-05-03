@@ -88,6 +88,38 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(profile, { status: 201 });
 }
 
+export async function PATCH(req: NextRequest) {
+  const admin = await verifyAdmin(req);
+  if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+  const body = await req.json();
+  const { id, name, role, is_admin } = body;
+  if (!id) return NextResponse.json({ error: 'Falta id' }, { status: 400 });
+
+  const fields: Record<string, unknown> = {};
+  if (name  !== undefined) fields.name     = name;
+  if (role  !== undefined) fields.role     = role;
+  if (is_admin !== undefined) fields.is_admin = is_admin;
+
+  // Recalculate initials if name changed
+  if (name) {
+    const parts = name.trim().split(' ');
+    fields.initials = parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : name.slice(0, 2).toUpperCase();
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .update(fields)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
+
 export async function DELETE(req: NextRequest) {
   const admin = await verifyAdmin(req);
   if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
