@@ -9,6 +9,10 @@ import { TimelineView } from '@/components/TimelineView';
 import { TaskDetail } from '@/components/TaskDetail';
 import { CommandPalette } from '@/components/CommandPalette';
 import { CreateTaskModal } from '@/components/CreateTaskModal';
+import { MyTasksView } from '@/components/MyTasksView';
+import { InboxView } from '@/components/InboxView';
+import { PeopleView } from '@/components/PeopleView';
+import { ReportsView } from '@/components/ReportsView';
 import { useNorteData } from '@/lib/useNorteData';
 import type { Task } from '@/lib/types';
 
@@ -61,7 +65,15 @@ export default function Home() {
   }
 
   function renderContent() {
-    if (!isProjectView) return <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
+    if (!isProjectView) {
+      switch (activeNav) {
+        case 'inbox':   return <InboxView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
+        case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
+        case 'people':  return <PeopleView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
+        case 'reports': return <ReportsView tasks={tasks} projects={projects} />;
+        default:        return <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
+      }
+    }
     switch (activeView) {
       case 'list':     return <ListView tasks={visibleTasks} onOpenTask={setSelectedTask} />;
       case 'calendar': return <CalendarView tasks={visibleTasks} onOpenTask={setSelectedTask} />;
