@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Shell } from '@/components/Shell';
 import { Dashboard } from '@/components/Dashboard';
 import { Board } from '@/components/Board';
@@ -13,13 +14,17 @@ import { MyTasksView } from '@/components/MyTasksView';
 import { InboxView } from '@/components/InboxView';
 import { PeopleView } from '@/components/PeopleView';
 import { ReportsView } from '@/components/ReportsView';
+import { SettingsPanel } from '@/components/SettingsPanel';
 import { useNorteData } from '@/lib/useNorteData';
+import { useAuth } from '@/lib/auth-context';
 import type { Task } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
 type ViewId = 'board' | 'list' | 'timeline' | 'calendar';
 
 export default function Home() {
+  const router = useRouter();
+  const { session, profile, loading: authLoading } = useAuth();
   const { tasks, projects, users, loading, error, refetch } = useNorteData();
 
   const [activeNav, setActiveNav] = useState<NavId>('dashboard');
@@ -28,6 +33,13 @@ export default function Home() {
   const [cmdkOpen, setCmdkOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDefaultStatus, setCreateDefaultStatus] = useState<Task['status']>('todo');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !session) {
+      router.replace('/login');
+    }
+  }, [authLoading, session, router]);
 
   const isProjectView = activeNav.startsWith('project:');
   const projectId = isProjectView ? activeNav.replace('project:', '') : undefined;
@@ -46,12 +58,13 @@ export default function Home() {
       }
       if (e.key === 'Escape') {
         if (cmdkOpen) { setCmdkOpen(false); return; }
+        if (settingsOpen) { setSettingsOpen(false); return; }
         if (selectedTask) setSelectedTask(null);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [cmdkOpen, selectedTask]);
+  }, [cmdkOpen, selectedTask, settingsOpen]);
 
   function handleNav(id: NavId) {
     setActiveNav(id);
@@ -62,6 +75,14 @@ export default function Home() {
   function openCreateTask(defaultStatus: Task['status'] = 'todo') {
     setCreateDefaultStatus(defaultStatus);
     setCreateOpen(true);
+  }
+
+  if (authLoading || !session) {
+    return (
+      <div className="flex items-center justify-center h-screen" style={{ background: 'var(--bg)' }}>
+        <div className="text-[14px]" style={{ color: 'var(--ink-3)' }}>Cargando…</div>
+      </div>
+    );
   }
 
   function renderContent() {
@@ -96,10 +117,12 @@ export default function Home() {
         crumbs={crumbs}
         projectId={projectId}
         projects={projects}
+        currentUser={profile ?? undefined}
         onNavChange={handleNav}
         onViewChange={setActiveView}
         onOpenCmdk={() => setCmdkOpen(true)}
         onCreateTask={() => openCreateTask()}
+        onOpenSettings={() => setSettingsOpen(true)}
         loading={loading}
       >
         {error && (
@@ -130,6 +153,11 @@ export default function Home() {
         users={users}
         onClose={() => setCreateOpen(false)}
         onCreated={() => refetch()}
+      />
+
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
     </>
   );

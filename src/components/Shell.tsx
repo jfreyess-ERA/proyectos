@@ -20,10 +20,12 @@ interface ShellProps {
   projectId?: string;
   projects: Project[];
   loading?: boolean;
+  currentUser?: { name: string; role: string; id: string; initials: string; hue: number };
   onNavChange?: (id: NavId) => void;
   onViewChange?: (id: ViewId) => void;
   onOpenCmdk?: () => void;
   onCreateTask?: () => void;
+  onOpenSettings?: () => void;
   children: React.ReactNode;
 }
 
@@ -33,14 +35,16 @@ export function Shell({
   crumbs = ['Norte'],
   projectId,
   projects,
+  currentUser,
   onNavChange,
   onViewChange,
   onOpenCmdk,
   onCreateTask,
+  onOpenSettings,
   children,
 }: ShellProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const me = PEOPLE[0];
+  const me = currentUser ?? PEOPLE[0];
 
   const activeProject = projects.find(p => p.id === projectId);
 
@@ -194,8 +198,10 @@ export function Shell({
           </div>
           {!collapsed && (
             <button
+              onClick={onOpenSettings}
               className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors flex-shrink-0"
               style={{ color: 'var(--ink-2)' }}
+              title="Configuración"
             >
               <Settings size={16} />
             </button>

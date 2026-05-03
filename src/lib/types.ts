@@ -7,6 +7,8 @@ export interface User {
   role: string;
   initials: string;
   hue: number;
+  email?: string;
+  is_admin?: boolean;
 }
 
 export interface Project {
