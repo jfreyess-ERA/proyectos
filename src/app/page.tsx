@@ -1,65 +1,124 @@
-import Image from "next/image";
+'use client';
+import { useState, useEffect } from 'react';
+import { Shell } from '@/components/Shell';
+import { Dashboard } from '@/components/Dashboard';
+import { Board } from '@/components/Board';
+import { ListView } from '@/components/ListView';
+import { CalendarView } from '@/components/CalendarView';
+import { TimelineView } from '@/components/TimelineView';
+import { TaskDetail } from '@/components/TaskDetail';
+import { CommandPalette } from '@/components/CommandPalette';
+import { CreateTaskModal } from '@/components/CreateTaskModal';
+import { useNorteData } from '@/lib/useNorteData';
+import type { Task } from '@/lib/types';
+
+type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
+type ViewId = 'board' | 'list' | 'timeline' | 'calendar';
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+  const { tasks, projects, users, loading, error, refetch } = useNorteData();
+
+  const [activeNav, setActiveNav] = useState<NavId>('dashboard');
+  const [activeView, setActiveView] = useState<ViewId>('board');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [cmdkOpen, setCmdkOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createDefaultStatus, setCreateDefaultStatus] = useState<Task['status']>('todo');
+
+  const isProjectView = activeNav.startsWith('project:');
+  const projectId = isProjectView ? activeNav.replace('project:', '') : undefined;
+  const project = projectId ? projects.find(p => p.id === projectId) : undefined;
+  const visibleTasks = projectId ? tasks.filter(t => t.project === projectId) : tasks;
+
+  const crumbs = isProjectView && project
+    ? ['Norte', project.name]
+    : ['Norte', 'Inicio'];
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdkOpen(o => !o);
+      }
+      if (e.key === 'Escape') {
+        if (cmdkOpen) { setCmdkOpen(false); return; }
+        if (selectedTask) setSelectedTask(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [cmdkOpen, selectedTask]);
+
+  function handleNav(id: NavId) {
+    setActiveNav(id);
+    setActiveView('board');
+    setCmdkOpen(false);
+  }
+
+  function openCreateTask(defaultStatus: Task['status'] = 'todo') {
+    setCreateDefaultStatus(defaultStatus);
+    setCreateOpen(true);
+  }
+
+  function renderContent() {
+    if (!isProjectView) return <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
+    switch (activeView) {
+      case 'list':     return <ListView tasks={visibleTasks} onOpenTask={setSelectedTask} />;
+      case 'calendar': return <CalendarView tasks={visibleTasks} onOpenTask={setSelectedTask} />;
+      case 'timeline': return <TimelineView tasks={visibleTasks} projects={projects} onOpenTask={setSelectedTask} />;
+      default:         return (
+        <Board
+          tasks={visibleTasks}
+          onOpenTask={setSelectedTask}
+          onCreateTask={openCreateTask}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      );
+    }
+  }
+
+  return (
+    <>
+      <Shell
+        activeNav={activeNav}
+        activeView={activeView}
+        crumbs={crumbs}
+        projectId={projectId}
+        projects={projects}
+        onNavChange={handleNav}
+        onViewChange={setActiveView}
+        onOpenCmdk={() => setCmdkOpen(true)}
+        onCreateTask={() => openCreateTask()}
+        loading={loading}
+      >
+        {error && (
+          <div className="mx-6 mt-4 px-4 py-3 rounded-[8px] text-[13px]"
+            style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
+            Error Supabase: {error}
+          </div>
+        )}
+        {renderContent()}
+      </Shell>
+
+      <TaskDetail task={selectedTask} onClose={() => setSelectedTask(null)} />
+
+      <CommandPalette
+        open={cmdkOpen}
+        onClose={() => setCmdkOpen(false)}
+        onNav={handleNav}
+        onOpenTask={t => { setSelectedTask(t); setCmdkOpen(false); }}
+        tasks={tasks}
+        projects={projects}
+      />
+
+      <CreateTaskModal
+        open={createOpen}
+        defaultStatus={createDefaultStatus}
+        defaultProjectId={projectId}
+        projects={projects}
+        users={users}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => refetch()}
+      />
+    </>
   );
 }
