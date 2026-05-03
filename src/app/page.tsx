@@ -16,6 +16,7 @@ import { PeopleView } from '@/components/PeopleView';
 import { ReportsView } from '@/components/ReportsView';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProjectModal } from '@/components/ProjectModal';
+import { SavedView } from '@/components/SavedView';
 import { useNorteData } from '@/lib/useNorteData';
 import { useAuth } from '@/lib/auth-context';
 import type { Task, Project } from '@/lib/types';
@@ -108,6 +109,20 @@ export default function Home() {
         case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
         case 'people':  return <PeopleView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
         case 'reports': return <ReportsView tasks={tasks} projects={projects} />;
+        case 'saved:week': {
+          const now = new Date();
+          const in7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const weekTasks = tasks.filter(t => {
+            if (!t.due || t.status === 'done') return false;
+            const d = new Date(t.due);
+            return d >= now && d <= in7;
+          });
+          return <SavedView title="Vence esta semana" description="Tareas con fecha límite en los próximos 7 días" tasks={weekTasks} projects={projects} onOpenTask={setSelectedTask} />;
+        }
+        case 'saved:blockers': {
+          const blockerTasks = tasks.filter(t => t.labels.includes('l6'));
+          return <SavedView title="Bloqueantes" description="Tareas marcadas como bloqueantes" tasks={blockerTasks} projects={projects} onOpenTask={setSelectedTask} />;
+        }
         default:        return <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
       }
     }
@@ -142,6 +157,10 @@ export default function Home() {
         onOpenSettings={() => setSettingsOpen(true)}
         onCreateProject={openCreateProject}
         onEditProject={openEditProject}
+        onOpenTask={(taskId) => {
+          const t = tasks.find(t => t.id === taskId);
+          if (t) setSelectedTask(t);
+        }}
         loading={loading}
       >
         {error && (

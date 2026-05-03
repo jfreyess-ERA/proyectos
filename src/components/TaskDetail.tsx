@@ -1,14 +1,13 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { X, Paperclip, Archive, MoreHorizontal, Plus, Send } from 'lucide-react';
+import { X, Paperclip, Archive, MoreHorizontal, Plus, Send, Trash2, FileText, Image as ImageIcon, Upload } from 'lucide-react';
 import {
-  getProject, getLabel, getUser, getPriority, getStatus,
-  fmtDate, PEOPLE, STATUSES, PRIORITIES,
+  getProject, getLabel, getUser, fmtDate, PEOPLE, STATUSES, PRIORITIES,
 } from '@/lib/data';
-import { updateTask, fetchComments, insertComment } from '@/lib/db';
+import { updateTask, fetchComments, insertComment, logActivity, fetchActivity, fetchAttachments, uploadAttachment, deleteAttachment } from '@/lib/db';
 import { useAuth } from '@/lib/auth-context';
-import { Avatar, AvatarStack } from './Avatar';
-import type { Task, Comment, User } from '@/lib/types';
+import { Avatar } from './Avatar';
+import type { Task, Comment, Activity, Attachment, User } from '@/lib/types';
 
 interface Props {
   task: Task | null;
@@ -28,6 +27,10 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
   const [postingComment, setPostingComment] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
+  const [activity, setActivity] = useState<Activity[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -36,6 +39,8 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
     setEditingTitle(false);
     setEditingDesc(false);
     fetchComments(task.id).then(setComments).catch(() => {});
+    fetchActivity(task.id).then(setActivity).catch(() => {});
+    fetchAttachments(task.id).then(setAttachments).catch(() => {});
   }, [task?.id]);
 
   if (!task || !edited) return null;
@@ -46,22 +51,28 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
   const spentPct = edited.estimate > 0 ? Math.min(100, (edited.spent / edited.estimate) * 100) : 0;
   const overBudget = edited.spent > edited.estimate;
 
-  async function save(fields: Partial<Task>) {
+  async function save(fields: Partial<Task>, activityMsg?: string) {
     setSaving(true);
     try {
       const dbFields: Record<string, unknown> = {};
-      if ('status' in fields)    dbFields.status    = fields.status;
-      if ('priority' in fields)  dbFields.priority  = fields.priority;
-      if ('due' in fields)       dbFields.due_date  = fields.due ?? null;
-      if ('title' in fields)     dbFields.title     = fields.title;
+      if ('status' in fields)      dbFields.status      = fields.status;
+      if ('priority' in fields)    dbFields.priority    = fields.priority;
+      if ('start' in fields)       dbFields.start_date  = fields.start ?? null;
+      if ('due' in fields)         dbFields.due_date    = fields.due ?? null;
+      if ('title' in fields)       dbFields.title       = fields.title;
       if ('description' in fields) dbFields.description = fields.description;
-      if ('assignees' in fields) dbFields.assignees = fields.assignees;
-      if ('estimate' in fields)  dbFields.estimate  = fields.estimate;
-      if ('spent' in fields)     dbFields.spent     = fields.spent;
+      if ('assignees' in fields)   dbFields.assignees   = fields.assignees;
+      if ('estimate' in fields)    dbFields.estimate    = fields.estimate;
+      if ('spent' in fields)       dbFields.spent       = fields.spent;
 
       const updated = await updateTask(taskId, dbFields as Parameters<typeof updateTask>[1]);
       setEdited(updated);
       onUpdated?.(updated);
+
+      if (activityMsg && profile?.id) {
+        await logActivity(taskId, profile.id, activityMsg);
+        fetchActivity(taskId).then(setActivity).catch(() => {});
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -69,9 +80,9 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
     }
   }
 
-  function patch(fields: Partial<Task>) {
+  function patch(fields: Partial<Task>, activityMsg?: string) {
     setEdited(prev => prev ? { ...prev, ...fields } : prev);
-    save(fields);
+    save(fields, activityMsg);
   }
 
   function toggleAssignee(userId: string) {
@@ -79,7 +90,11 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
     const next = current.includes(userId)
       ? current.filter(id => id !== userId)
       : [...current, userId];
-    patch({ assignees: next });
+    const user = allPeople.find(u => u.id === userId);
+    const action = current.includes(userId)
+      ? `Removió a ${user?.name ?? userId}`
+      : `Asignó a ${user?.name ?? userId}`;
+    patch({ assignees: next }, action);
   }
 
   async function handleComment(e: React.FormEvent) {
@@ -90,6 +105,10 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
       const c = await insertComment(taskId, profile.id, newComment.trim());
       setComments(prev => [...prev, c]);
       setNewComment('');
+      if (profile?.id) {
+        await logActivity(taskId, profile.id, 'Agregó un comentario');
+        fetchActivity(taskId).then(setActivity).catch(() => {});
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -97,12 +116,56 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
     }
   }
 
-  const priorityColors: Record<string, string> = {
-    urgent: 'oklch(0.58 0.18 25)',
-    high:   'oklch(0.65 0.14 50)',
-    med:    'oklch(0.62 0.05 250)',
-    low:    'oklch(0.62 0.02 250)',
-  };
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !profile) return;
+    setUploading(true);
+    try {
+      const att = await uploadAttachment(taskId, profile.id, file);
+      setAttachments(prev => [...prev, att]);
+      await logActivity(taskId, profile.id, `Adjuntó ${file.name}`);
+      fetchActivity(taskId).then(setActivity).catch(() => {});
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  async function handleDeleteAttachment(att: Attachment) {
+    try {
+      await deleteAttachment(att.id, att.storage_path);
+      setAttachments(prev => prev.filter(a => a.id !== att.id));
+      if (profile?.id) {
+        await logActivity(taskId, profile.id, `Eliminó adjunto ${att.name}`);
+        fetchActivity(taskId).then(setActivity).catch(() => {});
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function fmtSize(bytes?: number) {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function isImage(name: string) {
+    return /\.(png|jpe?g|gif|webp|svg)$/i.test(name);
+  }
+
+  function fmtActivityTime(iso: string) {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = (now.getTime() - d.getTime()) / 1000;
+    if (diff < 60)    return 'Ahora';
+    if (diff < 3600)  return `Hace ${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `Hace ${Math.floor(diff / 3600)}h`;
+    return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  }
 
   return (
     <div
@@ -137,7 +200,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
             )}
           </div>
           <div className="flex items-center gap-1">
-            <IconBtn><Paperclip size={15} /></IconBtn>
+            <IconBtn onClick={() => fileInputRef.current?.click()}><Paperclip size={15} /></IconBtn>
             <IconBtn><Archive size={15} /></IconBtn>
             <IconBtn><MoreHorizontal size={15} /></IconBtn>
             <IconBtn onClick={onClose}><X size={15} /></IconBtn>
@@ -155,8 +218,8 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                 ref={titleRef}
                 value={edited.title}
                 onChange={e => setEdited(prev => prev ? { ...prev, title: e.target.value } : prev)}
-                onBlur={() => { setEditingTitle(false); save({ title: edited.title }); }}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setEditingTitle(false); save({ title: edited.title }); }}}
+                onBlur={() => { setEditingTitle(false); save({ title: edited.title }, 'Actualizó el título'); }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setEditingTitle(false); save({ title: edited.title }, 'Actualizó el título'); }}}
                 autoFocus
                 rows={2}
                 className="w-full text-[20px] font-semibold leading-tight tracking-tight resize-none border-0 bg-transparent outline-none rounded-[6px] p-1 -mx-1"
@@ -179,7 +242,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                 <textarea
                   value={edited.description ?? ''}
                   onChange={e => setEdited(prev => prev ? { ...prev, description: e.target.value } : prev)}
-                  onBlur={() => { setEditingDesc(false); save({ description: edited.description }); }}
+                  onBlur={() => { setEditingDesc(false); save({ description: edited.description }, 'Actualizó la descripción'); }}
                   autoFocus
                   rows={5}
                   className="w-full text-[13.5px] leading-relaxed resize-none rounded-[8px] px-3 py-2 border outline-none"
@@ -199,6 +262,80 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                 >
                   {edited.description || 'Sin descripción. Click para agregar…'}
                 </p>
+              )}
+            </Section>
+
+            {/* Attachments */}
+            <Section
+              title={`Adjuntos${attachments.length > 0 ? ` (${attachments.length})` : ''}`}
+              right={
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex items-center gap-1 text-[11px] border-0 bg-transparent"
+                  style={{ color: 'var(--accent)' }}
+                >
+                  <Upload size={11} />
+                  {uploading ? 'Subiendo…' : 'Subir archivo'}
+                </button>
+              }
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleUpload}
+              />
+              {attachments.length === 0 && !uploading ? (
+                <div
+                  className="flex flex-col items-center justify-center gap-2 rounded-[8px] border-2 border-dashed py-5 cursor-pointer text-[12px]"
+                  style={{ borderColor: 'var(--line)', color: 'var(--ink-4)' }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip size={16} />
+                  Arrastra archivos o haz click para subir
+                </div>
+              ) : (
+                <div className="flex flex-col gap-[6px]">
+                  {attachments.map(att => (
+                    <div
+                      key={att.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-[8px] group"
+                      style={{ background: 'var(--bg-2)', border: '1px solid var(--line)' }}
+                    >
+                      <span style={{ color: 'var(--ink-3)' }}>
+                        {isImage(att.name) ? <ImageIcon size={14} /> : <FileText size={14} />}
+                      </span>
+                      <a
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 min-w-0 truncate text-[12.5px]"
+                        style={{ color: 'var(--accent)' }}
+                      >
+                        {att.name}
+                      </a>
+                      {att.size && (
+                        <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--ink-4)' }}>
+                          {fmtSize(att.size)}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => handleDeleteAttachment(att)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity border-0 bg-transparent"
+                        style={{ color: 'var(--danger)' }}
+                        title="Eliminar adjunto"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  {uploading && (
+                    <div className="flex items-center gap-2 px-3 py-2 text-[12px]" style={{ color: 'var(--ink-4)' }}>
+                      <span className="animate-pulse">Subiendo…</span>
+                    </div>
+                  )}
+                </div>
               )}
             </Section>
 
@@ -316,6 +453,31 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                 </form>
               </div>
             </Section>
+
+            {/* Activity */}
+            {activity.length > 0 && (
+              <Section title="Actividad">
+                <div className="flex flex-col gap-[10px]">
+                  {activity.map(a => {
+                    const actor = allPeople.find(u => u.id === a.user_id) ?? getUser(a.user_id);
+                    return (
+                      <div key={a.id} className="flex items-start gap-2">
+                        <Avatar userId={a.user_id} size="sm" />
+                        <div className="flex-1 min-w-0 pt-[1px]">
+                          <span className="text-[12px]" style={{ color: 'var(--ink-2)' }}>
+                            <span className="font-medium" style={{ color: 'var(--ink)' }}>{actor?.name ?? 'Usuario'}</span>
+                            {' '}{a.action}
+                          </span>
+                          <span className="ml-2 text-[11px]" style={{ color: 'var(--ink-4)' }}>
+                            {fmtActivityTime(a.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -327,7 +489,11 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
             <Field label="Estado">
               <select
                 value={edited.status}
-                onChange={e => patch({ status: e.target.value as Task['status'] })}
+                onChange={e => {
+                  const val = e.target.value as Task['status'];
+                  const label = STATUSES.find(s => s.id === val)?.label ?? val;
+                  patch({ status: val }, `Cambió el estado a "${label}"`);
+                }}
                 className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
                 style={{
                   background: 'var(--bg-2)',
@@ -346,7 +512,11 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
             <Field label="Prioridad">
               <select
                 value={edited.priority}
-                onChange={e => patch({ priority: e.target.value as Task['priority'] })}
+                onChange={e => {
+                  const val = e.target.value as Task['priority'];
+                  const label = PRIORITIES.find(p => p.id === val)?.label ?? val;
+                  patch({ priority: val }, `Cambió la prioridad a "${label}"`);
+                }}
                 className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
                 style={{
                   background: 'var(--bg-2)',
@@ -384,12 +554,28 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
               )}
             </Field>
 
+            {/* Start date */}
+            <Field label="Fecha inicio">
+              <input
+                type="date"
+                value={edited.start ?? ''}
+                onChange={e => patch({ start: e.target.value || undefined }, e.target.value ? `Fijó inicio el ${e.target.value}` : 'Quitó la fecha de inicio')}
+                className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
+                style={{
+                  background: 'var(--bg-2)',
+                  borderColor: 'var(--line)',
+                  color: edited.start ? 'var(--ink)' : 'var(--ink-4)',
+                  fontFamily: 'var(--font)',
+                }}
+              />
+            </Field>
+
             {/* Due date */}
             <Field label="Fecha límite">
               <input
                 type="date"
                 value={edited.due ?? ''}
-                onChange={e => patch({ due: e.target.value || undefined })}
+                onChange={e => patch({ due: e.target.value || undefined }, e.target.value ? `Fijó vencimiento el ${e.target.value}` : 'Quitó la fecha límite')}
                 className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
                 style={{
                   background: 'var(--bg-2)',
@@ -410,7 +596,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                     min={0}
                     value={edited.estimate ?? 0}
                     onChange={e => setEdited(prev => prev ? { ...prev, estimate: +e.target.value } : prev)}
-                    onBlur={() => save({ estimate: edited.estimate })}
+                    onBlur={() => save({ estimate: edited.estimate }, `Actualizó estimado a ${edited.estimate}h`)}
                     className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
                     style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
                   />
@@ -422,7 +608,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                     min={0}
                     value={edited.spent ?? 0}
                     onChange={e => setEdited(prev => prev ? { ...prev, spent: +e.target.value } : prev)}
-                    onBlur={() => save({ spent: edited.spent })}
+                    onBlur={() => save({ spent: edited.spent }, `Actualizó tiempo real a ${edited.spent}h`)}
                     className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
                     style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
                   />

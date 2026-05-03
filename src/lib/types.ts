@@ -41,6 +41,35 @@ export interface Task {
   description?: string;
 }
 
+export interface Activity {
+  id: string;
+  task_id: string;
+  user_id: string;
+  action: string;
+  created_at: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  task_id: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+}
+
+export interface Attachment {
+  id: string;
+  task_id: string;
+  user_id: string;
+  name: string;
+  url: string;
+  storage_path: string;
+  size?: number;
+  created_at: string;
+}
+
 export interface Comment {
   id: string;
   task_id: string;

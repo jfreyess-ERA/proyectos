@@ -13,6 +13,7 @@ interface Item {
   kind: Kind;
   label: string;
   sub?: string;
+  desc?: string;
   color?: string;
   priority?: string;
   userId?: string;
@@ -89,6 +90,7 @@ export function CommandPalette({ open, onClose, onNav, onOpenTask, tasks, projec
         sub:      t.ref + ' · ' + proj?.name,
         color:    proj?.color,
         priority: t.priority,
+        desc:     t.description,
         action:   () => onOpenTask(t),
       };
     });
@@ -108,7 +110,11 @@ export function CommandPalette({ open, onClose, onNav, onOpenTask, tasks, projec
 
   const q = norm(query.trim());
   const filtered = q
-    ? items.filter(it => norm(it.label).includes(q) || norm(it.sub ?? '').includes(q))
+    ? items.filter(it =>
+        norm(it.label).includes(q) ||
+        norm(it.sub ?? '').includes(q) ||
+        norm(it.desc ?? '').includes(q)
+      )
     : items;
 
   const groups = GROUP_ORDER

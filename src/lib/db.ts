@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Task, Project, User, Label, Comment } from './types';
+import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment } from './types';
 
 // ── Row types from Supabase ────────────────────────────────────────
 
@@ -106,6 +106,7 @@ export async function updateTask(
     status: Task['status'];
     priority: Task['priority'];
     assignees: string[];
+    start_date: string | null;
     due_date: string | null;
     description: string;
     estimate: number;
@@ -163,6 +164,79 @@ export async function insertComment(taskId: string, userId: string, content: str
     .single();
   if (error) throw error;
   return data as Comment;
+}
+
+// ── Activity ───────────────────────────────────────────────────────
+
+export async function logActivity(taskId: string, userId: string, action: string): Promise<void> {
+  await supabase.from('task_activity').insert({ task_id: taskId, user_id: userId, action });
+}
+
+export async function fetchActivity(taskId: string): Promise<Activity[]> {
+  const { data } = await supabase
+    .from('task_activity')
+    .select('*')
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: false })
+    .limit(20);
+  return (data ?? []) as Activity[];
+}
+
+// ── Notifications ──────────────────────────────────────────────────
+
+export async function fetchNotifications(userId: string): Promise<Notification[]> {
+  const { data } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(30);
+  return (data ?? []) as Notification[];
+}
+
+export async function markNotificationsRead(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  await supabase.from('notifications').update({ read: true }).in('id', ids);
+}
+
+export async function createNotification(
+  userId: string, type: string, taskId: string, message: string
+): Promise<void> {
+  await supabase.from('notifications').insert({ user_id: userId, type, task_id: taskId, message });
+}
+
+// ── Attachments ────────────────────────────────────────────────────
+
+export async function fetchAttachments(taskId: string): Promise<Attachment[]> {
+  const { data } = await supabase
+    .from('task_attachments')
+    .select('*')
+    .eq('task_id', taskId)
+    .order('created_at');
+  return (data ?? []) as Attachment[];
+}
+
+export async function uploadAttachment(taskId: string, userId: string, file: File): Promise<Attachment> {
+  const ext = file.name.split('.').pop();
+  const path = `tasks/${taskId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage.from('attachments').upload(path, file);
+  if (uploadError) throw uploadError;
+
+  const { data: { publicUrl } } = supabase.storage.from('attachments').getPublicUrl(path);
+
+  const { data, error } = await supabase
+    .from('task_attachments')
+    .insert({ task_id: taskId, user_id: userId, name: file.name, url: publicUrl, storage_path: path, size: file.size })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Attachment;
+}
+
+export async function deleteAttachment(id: string, storagePath: string): Promise<void> {
+  await supabase.storage.from('attachments').remove([storagePath]);
+  await supabase.from('task_attachments').delete().eq('id', id);
 }
 
 export async function insertTask(input: NewTaskInput): Promise<Task> {

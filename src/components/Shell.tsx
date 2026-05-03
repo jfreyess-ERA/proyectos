@@ -2,12 +2,13 @@
 import { useState } from 'react';
 import {
   Home, Inbox, CheckSquare, Users, BarChart2,
-  Search, Bell, Plus, Filter, SortAsc, Star, Settings,
+  Search, Plus, Filter, SortAsc, Star, Settings,
   PanelLeft, ChevronRight, SlidersHorizontal,
   LayoutGrid, List, GanttChart, Calendar,
 } from 'lucide-react';
 import { PEOPLE } from '@/lib/data';
 import { Avatar } from './Avatar';
+import { NotificationBell } from './NotificationBell';
 import type { Project } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
@@ -28,6 +29,7 @@ interface ShellProps {
   onOpenSettings?: () => void;
   onCreateProject?: () => void;
   onEditProject?: (id: string) => void;
+  onOpenTask?: (taskId: string) => void;
   children: React.ReactNode;
 }
 
@@ -45,6 +47,7 @@ export function Shell({
   onOpenSettings,
   onCreateProject,
   onEditProject,
+  onOpenTask,
   children,
 }: ShellProps) {
   const [collapsed, setCollapsed] = useState(false);
@@ -182,14 +185,22 @@ export function Shell({
               <div className="px-2 pb-1.5 text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
                 Vistas guardadas
               </div>
-              {['Vence esta semana', 'Bloqueantes'].map(label => (
+              {[
+                { id: 'saved:week',     label: 'Vence esta semana' },
+                { id: 'saved:blockers', label: 'Bloqueantes' },
+              ].map(item => (
                 <button
-                  key={label}
+                  key={item.id}
+                  onClick={() => onNavChange?.(item.id)}
                   className="flex items-center gap-[10px] w-full text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors"
-                  style={{ color: 'var(--ink-2)', background: 'transparent' }}
+                  style={{
+                    color: activeNav === item.id ? 'var(--ink)' : 'var(--ink-2)',
+                    background: activeNav === item.id ? 'var(--surface)' : 'transparent',
+                    fontWeight: activeNav === item.id ? 500 : 400,
+                  }}
                 >
-                  <Filter size={16} style={{ color: 'var(--ink-3)', flexShrink: 0 }} />
-                  <span>{label}</span>
+                  <Filter size={16} style={{ color: activeNav === item.id ? 'var(--accent)' : 'var(--ink-3)', flexShrink: 0 }} />
+                  <span>{item.label}</span>
                 </button>
               ))}
             </div>
@@ -279,16 +290,7 @@ export function Shell({
             </span>
           </div>
 
-          <button
-            className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent relative"
-            style={{ color: 'var(--ink-2)' }}
-          >
-            <Bell size={16} />
-            <span
-              className="absolute top-[6px] right-[6px] w-[6px] h-[6px] rounded-full"
-              style={{ background: 'var(--danger)' }}
-            />
-          </button>
+          <NotificationBell onOpenTask={taskId => onOpenTask?.(taskId)} />
 
           <button
             onClick={onCreateTask}
