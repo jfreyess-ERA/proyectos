@@ -1,39 +1,101 @@
 'use client';
-import { useState } from 'react';
-import { X, Paperclip, Archive, MoreHorizontal, Plus } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Paperclip, Archive, MoreHorizontal, Plus, Send } from 'lucide-react';
 import {
   getProject, getLabel, getUser, getPriority, getStatus,
   fmtDate, PEOPLE, STATUSES, PRIORITIES,
 } from '@/lib/data';
-import { Avatar } from './Avatar';
-import type { Task } from '@/lib/types';
+import { updateTask, fetchComments, insertComment } from '@/lib/db';
+import { useAuth } from '@/lib/auth-context';
+import { Avatar, AvatarStack } from './Avatar';
+import type { Task, Comment, User } from '@/lib/types';
 
 interface Props {
   task: Task | null;
+  users?: User[];
   onClose: () => void;
+  onUpdated?: (t: Task) => void;
 }
 
-const SAMPLE_SUBTASK_TITLES = [
-  'Revisar feedback de Ana',
-  'Actualizar variantes en Figma',
-  'Conectar con datos reales del API',
-  'Preparar deck de revisión',
-  'Test con 3 usuarios internos',
-  'Ajustes finales de copy',
-];
+export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
+  const { profile } = useAuth();
+  const allPeople = users.length > 0 ? users : PEOPLE;
 
-export function TaskDetail({ task, onClose }: Props) {
-  const [comment, setComment] = useState('');
+  const [edited, setEdited] = useState<Task | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
 
-  if (!task) return null;
+  useEffect(() => {
+    if (!task) return;
+    setEdited(task);
+    setEditingTitle(false);
+    setEditingDesc(false);
+    fetchComments(task.id).then(setComments).catch(() => {});
+  }, [task?.id]);
 
-  const project = getProject(task.project);
-  const labels = task.labels.map(id => getLabel(id)).filter(Boolean);
-  const priority = getPriority(task.priority);
-  const status = getStatus(task.status);
-  const me = PEOPLE[0];
-  const spentPct = Math.min(100, (task.spent / task.estimate) * 100);
-  const overBudget = task.spent > task.estimate;
+  if (!task || !edited) return null;
+
+  const taskId = task.id;
+  const project = getProject(edited.project);
+  const labels = edited.labels.map(id => getLabel(id)).filter(Boolean);
+  const spentPct = edited.estimate > 0 ? Math.min(100, (edited.spent / edited.estimate) * 100) : 0;
+  const overBudget = edited.spent > edited.estimate;
+
+  async function save(fields: Partial<Task>) {
+    setSaving(true);
+    try {
+      const dbFields: Record<string, unknown> = {};
+      if ('status' in fields)    dbFields.status    = fields.status;
+      if ('priority' in fields)  dbFields.priority  = fields.priority;
+      if ('due' in fields)       dbFields.due_date  = fields.due ?? null;
+      if ('title' in fields)     dbFields.title     = fields.title;
+      if ('description' in fields) dbFields.description = fields.description;
+      if ('assignees' in fields) dbFields.assignees = fields.assignees;
+      if ('estimate' in fields)  dbFields.estimate  = fields.estimate;
+      if ('spent' in fields)     dbFields.spent     = fields.spent;
+
+      const updated = await updateTask(taskId, dbFields as Parameters<typeof updateTask>[1]);
+      setEdited(updated);
+      onUpdated?.(updated);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function patch(fields: Partial<Task>) {
+    setEdited(prev => prev ? { ...prev, ...fields } : prev);
+    save(fields);
+  }
+
+  function toggleAssignee(userId: string) {
+    const current = edited!.assignees;
+    const next = current.includes(userId)
+      ? current.filter(id => id !== userId)
+      : [...current, userId];
+    patch({ assignees: next });
+  }
+
+  async function handleComment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newComment.trim() || !profile) return;
+    setPostingComment(true);
+    try {
+      const c = await insertComment(taskId, profile.id, newComment.trim());
+      setComments(prev => [...prev, c]);
+      setNewComment('');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setPostingComment(false);
+    }
+  }
 
   const priorityColors: Record<string, string> = {
     urgent: 'oklch(0.58 0.18 25)',
@@ -51,8 +113,8 @@ export function TaskDetail({ task, onClose }: Props) {
       <div
         className="flex flex-col overflow-hidden"
         style={{
-          width: 'min(880px, 92vw)',
-          maxHeight: '88vh',
+          width: 'min(900px, 92vw)',
+          maxHeight: '90vh',
           background: 'var(--surface)',
           border: '1px solid var(--line)',
           borderRadius: 14,
@@ -60,7 +122,7 @@ export function TaskDetail({ task, onClose }: Props) {
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Modal header */}
+        {/* Header */}
         <div
           className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0"
           style={{ borderColor: 'var(--line)' }}
@@ -70,6 +132,9 @@ export function TaskDetail({ task, onClose }: Props) {
             <span className="text-[12.5px]" style={{ color: 'var(--ink-3)' }}>
               {project?.name} · {task.ref}
             </span>
+            {saving && (
+              <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Guardando…</span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <IconBtn><Paperclip size={15} /></IconBtn>
@@ -81,31 +146,60 @@ export function TaskDetail({ task, onClose }: Props) {
 
         {/* Body */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* Main (left 60%) */}
+          {/* Main */}
           <div className="flex-1 min-w-0 overflow-y-auto p-6 flex flex-col gap-6">
-            <h2
-              className="text-[20px] font-semibold leading-tight tracking-tight"
-              style={{ color: 'var(--ink)' }}
-            >
-              {task.title}
-            </h2>
+
+            {/* Editable title */}
+            {editingTitle ? (
+              <textarea
+                ref={titleRef}
+                value={edited.title}
+                onChange={e => setEdited(prev => prev ? { ...prev, title: e.target.value } : prev)}
+                onBlur={() => { setEditingTitle(false); save({ title: edited.title }); }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setEditingTitle(false); save({ title: edited.title }); }}}
+                autoFocus
+                rows={2}
+                className="w-full text-[20px] font-semibold leading-tight tracking-tight resize-none border-0 bg-transparent outline-none rounded-[6px] p-1 -mx-1"
+                style={{ color: 'var(--ink)', fontFamily: 'var(--font)' }}
+              />
+            ) : (
+              <h2
+                className="text-[20px] font-semibold leading-tight tracking-tight cursor-text rounded-[6px] p-1 -mx-1 -my-1 transition-colors"
+                style={{ color: 'var(--ink)' }}
+                onClick={() => setEditingTitle(true)}
+                title="Click para editar"
+              >
+                {edited.title}
+              </h2>
+            )}
 
             {/* Description */}
             <Section title="Descripción">
-              <p className="text-[13.5px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>
-                Trabajamos sobre la versión actualizada del componente, integrando los hallazgos del
-                último round de research. La métrica principal pasa al cuadrante superior izquierdo
-                y los KPIs secundarios se agrupan en una fila horizontal compacta.
-              </p>
-              <ul className="list-disc list-inside mt-2 flex flex-col gap-1">
-                {[
-                  'Considerar variante con tarjetas vs. tabla para movimientos.',
-                  'Validar accesibilidad con lector de pantalla.',
-                  'Documentar tokens nuevos en el sistema.',
-                ].map((item, i) => (
-                  <li key={i} className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{item}</li>
-                ))}
-              </ul>
+              {editingDesc ? (
+                <textarea
+                  value={edited.description ?? ''}
+                  onChange={e => setEdited(prev => prev ? { ...prev, description: e.target.value } : prev)}
+                  onBlur={() => { setEditingDesc(false); save({ description: edited.description }); }}
+                  autoFocus
+                  rows={5}
+                  className="w-full text-[13.5px] leading-relaxed resize-none rounded-[8px] px-3 py-2 border outline-none"
+                  style={{
+                    color: 'var(--ink-2)',
+                    fontFamily: 'var(--font)',
+                    background: 'var(--bg-2)',
+                    borderColor: 'var(--accent)',
+                  }}
+                />
+              ) : (
+                <p
+                  className="text-[13.5px] leading-relaxed min-h-[40px] rounded-[6px] p-1 -mx-1 cursor-text transition-colors"
+                  style={{ color: edited.description ? 'var(--ink-2)' : 'var(--ink-4)' }}
+                  onClick={() => setEditingDesc(true)}
+                  title="Click para editar"
+                >
+                  {edited.description || 'Sin descripción. Click para agregar…'}
+                </p>
+              )}
             </Section>
 
             {/* Subtasks */}
@@ -139,7 +233,7 @@ export function TaskDetail({ task, onClose }: Props) {
                           textDecoration: done ? 'line-through' : 'none',
                         }}
                       >
-                        {SAMPLE_SUBTASK_TITLES[i] ?? `Subtarea ${i + 1}`}
+                        Subtarea {i + 1}
                       </span>
                     </div>
                   );
@@ -154,125 +248,197 @@ export function TaskDetail({ task, onClose }: Props) {
             </Section>
 
             {/* Comments */}
-            <Section title="Comentarios">
+            <Section title={`Comentarios${comments.length > 0 ? ` (${comments.length})` : ''}`}>
               <div className="flex flex-col gap-4">
-                <div
-                  className="text-[12px] py-2"
-                  style={{ color: 'var(--ink-4)' }}
-                >
-                  Aún no hay comentarios. Sé el primero en aportar contexto.
-                </div>
+                {comments.length === 0 && (
+                  <div className="text-[12px] py-1" style={{ color: 'var(--ink-4)' }}>
+                    Aún no hay comentarios.
+                  </div>
+                )}
+                {comments.map(c => {
+                  const author = allPeople.find(u => u.id === c.user_id) ?? getUser(c.user_id);
+                  const dt = new Date(c.created_at);
+                  return (
+                    <div key={c.id} className="flex gap-3">
+                      <Avatar userId={c.user_id} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span className="text-[12.5px] font-semibold" style={{ color: 'var(--ink)' }}>
+                            {author?.name ?? 'Usuario'}
+                          </span>
+                          <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
+                            {dt.toLocaleDateString('es', { day: 'numeric', month: 'short' })} {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-[13px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>
+                          {c.content}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
 
                 {/* Comment input */}
-                <div className="flex gap-3">
-                  <Avatar userId={me.id} size="md" />
+                <form onSubmit={handleComment} className="flex gap-3">
+                  {profile && <Avatar userId={profile.id} size="md" />}
                   <div
                     className="flex-1 rounded-[8px] border overflow-hidden"
                     style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}
                   >
                     <textarea
-                      value={comment}
-                      onChange={e => setComment(e.target.value)}
-                      placeholder="Escribe un comentario… usa @ para mencionar"
+                      value={newComment}
+                      onChange={e => setNewComment(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { handleComment(e); }}}
+                      placeholder="Escribe un comentario…"
                       rows={2}
                       className="w-full px-3 pt-2 text-[13px] resize-none border-0 bg-transparent outline-none"
                       style={{ color: 'var(--ink)', fontFamily: 'var(--font)' }}
                     />
                     <div
-                      className="flex items-center justify-between px-2 py-[6px] border-t"
+                      className="flex items-center justify-end px-2 py-[6px] border-t"
                       style={{ borderColor: 'var(--line-2)' }}
                     >
-                      <div className="flex gap-[2px]">
-                        <IconBtn><Paperclip size={13} /></IconBtn>
-                        <button
-                          className="w-6 h-6 flex items-center justify-center rounded-[5px] border-0 bg-transparent text-[12px] font-bold"
-                          style={{ color: 'var(--ink-3)' }}
-                        >
-                          @
-                        </button>
-                      </div>
                       <button
-                        className="h-[26px] px-3 rounded-[6px] text-[12px] font-medium border-0"
+                        type="submit"
+                        disabled={!newComment.trim() || postingComment}
+                        className="h-[26px] px-3 rounded-[6px] text-[12px] font-medium border-0 flex items-center gap-1 transition-opacity"
                         style={{
                           background: 'var(--accent)',
                           color: 'var(--on-accent)',
-                          opacity: comment.trim() ? 1 : 0.5,
+                          opacity: newComment.trim() && !postingComment ? 1 : 0.45,
                         }}
-                        disabled={!comment.trim()}
                       >
-                        Comentar
+                        <Send size={11} />
+                        {postingComment ? 'Enviando…' : 'Comentar'}
                       </button>
                     </div>
                   </div>
-                </div>
+                </form>
               </div>
             </Section>
           </div>
 
-          {/* Sidebar (right 40%) */}
+          {/* Sidebar */}
           <aside
             className="w-[280px] flex-shrink-0 border-l overflow-y-auto p-5 flex flex-col gap-4"
             style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}
           >
+            {/* Status */}
             <Field label="Estado">
-              <span
-                className="inline-flex items-center gap-[6px] h-[22px] px-2 rounded-[5px] text-[11.5px] font-medium border"
-                style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
+              <select
+                value={edited.status}
+                onChange={e => patch({ status: e.target.value as Task['status'] })}
+                className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
+                style={{
+                  background: 'var(--bg-2)',
+                  borderColor: 'var(--line)',
+                  color: 'var(--ink)',
+                  fontFamily: 'var(--font)',
+                }}
               >
-                <span className="w-[7px] h-[7px] rounded-full" style={{ background: STATUSES.find(s => s.id === task.status)?.tone }} />
-                {status?.label}
-              </span>
+                {STATUSES.map(s => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
+              </select>
             </Field>
 
+            {/* Priority */}
             <Field label="Prioridad">
-              <div className="flex items-center gap-[6px] text-[13px]" style={{ color: 'var(--ink)' }}>
-                <span className="w-2 h-2 rounded-full" style={{ background: priorityColors[task.priority] }} />
-                {priority?.label}
-              </div>
-            </Field>
-
-            <Field label="Asignado">
-              <div className="flex flex-wrap gap-2">
-                {task.assignees.length > 0 ? task.assignees.map(id => {
-                  const u = getUser(id);
-                  return u ? (
-                    <div key={id} className="flex items-center gap-[6px]">
-                      <Avatar userId={id} size="sm" />
-                      <span className="text-[12px]" style={{ color: 'var(--ink)' }}>
-                        {u.name.split(' ')[0]}
-                      </span>
-                    </div>
-                  ) : null;
-                }) : (
-                  <span className="text-[12px]" style={{ color: 'var(--ink-4)' }}>Sin asignar</span>
-                )}
-              </div>
-            </Field>
-
-            <Field label="Fechas">
-              <span className="text-[12px]" style={{ color: 'var(--ink-2)' }}>
-                {fmtDate(task.start)} → {fmtDate(task.due)}
-              </span>
-            </Field>
-
-            <Field label="Estimado">
-              <span className="text-[12px]" style={{ color: 'var(--ink-2)' }}>
-                <strong style={{ color: 'var(--ink)' }}>{task.spent}h</strong> de {task.estimate}h
-              </span>
-              <div
-                className="h-[4px] rounded-full overflow-hidden mt-1"
-                style={{ background: 'var(--bg-3)' }}
+              <select
+                value={edited.priority}
+                onChange={e => patch({ priority: e.target.value as Task['priority'] })}
+                className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
+                style={{
+                  background: 'var(--bg-2)',
+                  borderColor: 'var(--line)',
+                  color: 'var(--ink)',
+                  fontFamily: 'var(--font)',
+                }}
               >
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${spentPct}%`,
-                    background: overBudget ? 'var(--danger)' : 'var(--accent)',
-                  }}
-                />
-              </div>
+                {PRIORITIES.map(p => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+              </select>
             </Field>
 
+            {/* Assignees */}
+            <Field label="Asignado">
+              <div className="flex flex-wrap gap-[6px]">
+                {allPeople.map(u => {
+                  const active = edited.assignees.includes(u.id);
+                  return (
+                    <button
+                      key={u.id}
+                      onClick={() => toggleAssignee(u.id)}
+                      title={u.name}
+                      className="transition-opacity"
+                      style={{ opacity: active ? 1 : 0.35, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                    >
+                      <Avatar userId={u.id} size="md" />
+                    </button>
+                  );
+                })}
+              </div>
+              {edited.assignees.length === 0 && (
+                <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Sin asignar</span>
+              )}
+            </Field>
+
+            {/* Due date */}
+            <Field label="Fecha límite">
+              <input
+                type="date"
+                value={edited.due ?? ''}
+                onChange={e => patch({ due: e.target.value || undefined })}
+                className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
+                style={{
+                  background: 'var(--bg-2)',
+                  borderColor: 'var(--line)',
+                  color: edited.due ? 'var(--ink)' : 'var(--ink-4)',
+                  fontFamily: 'var(--font)',
+                }}
+              />
+            </Field>
+
+            {/* Estimate / Spent */}
+            <Field label="Tiempo (h)">
+              <div className="flex gap-2">
+                <div className="flex flex-col gap-1 flex-1">
+                  <span className="text-[10px]" style={{ color: 'var(--ink-4)' }}>Estimado</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={edited.estimate ?? 0}
+                    onChange={e => setEdited(prev => prev ? { ...prev, estimate: +e.target.value } : prev)}
+                    onBlur={() => save({ estimate: edited.estimate })}
+                    className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
+                    style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
+                  />
+                </div>
+                <div className="flex flex-col gap-1 flex-1">
+                  <span className="text-[10px]" style={{ color: 'var(--ink-4)' }}>Real</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={edited.spent ?? 0}
+                    onChange={e => setEdited(prev => prev ? { ...prev, spent: +e.target.value } : prev)}
+                    onBlur={() => save({ spent: edited.spent })}
+                    className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
+                    style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
+                  />
+                </div>
+              </div>
+              {edited.estimate > 0 && (
+                <div className="h-[4px] rounded-full overflow-hidden mt-2" style={{ background: 'var(--bg-3)' }}>
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${spentPct}%`, background: overBudget ? 'var(--danger)' : 'var(--accent)' }}
+                  />
+                </div>
+              )}
+            </Field>
+
+            {/* Labels */}
             <Field label="Etiquetas">
               <div className="flex flex-wrap gap-[6px]">
                 {labels.map(l => l && (
@@ -293,14 +459,9 @@ export function TaskDetail({ task, onClose }: Props) {
               </div>
             </Field>
 
-            <Field label="Dependencias">
-              <span className="text-[12px]" style={{ color: 'var(--ink-4)' }}>Ninguna</span>
-            </Field>
-
             <hr style={{ border: 0, borderTop: '1px solid var(--line)', margin: '4px 0' }} />
-
             <div className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
-              Creado por {getUser('u1')?.name.split(' ')[0]} · {fmtDate(task.start)}
+              {fmtDate(task.start)} · {task.ref}
             </div>
           </aside>
         </div>
@@ -308,8 +469,6 @@ export function TaskDetail({ task, onClose }: Props) {
     </div>
   );
 }
-
-/* ── Helpers ─────────────────────────────────────────────────── */
 
 function IconBtn({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
   return (
@@ -323,15 +482,7 @@ function IconBtn({ children, onClick }: { children: React.ReactNode; onClick?: (
   );
 }
 
-function Section({
-  title,
-  right,
-  children,
-}: {
-  title: string;
-  right?: React.ReactNode;
-  children: React.ReactNode;
-}) {
+function Section({ title, right, children }: { title: string; right?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between">

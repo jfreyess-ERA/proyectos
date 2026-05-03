@@ -1,6 +1,7 @@
 'use client';
 import { Clock } from 'lucide-react';
 import { STATUSES, PEOPLE, getProject, fmtDate, dueClass } from '@/lib/data';
+import { useAuth } from '@/lib/auth-context';
 import type { Task, Project } from '@/lib/types';
 
 interface Props {
@@ -17,7 +18,8 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export function MyTasksView({ tasks, onOpenTask }: Props) {
-  const me = PEOPLE[0];
+  const { profile } = useAuth();
+  const me = profile ?? PEOPLE[0];
   const myTasks = tasks.filter(t => t.assignees.includes(me.id));
 
   const today = new Date(); today.setHours(0, 0, 0, 0);

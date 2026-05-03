@@ -26,6 +26,8 @@ interface ShellProps {
   onOpenCmdk?: () => void;
   onCreateTask?: () => void;
   onOpenSettings?: () => void;
+  onCreateProject?: () => void;
+  onEditProject?: (id: string) => void;
   children: React.ReactNode;
 }
 
@@ -41,6 +43,8 @@ export function Shell({
   onOpenCmdk,
   onCreateTask,
   onOpenSettings,
+  onCreateProject,
+  onEditProject,
   children,
 }: ShellProps) {
   const [collapsed, setCollapsed] = useState(false);
@@ -133,6 +137,7 @@ export function Shell({
                   Proyectos
                 </span>
                 <button
+                  onClick={onCreateProject}
                   className="border-0 bg-transparent text-[14px] leading-none px-1 rounded"
                   style={{ color: 'var(--ink-4)' }}
                   title="Nuevo proyecto"
@@ -142,24 +147,32 @@ export function Shell({
               </div>
             )}
             {projects.map(p => (
-              <button
-                key={p.id}
-                onClick={() => onNavChange?.('project:' + p.id)}
-                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors overflow-hidden"
-                style={{
-                  color: activeNav === 'project:' + p.id ? 'var(--ink)' : 'var(--ink-2)',
-                  background: activeNav === 'project:' + p.id ? 'var(--surface)' : 'transparent',
-                  fontWeight: activeNav === 'project:' + p.id ? 500 : 400,
-                }}
-              >
-                <span className="w-[10px] h-[10px] rounded-[3px] flex-shrink-0" style={{ background: p.color }} />
-                {!collapsed && (
-                  <>
+              <div key={p.id} className="flex items-center group">
+                <button
+                  onClick={() => onNavChange?.('project:' + p.id)}
+                  className="flex items-center gap-[10px] flex-1 text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors overflow-hidden min-w-0"
+                  style={{
+                    color: activeNav === 'project:' + p.id ? 'var(--ink)' : 'var(--ink-2)',
+                    background: activeNav === 'project:' + p.id ? 'var(--surface)' : 'transparent',
+                    fontWeight: activeNav === 'project:' + p.id ? 500 : 400,
+                  }}
+                >
+                  <span className="w-[10px] h-[10px] rounded-[3px] flex-shrink-0" style={{ background: p.color }} />
+                  {!collapsed && (
                     <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{p.name}</span>
-                    {p.favorite && <Star size={12} className="ml-auto flex-shrink-0" style={{ color: 'var(--ink-4)' }} />}
-                  </>
+                  )}
+                </button>
+                {!collapsed && onEditProject && (
+                  <button
+                    onClick={e => { e.stopPropagation(); onEditProject(p.id); }}
+                    className="w-5 h-5 flex items-center justify-center rounded-[4px] border-0 bg-transparent opacity-0 group-hover:opacity-100 flex-shrink-0 mr-1 transition-opacity"
+                    style={{ color: 'var(--ink-4)', fontSize: 11 }}
+                    title="Editar proyecto"
+                  >
+                    ···
+                  </button>
                 )}
-              </button>
+              </div>
             ))}
           </div>
 

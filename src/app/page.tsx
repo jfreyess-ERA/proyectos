@@ -15,9 +15,10 @@ import { InboxView } from '@/components/InboxView';
 import { PeopleView } from '@/components/PeopleView';
 import { ReportsView } from '@/components/ReportsView';
 import { SettingsPanel } from '@/components/SettingsPanel';
+import { ProjectModal } from '@/components/ProjectModal';
 import { useNorteData } from '@/lib/useNorteData';
 import { useAuth } from '@/lib/auth-context';
-import type { Task } from '@/lib/types';
+import type { Task, Project } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
 type ViewId = 'board' | 'list' | 'timeline' | 'calendar';
@@ -34,6 +35,8 @@ export default function Home() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createDefaultStatus, setCreateDefaultStatus] = useState<Task['status']>('todo');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | undefined>(undefined);
 
   useEffect(() => {
     if (!authLoading && !session) {
@@ -59,12 +62,13 @@ export default function Home() {
       if (e.key === 'Escape') {
         if (cmdkOpen) { setCmdkOpen(false); return; }
         if (settingsOpen) { setSettingsOpen(false); return; }
+        if (projectModalOpen) { setProjectModalOpen(false); return; }
         if (selectedTask) setSelectedTask(null);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [cmdkOpen, selectedTask, settingsOpen]);
+  }, [cmdkOpen, selectedTask, settingsOpen, projectModalOpen]);
 
   function handleNav(id: NavId) {
     setActiveNav(id);
@@ -75,6 +79,18 @@ export default function Home() {
   function openCreateTask(defaultStatus: Task['status'] = 'todo') {
     setCreateDefaultStatus(defaultStatus);
     setCreateOpen(true);
+  }
+
+  function openCreateProject() {
+    setEditingProject(undefined);
+    setProjectModalOpen(true);
+  }
+
+  function openEditProject(id: string) {
+    const p = projects.find(pr => pr.id === id);
+    if (!p) return;
+    setEditingProject(p);
+    setProjectModalOpen(true);
   }
 
   if (authLoading || !session) {
@@ -102,6 +118,7 @@ export default function Home() {
       default:         return (
         <Board
           tasks={visibleTasks}
+          users={users}
           onOpenTask={setSelectedTask}
           onCreateTask={openCreateTask}
         />
@@ -123,6 +140,8 @@ export default function Home() {
         onOpenCmdk={() => setCmdkOpen(true)}
         onCreateTask={() => openCreateTask()}
         onOpenSettings={() => setSettingsOpen(true)}
+        onCreateProject={openCreateProject}
+        onEditProject={openEditProject}
         loading={loading}
       >
         {error && (
@@ -134,7 +153,12 @@ export default function Home() {
         {renderContent()}
       </Shell>
 
-      <TaskDetail task={selectedTask} onClose={() => setSelectedTask(null)} />
+      <TaskDetail
+        task={selectedTask}
+        users={users}
+        onClose={() => setSelectedTask(null)}
+        onUpdated={updated => { setSelectedTask(updated); refetch(); }}
+      />
 
       <CommandPalette
         open={cmdkOpen}
@@ -153,6 +177,18 @@ export default function Home() {
         users={users}
         onClose={() => setCreateOpen(false)}
         onCreated={() => refetch()}
+      />
+
+      <ProjectModal
+        open={projectModalOpen}
+        project={editingProject}
+        onClose={() => setProjectModalOpen(false)}
+        onSaved={() => {
+          refetch();
+          if (editingProject && activeNav === 'project:' + editingProject.id) {
+            setActiveNav('dashboard');
+          }
+        }}
       />
 
       <SettingsPanel

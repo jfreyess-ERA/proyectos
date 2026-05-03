@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Task, Project, User, Label } from './types';
+import type { Task, Project, User, Label, Comment } from './types';
 
 // ── Row types from Supabase ────────────────────────────────────────
 
@@ -97,6 +97,72 @@ export interface NewTaskInput {
   assignees: string[];
   due_date?: string;
   description?: string;
+}
+
+export async function updateTask(
+  id: string,
+  fields: Partial<{
+    title: string;
+    status: Task['status'];
+    priority: Task['priority'];
+    assignees: string[];
+    due_date: string | null;
+    description: string;
+    estimate: number;
+    spent: number;
+  }>
+): Promise<Task> {
+  const { data, error } = await supabase
+    .from('tasks')
+    .update(fields)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToTask(data as TaskRow);
+}
+
+export async function insertProject(input: { name: string; key: string; color: string }): Promise<Project> {
+  const { data, error } = await supabase
+    .from('projects')
+    .insert({ id: crypto.randomUUID(), ...input, favorite: false })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Project;
+}
+
+export async function updateProject(
+  id: string,
+  fields: Partial<{ name: string; color: string; favorite: boolean }>
+): Promise<void> {
+  const { error } = await supabase.from('projects').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  const { error } = await supabase.from('projects').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function fetchComments(taskId: string): Promise<Comment[]> {
+  const { data, error } = await supabase
+    .from('task_comments')
+    .select('*')
+    .eq('task_id', taskId)
+    .order('created_at');
+  if (error) throw error;
+  return data as Comment[];
+}
+
+export async function insertComment(taskId: string, userId: string, content: string): Promise<Comment> {
+  const { data, error } = await supabase
+    .from('task_comments')
+    .insert({ task_id: taskId, user_id: userId, content })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Comment;
 }
 
 export async function insertTask(input: NewTaskInput): Promise<Task> {

@@ -12,21 +12,24 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, MoreHorizontal, Clock } from 'lucide-react';
-import { STATUSES, getProject, getLabel, fmtDate, dueClass } from '@/lib/data';
+import { Plus, MoreHorizontal, Clock, X } from 'lucide-react';
+import { STATUSES, PRIORITIES, getProject, getLabel, fmtDate, dueClass, avatarBg } from '@/lib/data';
 import { updateTaskStatus } from '@/lib/db';
 import { AvatarStack } from './Avatar';
-import type { Task } from '@/lib/types';
+import type { Task, User } from '@/lib/types';
 
 interface Props {
   tasks: Task[];
+  users?: User[];
   onOpenTask: (task: Task) => void;
   onCreateTask?: (defaultStatus: Task['status']) => void;
 }
 
-export function Board({ tasks: propTasks, onOpenTask, onCreateTask }: Props) {
+export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }: Props) {
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [filterAssignees, setFilterAssignees] = useState<string[]>([]);
+  const [filterPriorities, setFilterPriorities] = useState<string[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -36,7 +39,21 @@ export function Board({ tasks: propTasks, onOpenTask, onCreateTask }: Props) {
     statusOverrides[t.id] ? { ...t, status: statusOverrides[t.id] as Task['status'] } : t
   );
 
+  const filteredTasks = tasks.filter(t => {
+    if (filterAssignees.length > 0 && !filterAssignees.some(id => t.assignees.includes(id))) return false;
+    if (filterPriorities.length > 0 && !filterPriorities.includes(t.priority)) return false;
+    return true;
+  });
+
   const activeTask = activeId ? tasks.find(t => t.id === activeId) ?? null : null;
+  const hasFilters = filterAssignees.length > 0 || filterPriorities.length > 0;
+
+  function toggleAssigneeFilter(id: string) {
+    setFilterAssignees(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+  function togglePriorityFilter(id: string) {
+    setFilterPriorities(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
 
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(active.id as string);
@@ -53,23 +70,91 @@ export function Board({ tasks: propTasks, onOpenTask, onCreateTask }: Props) {
     }
   }
 
+  const priorityColors: Record<string, string> = {
+    urgent: 'oklch(0.58 0.18 25)',
+    high:   'oklch(0.65 0.14 50)',
+    med:    'oklch(0.62 0.05 250)',
+    low:    'oklch(0.62 0.02 250)',
+  };
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div
-        className="h-full overflow-x-auto overflow-y-hidden"
-        style={{ padding: '16px 24px 24px' }}
-      >
-        <div className="flex gap-[14px] h-full">
-          {STATUSES.map(status => (
-            <KanbanColumn
-              key={status.id}
-              status={status}
-              tasks={tasks.filter(t => t.status === status.id)}
-              onOpenTask={onOpenTask}
-              onCreateTask={onCreateTask}
-              activeId={activeId}
-            />
+      <div className="flex flex-col h-full min-h-0">
+        {/* Filter bar */}
+        <div
+          className="flex items-center gap-3 px-6 py-2 border-b flex-shrink-0 flex-wrap"
+          style={{ borderColor: 'var(--line)', background: 'var(--bg)' }}
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
+            Filtrar
+          </span>
+          {/* Assignee filters */}
+          {users.map(u => (
+            <button
+              key={u.id}
+              onClick={() => toggleAssigneeFilter(u.id)}
+              title={u.name}
+              className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold transition-opacity border-0"
+              style={{
+                background: avatarBg(u.hue),
+                opacity: filterAssignees.length === 0 || filterAssignees.includes(u.id) ? 1 : 0.3,
+                outline: filterAssignees.includes(u.id) ? `2px solid ${avatarBg(u.hue)}` : 'none',
+                outlineOffset: 2,
+                cursor: 'pointer',
+              }}
+            >
+              {u.initials.slice(0, 1)}
+            </button>
           ))}
+
+          <div className="w-px h-4 flex-shrink-0" style={{ background: 'var(--line)' }} />
+
+          {/* Priority filters */}
+          {PRIORITIES.map(p => (
+            <button
+              key={p.id}
+              onClick={() => togglePriorityFilter(p.id)}
+              className="flex items-center gap-[5px] h-6 px-2 rounded-full text-[11px] border transition-colors"
+              style={{
+                borderColor: filterPriorities.includes(p.id) ? p.tone : 'var(--line)',
+                background: filterPriorities.includes(p.id) ? p.tone + '22' : 'transparent',
+                color: filterPriorities.includes(p.id) ? p.tone : 'var(--ink-3)',
+                cursor: 'pointer',
+              }}
+            >
+              <span className="w-[6px] h-[6px] rounded-full flex-shrink-0" style={{ background: priorityColors[p.id] }} />
+              {p.label}
+            </button>
+          ))}
+
+          {hasFilters && (
+            <button
+              onClick={() => { setFilterAssignees([]); setFilterPriorities([]); }}
+              className="flex items-center gap-1 h-6 px-2 rounded-full text-[11px] border-0 ml-auto"
+              style={{ background: 'var(--bg-3)', color: 'var(--ink-3)', cursor: 'pointer' }}
+            >
+              <X size={11} /> Limpiar
+            </button>
+          )}
+        </div>
+
+        {/* Board columns */}
+        <div
+          className="flex-1 overflow-x-auto overflow-y-hidden min-h-0"
+          style={{ padding: '16px 24px 24px' }}
+        >
+          <div className="flex gap-[14px] h-full">
+            {STATUSES.map(status => (
+              <KanbanColumn
+                key={status.id}
+                status={status}
+                tasks={filteredTasks.filter(t => t.status === status.id)}
+                onOpenTask={onOpenTask}
+                onCreateTask={onCreateTask}
+                activeId={activeId}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
