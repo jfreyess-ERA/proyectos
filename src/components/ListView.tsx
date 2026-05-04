@@ -1,13 +1,31 @@
 'use client';
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
-import { STATUSES, PRIORITIES, getLabel, fmtDate, dueClass } from '@/lib/data';
+import { ChevronDown, ChevronRight, Plus, Download } from 'lucide-react';
+import { STATUSES, PRIORITIES, getLabel, getProject, getUser, fmtDate, dueClass } from '@/lib/data';
 import { AvatarStack } from './Avatar';
 import type { Task } from '@/lib/types';
 
 interface Props {
   tasks: Task[];
   onOpenTask: (task: Task) => void;
+}
+
+function exportCSV(tasks: Task[]) {
+  const headers = ['Ref', 'Título', 'Proyecto', 'Estado', 'Prioridad', 'Asignados', 'Etiquetas', 'Inicio', 'Vence', 'Estimado (h)', 'Real (h)'];
+  const rows = tasks.map(t => {
+    const proj     = getProject(t.project);
+    const assignees = t.assignees.map(id => getUser(id)?.name ?? id).join('; ');
+    const labels   = t.labels.map(id => getLabel(id)?.text ?? id).join('; ');
+    return [t.ref, t.title, proj?.name ?? '', t.status, t.priority, assignees, labels, t.start ?? '', t.due ?? '', t.estimate, t.spent];
+  });
+  const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `tareas-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -28,6 +46,16 @@ export function ListView({ tasks, onOpenTask }: Props) {
   return (
     <div className="h-full overflow-auto" style={{ padding: '0 24px 24px' }}>
       <div className="flex flex-col">
+        {/* Toolbar */}
+        <div className="flex items-center justify-end py-3 gap-2">
+          <button
+            onClick={() => exportCSV(tasks)}
+            className="flex items-center gap-[6px] h-7 px-3 rounded-[6px] text-[12px] border-0 transition-colors"
+            style={{ background: 'var(--bg-2)', color: 'var(--ink-3)', border: '1px solid var(--line)' }}
+          >
+            <Download size={12} /> Exportar CSV
+          </button>
+        </div>
         {/* Header row */}
         <div
           className="grid sticky top-0 z-10 h-8 border-b"

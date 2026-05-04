@@ -1,13 +1,18 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { X, Paperclip, Archive, MoreHorizontal, Plus, Send, Trash2, FileText, Image as ImageIcon, Upload } from 'lucide-react';
+import { X, Paperclip, Archive, MoreHorizontal, Plus, Send, Trash2, FileText, Image as ImageIcon, Upload, Check } from 'lucide-react';
 import {
-  getProject, getLabel, getUser, fmtDate, PEOPLE, STATUSES, PRIORITIES,
+  getProject, getLabel, getUser, fmtDate, PEOPLE, STATUSES, PRIORITIES, LABELS,
 } from '@/lib/data';
-import { updateTask, fetchComments, insertComment, logActivity, fetchActivity, fetchAttachments, uploadAttachment, deleteAttachment } from '@/lib/db';
+import {
+  updateTask, fetchComments, insertComment,
+  logActivity, fetchActivity,
+  fetchAttachments, uploadAttachment, deleteAttachment,
+  fetchSubtasks, insertSubtask, toggleSubtask, deleteSubtask,
+} from '@/lib/db';
 import { useAuth } from '@/lib/auth-context';
 import { Avatar } from './Avatar';
-import type { Task, Comment, Activity, Attachment, User } from '@/lib/types';
+import type { Task, Comment, Activity, Attachment, User, SubtaskItem } from '@/lib/types';
 
 interface Props {
   task: Task | null;
@@ -20,35 +25,52 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
   const { profile } = useAuth();
   const allPeople = users.length > 0 ? users : PEOPLE;
 
-  const [edited, setEdited] = useState<Task | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [edited, setEdited]         = useState<Task | null>(null);
+  const [saving, setSaving]         = useState(false);
+  const [comments, setComments]     = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [postingComment, setPostingComment] = useState(false);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [editingDesc, setEditingDesc] = useState(false);
-  const [activity, setActivity] = useState<Activity[]>([]);
+  const [editingTitle, setEditingTitle]     = useState(false);
+  const [editingDesc, setEditingDesc]       = useState(false);
+  const [activity, setActivity]     = useState<Activity[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const [uploading, setUploading]   = useState(false);
+  const [subtasks, setSubtasks]     = useState<SubtaskItem[]>([]);
+  const [newSubtask, setNewSubtask] = useState('');
+  const [addingSubtask, setAddingSubtask] = useState(false);
+  const [showLabelPicker, setShowLabelPicker] = useState(false);
+  const labelPickerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef   = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!task) return;
     setEdited(task);
     setEditingTitle(false);
     setEditingDesc(false);
+    setShowLabelPicker(false);
     fetchComments(task.id).then(setComments).catch(() => {});
     fetchActivity(task.id).then(setActivity).catch(() => {});
     fetchAttachments(task.id).then(setAttachments).catch(() => {});
+    fetchSubtasks(task.id).then(setSubtasks).catch(() => {});
   }, [task?.id]);
+
+  // Close label picker on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (labelPickerRef.current && !labelPickerRef.current.contains(e.target as Node)) {
+        setShowLabelPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   if (!task || !edited) return null;
 
-  const taskId = task.id;
+  const taskId  = task.id;
   const project = getProject(edited.project);
-  const labels = edited.labels.map(id => getLabel(id)).filter(Boolean);
-  const spentPct = edited.estimate > 0 ? Math.min(100, (edited.spent / edited.estimate) * 100) : 0;
+  const labels  = edited.labels.map(id => getLabel(id)).filter(Boolean);
+  const spentPct   = edited.estimate > 0 ? Math.min(100, (edited.spent / edited.estimate) * 100) : 0;
   const overBudget = edited.spent > edited.estimate;
 
   async function save(fields: Partial<Task>, activityMsg?: string) {
@@ -62,6 +84,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
       if ('title' in fields)       dbFields.title       = fields.title;
       if ('description' in fields) dbFields.description = fields.description;
       if ('assignees' in fields)   dbFields.assignees   = fields.assignees;
+      if ('labels' in fields)      dbFields.label_ids   = fields.labels;
       if ('estimate' in fields)    dbFields.estimate    = fields.estimate;
       if ('spent' in fields)       dbFields.spent       = fields.spent;
 
@@ -87,14 +110,19 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
 
   function toggleAssignee(userId: string) {
     const current = edited!.assignees;
-    const next = current.includes(userId)
-      ? current.filter(id => id !== userId)
-      : [...current, userId];
-    const user = allPeople.find(u => u.id === userId);
-    const action = current.includes(userId)
-      ? `Removió a ${user?.name ?? userId}`
-      : `Asignó a ${user?.name ?? userId}`;
+    const next    = current.includes(userId) ? current.filter(id => id !== userId) : [...current, userId];
+    const user    = allPeople.find(u => u.id === userId);
+    const action  = current.includes(userId) ? `Removió a ${user?.name ?? userId}` : `Asignó a ${user?.name ?? userId}`;
     patch({ assignees: next }, action);
+  }
+
+  function toggleLabel(labelId: string) {
+    const current = edited!.labels;
+    const next    = current.includes(labelId) ? current.filter(id => id !== labelId) : [...current, labelId];
+    const lbl     = LABELS.find(l => l.id === labelId);
+    const action  = current.includes(labelId) ? `Quitó etiqueta "${lbl?.text}"` : `Agregó etiqueta "${lbl?.text}"`;
+    setEdited(prev => prev ? { ...prev, labels: next } : prev);
+    save({ labels: next }, action);
   }
 
   async function handleComment(e: React.FormEvent) {
@@ -105,15 +133,42 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
       const c = await insertComment(taskId, profile.id, newComment.trim());
       setComments(prev => [...prev, c]);
       setNewComment('');
-      if (profile?.id) {
-        await logActivity(taskId, profile.id, 'Agregó un comentario');
-        fetchActivity(taskId).then(setActivity).catch(() => {});
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setPostingComment(false);
-    }
+      await logActivity(taskId, profile.id, 'Agregó un comentario');
+      fetchActivity(taskId).then(setActivity).catch(() => {});
+    } catch (e) { console.error(e); } finally { setPostingComment(false); }
+  }
+
+  async function handleAddSubtask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newSubtask.trim()) return;
+    setAddingSubtask(true);
+    try {
+      const item = await insertSubtask(taskId, newSubtask.trim());
+      setSubtasks(prev => [...prev, item]);
+      setNewSubtask('');
+      // Update local task summary
+      setEdited(prev => prev ? { ...prev, subtasks: { done: prev.subtasks.done, total: prev.subtasks.total + 1 } } : prev);
+    } catch (e) { console.error(e); } finally { setAddingSubtask(false); }
+  }
+
+  async function handleToggleSubtask(sub: SubtaskItem) {
+    const next = !sub.done;
+    setSubtasks(prev => prev.map(s => s.id === sub.id ? { ...s, done: next } : s));
+    setEdited(prev => {
+      if (!prev) return prev;
+      const delta = next ? 1 : -1;
+      return { ...prev, subtasks: { done: prev.subtasks.done + delta, total: prev.subtasks.total } };
+    });
+    await toggleSubtask(sub.id, next, taskId);
+  }
+
+  async function handleDeleteSubtask(sub: SubtaskItem) {
+    setSubtasks(prev => prev.filter(s => s.id !== sub.id));
+    setEdited(prev => {
+      if (!prev) return prev;
+      return { ...prev, subtasks: { done: sub.done ? prev.subtasks.done - 1 : prev.subtasks.done, total: prev.subtasks.total - 1 } };
+    });
+    await deleteSubtask(sub.id, taskId);
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -125,9 +180,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
       setAttachments(prev => [...prev, att]);
       await logActivity(taskId, profile.id, `Adjuntó ${file.name}`);
       fetchActivity(taskId).then(setActivity).catch(() => {});
-    } catch (err) {
-      console.error(err);
-    } finally {
+    } catch (err) { console.error(err); } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -141,9 +194,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
         await logActivity(taskId, profile.id, `Eliminó adjunto ${att.name}`);
         fetchActivity(taskId).then(setActivity).catch(() => {});
       }
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   }
 
   function fmtSize(bytes?: number) {
@@ -153,14 +204,11 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  function isImage(name: string) {
-    return /\.(png|jpe?g|gif|webp|svg)$/i.test(name);
-  }
+  function isImage(name: string) { return /\.(png|jpe?g|gif|webp|svg)$/i.test(name); }
 
   function fmtActivityTime(iso: string) {
     const d = new Date(iso);
-    const now = new Date();
-    const diff = (now.getTime() - d.getTime()) / 1000;
+    const diff = (Date.now() - d.getTime()) / 1000;
     if (diff < 60)    return 'Ahora';
     if (diff < 3600)  return `Hace ${Math.floor(diff / 60)}m`;
     if (diff < 86400) return `Hace ${Math.floor(diff / 3600)}h`;
@@ -176,28 +224,18 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
       <div
         className="flex flex-col overflow-hidden"
         style={{
-          width: 'min(900px, 92vw)',
-          maxHeight: '90vh',
-          background: 'var(--surface)',
-          border: '1px solid var(--line)',
-          borderRadius: 14,
-          boxShadow: 'var(--shadow-pop)',
+          width: 'min(900px, 92vw)', maxHeight: '90vh',
+          background: 'var(--surface)', border: '1px solid var(--line)',
+          borderRadius: 14, boxShadow: 'var(--shadow-pop)',
         }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0"
-          style={{ borderColor: 'var(--line)' }}
-        >
+        <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--line)' }}>
           <div className="flex items-center gap-[10px]">
             <span className="w-2 h-2 rounded-[2px]" style={{ background: project?.color }} />
-            <span className="text-[12.5px]" style={{ color: 'var(--ink-3)' }}>
-              {project?.name} · {task.ref}
-            </span>
-            {saving && (
-              <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Guardando…</span>
-            )}
+            <span className="text-[12.5px]" style={{ color: 'var(--ink-3)' }}>{project?.name} · {task.ref}</span>
+            {saving && <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Guardando…</span>}
           </div>
           <div className="flex items-center gap-1">
             <IconBtn onClick={() => fileInputRef.current?.click()}><Paperclip size={15} /></IconBtn>
@@ -212,25 +250,22 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
           {/* Main */}
           <div className="flex-1 min-w-0 overflow-y-auto p-6 flex flex-col gap-6">
 
-            {/* Editable title */}
+            {/* Title */}
             {editingTitle ? (
               <textarea
-                ref={titleRef}
                 value={edited.title}
                 onChange={e => setEdited(prev => prev ? { ...prev, title: e.target.value } : prev)}
                 onBlur={() => { setEditingTitle(false); save({ title: edited.title }, 'Actualizó el título'); }}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setEditingTitle(false); save({ title: edited.title }, 'Actualizó el título'); }}}
-                autoFocus
-                rows={2}
+                autoFocus rows={2}
                 className="w-full text-[20px] font-semibold leading-tight tracking-tight resize-none border-0 bg-transparent outline-none rounded-[6px] p-1 -mx-1"
                 style={{ color: 'var(--ink)', fontFamily: 'var(--font)' }}
               />
             ) : (
               <h2
-                className="text-[20px] font-semibold leading-tight tracking-tight cursor-text rounded-[6px] p-1 -mx-1 -my-1 transition-colors"
+                className="text-[20px] font-semibold leading-tight tracking-tight cursor-text rounded-[6px] p-1 -mx-1 -my-1"
                 style={{ color: 'var(--ink)' }}
                 onClick={() => setEditingTitle(true)}
-                title="Click para editar"
               >
                 {edited.title}
               </h2>
@@ -243,26 +278,83 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                   value={edited.description ?? ''}
                   onChange={e => setEdited(prev => prev ? { ...prev, description: e.target.value } : prev)}
                   onBlur={() => { setEditingDesc(false); save({ description: edited.description }, 'Actualizó la descripción'); }}
-                  autoFocus
-                  rows={5}
+                  autoFocus rows={5}
                   className="w-full text-[13.5px] leading-relaxed resize-none rounded-[8px] px-3 py-2 border outline-none"
-                  style={{
-                    color: 'var(--ink-2)',
-                    fontFamily: 'var(--font)',
-                    background: 'var(--bg-2)',
-                    borderColor: 'var(--accent)',
-                  }}
+                  style={{ color: 'var(--ink-2)', fontFamily: 'var(--font)', background: 'var(--bg-2)', borderColor: 'var(--accent)' }}
                 />
               ) : (
                 <p
-                  className="text-[13.5px] leading-relaxed min-h-[40px] rounded-[6px] p-1 -mx-1 cursor-text transition-colors"
+                  className="text-[13.5px] leading-relaxed min-h-[40px] rounded-[6px] p-1 -mx-1 cursor-text"
                   style={{ color: edited.description ? 'var(--ink-2)' : 'var(--ink-4)' }}
                   onClick={() => setEditingDesc(true)}
-                  title="Click para editar"
                 >
                   {edited.description || 'Sin descripción. Click para agregar…'}
                 </p>
               )}
+            </Section>
+
+            {/* Subtasks */}
+            <Section
+              title="Subtareas"
+              right={
+                <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+                  {subtasks.filter(s => s.done).length}/{subtasks.length}
+                </span>
+              }
+            >
+              <div className="flex flex-col gap-[6px]">
+                {subtasks.map(sub => (
+                  <div key={sub.id} className="flex items-center gap-3 group">
+                    <button
+                      onClick={() => handleToggleSubtask(sub)}
+                      className="w-4 h-4 rounded-[4px] border flex items-center justify-center flex-shrink-0 transition-colors"
+                      style={{
+                        background: sub.done ? 'var(--accent)' : 'transparent',
+                        borderColor: sub.done ? 'var(--accent)' : 'var(--line)',
+                        color: 'white',
+                      }}
+                    >
+                      {sub.done && <Check size={10} />}
+                    </button>
+                    <span
+                      className="text-[13px] flex-1"
+                      style={{ color: sub.done ? 'var(--ink-3)' : 'var(--ink)', textDecoration: sub.done ? 'line-through' : 'none' }}
+                    >
+                      {sub.title}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteSubtask(sub)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity border-0 bg-transparent"
+                      style={{ color: 'var(--ink-4)' }}
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Add subtask */}
+                <form onSubmit={handleAddSubtask} className="flex items-center gap-2 mt-1">
+                  <span className="w-4 h-4 rounded-[4px] border flex-shrink-0" style={{ borderColor: 'var(--line)' }} />
+                  <input
+                    value={newSubtask}
+                    onChange={e => setNewSubtask(e.target.value)}
+                    placeholder="Agregar subtarea…"
+                    className="flex-1 text-[12.5px] border-0 bg-transparent outline-none"
+                    style={{ color: 'var(--ink)', fontFamily: 'var(--font)' }}
+                    disabled={addingSubtask}
+                  />
+                  {newSubtask.trim() && (
+                    <button
+                      type="submit"
+                      disabled={addingSubtask}
+                      className="text-[11px] border-0 bg-transparent"
+                      style={{ color: 'var(--accent)' }}
+                    >
+                      Agregar
+                    </button>
+                  )}
+                </form>
+              </div>
             </Section>
 
             {/* Attachments */}
@@ -275,17 +367,11 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                   className="flex items-center gap-1 text-[11px] border-0 bg-transparent"
                   style={{ color: 'var(--accent)' }}
                 >
-                  <Upload size={11} />
-                  {uploading ? 'Subiendo…' : 'Subir archivo'}
+                  <Upload size={11} />{uploading ? 'Subiendo…' : 'Subir archivo'}
                 </button>
               }
             >
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleUpload}
-              />
+              <input ref={fileInputRef} type="file" className="hidden" onChange={handleUpload} />
               {attachments.length === 0 && !uploading ? (
                 <div
                   className="flex flex-col items-center justify-center gap-2 rounded-[8px] border-2 border-dashed py-5 cursor-pointer text-[12px]"
@@ -306,92 +392,24 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                       <span style={{ color: 'var(--ink-3)' }}>
                         {isImage(att.name) ? <ImageIcon size={14} /> : <FileText size={14} />}
                       </span>
-                      <a
-                        href={att.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 min-w-0 truncate text-[12.5px]"
-                        style={{ color: 'var(--accent)' }}
-                      >
+                      <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 truncate text-[12.5px]" style={{ color: 'var(--accent)' }}>
                         {att.name}
                       </a>
-                      {att.size && (
-                        <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--ink-4)' }}>
-                          {fmtSize(att.size)}
-                        </span>
-                      )}
-                      <button
-                        onClick={() => handleDeleteAttachment(att)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity border-0 bg-transparent"
-                        style={{ color: 'var(--danger)' }}
-                        title="Eliminar adjunto"
-                      >
+                      {att.size && <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--ink-4)' }}>{fmtSize(att.size)}</span>}
+                      <button onClick={() => handleDeleteAttachment(att)} className="opacity-0 group-hover:opacity-100 transition-opacity border-0 bg-transparent" style={{ color: 'var(--danger)' }}>
                         <Trash2 size={12} />
                       </button>
                     </div>
                   ))}
-                  {uploading && (
-                    <div className="flex items-center gap-2 px-3 py-2 text-[12px]" style={{ color: 'var(--ink-4)' }}>
-                      <span className="animate-pulse">Subiendo…</span>
-                    </div>
-                  )}
+                  {uploading && <div className="flex items-center gap-2 px-3 py-2 text-[12px]" style={{ color: 'var(--ink-4)' }}><span className="animate-pulse">Subiendo…</span></div>}
                 </div>
               )}
-            </Section>
-
-            {/* Subtasks */}
-            <Section
-              title="Subtareas"
-              right={
-                <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
-                  {task.subtasks.done}/{task.subtasks.total}
-                </span>
-              }
-            >
-              <div className="flex flex-col gap-[6px]">
-                {Array.from({ length: task.subtasks.total }).map((_, i) => {
-                  const done = i < task.subtasks.done;
-                  return (
-                    <div key={i} className="flex items-center gap-3">
-                      <span
-                        className="w-4 h-4 rounded-[4px] border flex items-center justify-center flex-shrink-0 text-[10px]"
-                        style={{
-                          background: done ? 'var(--accent)' : 'transparent',
-                          borderColor: done ? 'var(--accent)' : 'var(--line)',
-                          color: 'white',
-                        }}
-                      >
-                        {done && '✓'}
-                      </span>
-                      <span
-                        className="text-[13px]"
-                        style={{
-                          color: done ? 'var(--ink-3)' : 'var(--ink)',
-                          textDecoration: done ? 'line-through' : 'none',
-                        }}
-                      >
-                        Subtarea {i + 1}
-                      </span>
-                    </div>
-                  );
-                })}
-                <button
-                  className="flex items-center gap-1 text-[12px] border-0 bg-transparent mt-1"
-                  style={{ color: 'var(--ink-4)' }}
-                >
-                  <Plus size={12} /> Agregar subtarea
-                </button>
-              </div>
             </Section>
 
             {/* Comments */}
             <Section title={`Comentarios${comments.length > 0 ? ` (${comments.length})` : ''}`}>
               <div className="flex flex-col gap-4">
-                {comments.length === 0 && (
-                  <div className="text-[12px] py-1" style={{ color: 'var(--ink-4)' }}>
-                    Aún no hay comentarios.
-                  </div>
-                )}
+                {comments.length === 0 && <div className="text-[12px] py-1" style={{ color: 'var(--ink-4)' }}>Aún no hay comentarios.</div>}
                 {comments.map(c => {
                   const author = allPeople.find(u => u.id === c.user_id) ?? getUser(c.user_id);
                   const dt = new Date(c.created_at);
@@ -400,53 +418,34 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                       <Avatar userId={c.user_id} size="md" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2 mb-1">
-                          <span className="text-[12.5px] font-semibold" style={{ color: 'var(--ink)' }}>
-                            {author?.name ?? 'Usuario'}
-                          </span>
+                          <span className="text-[12.5px] font-semibold" style={{ color: 'var(--ink)' }}>{author?.name ?? 'Usuario'}</span>
                           <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
                             {dt.toLocaleDateString('es', { day: 'numeric', month: 'short' })} {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <p className="text-[13px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>
-                          {c.content}
-                        </p>
+                        <p className="text-[13px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>{c.content}</p>
                       </div>
                     </div>
                   );
                 })}
-
-                {/* Comment input */}
                 <form onSubmit={handleComment} className="flex gap-3">
                   {profile && <Avatar userId={profile.id} size="md" />}
-                  <div
-                    className="flex-1 rounded-[8px] border overflow-hidden"
-                    style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}
-                  >
+                  <div className="flex-1 rounded-[8px] border overflow-hidden" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
                     <textarea
                       value={newComment}
                       onChange={e => setNewComment(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { handleComment(e); }}}
-                      placeholder="Escribe un comentario…"
-                      rows={2}
+                      onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleComment(e); }}
+                      placeholder="Escribe un comentario…" rows={2}
                       className="w-full px-3 pt-2 text-[13px] resize-none border-0 bg-transparent outline-none"
                       style={{ color: 'var(--ink)', fontFamily: 'var(--font)' }}
                     />
-                    <div
-                      className="flex items-center justify-end px-2 py-[6px] border-t"
-                      style={{ borderColor: 'var(--line-2)' }}
-                    >
+                    <div className="flex items-center justify-end px-2 py-[6px] border-t" style={{ borderColor: 'var(--line-2)' }}>
                       <button
-                        type="submit"
-                        disabled={!newComment.trim() || postingComment}
+                        type="submit" disabled={!newComment.trim() || postingComment}
                         className="h-[26px] px-3 rounded-[6px] text-[12px] font-medium border-0 flex items-center gap-1 transition-opacity"
-                        style={{
-                          background: 'var(--accent)',
-                          color: 'var(--on-accent)',
-                          opacity: newComment.trim() && !postingComment ? 1 : 0.45,
-                        }}
+                        style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: newComment.trim() && !postingComment ? 1 : 0.45 }}
                       >
-                        <Send size={11} />
-                        {postingComment ? 'Enviando…' : 'Comentar'}
+                        <Send size={11} />{postingComment ? 'Enviando…' : 'Comentar'}
                       </button>
                     </div>
                   </div>
@@ -468,9 +467,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                             <span className="font-medium" style={{ color: 'var(--ink)' }}>{actor?.name ?? 'Usuario'}</span>
                             {' '}{a.action}
                           </span>
-                          <span className="ml-2 text-[11px]" style={{ color: 'var(--ink-4)' }}>
-                            {fmtActivityTime(a.created_at)}
-                          </span>
+                          <span className="ml-2 text-[11px]" style={{ color: 'var(--ink-4)' }}>{fmtActivityTime(a.created_at)}</span>
                         </div>
                       </div>
                     );
@@ -481,30 +478,21 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
           </div>
 
           {/* Sidebar */}
-          <aside
-            className="w-[280px] flex-shrink-0 border-l overflow-y-auto p-5 flex flex-col gap-4"
-            style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}
-          >
+          <aside className="w-[280px] flex-shrink-0 border-l overflow-y-auto p-5 flex flex-col gap-4" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
+
             {/* Status */}
             <Field label="Estado">
               <select
                 value={edited.status}
                 onChange={e => {
                   const val = e.target.value as Task['status'];
-                  const label = STATUSES.find(s => s.id === val)?.label ?? val;
-                  patch({ status: val }, `Cambió el estado a "${label}"`);
+                  const lbl = STATUSES.find(s => s.id === val)?.label ?? val;
+                  patch({ status: val }, `Cambió el estado a "${lbl}"`);
                 }}
                 className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
-                style={{
-                  background: 'var(--bg-2)',
-                  borderColor: 'var(--line)',
-                  color: 'var(--ink)',
-                  fontFamily: 'var(--font)',
-                }}
+                style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
               >
-                {STATUSES.map(s => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
-                ))}
+                {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
             </Field>
 
@@ -514,20 +502,13 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                 value={edited.priority}
                 onChange={e => {
                   const val = e.target.value as Task['priority'];
-                  const label = PRIORITIES.find(p => p.id === val)?.label ?? val;
-                  patch({ priority: val }, `Cambió la prioridad a "${label}"`);
+                  const lbl = PRIORITIES.find(p => p.id === val)?.label ?? val;
+                  patch({ priority: val }, `Cambió la prioridad a "${lbl}"`);
                 }}
                 className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
-                style={{
-                  background: 'var(--bg-2)',
-                  borderColor: 'var(--line)',
-                  color: 'var(--ink)',
-                  fontFamily: 'var(--font)',
-                }}
+                style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
               >
-                {PRIORITIES.map(p => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
-                ))}
+                {PRIORITIES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
             </Field>
 
@@ -537,52 +518,83 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                 {allPeople.map(u => {
                   const active = edited.assignees.includes(u.id);
                   return (
-                    <button
-                      key={u.id}
-                      onClick={() => toggleAssignee(u.id)}
-                      title={u.name}
-                      className="transition-opacity"
-                      style={{ opacity: active ? 1 : 0.35, border: 'none', background: 'transparent', cursor: 'pointer' }}
-                    >
+                    <button key={u.id} onClick={() => toggleAssignee(u.id)} title={u.name}
+                      style={{ opacity: active ? 1 : 0.35, border: 'none', background: 'transparent', cursor: 'pointer' }}>
                       <Avatar userId={u.id} size="md" />
                     </button>
                   );
                 })}
               </div>
-              {edited.assignees.length === 0 && (
-                <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Sin asignar</span>
-              )}
+              {edited.assignees.length === 0 && <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Sin asignar</span>}
+            </Field>
+
+            {/* Labels */}
+            <Field label="Etiquetas">
+              <div className="flex flex-wrap gap-[6px]" ref={labelPickerRef}>
+                {labels.map(l => l && (
+                  <button
+                    key={l.id}
+                    onClick={() => toggleLabel(l.id)}
+                    className="inline-flex items-center h-5 px-2 rounded-[4px] text-[11px] font-medium border-0"
+                    style={{ background: l.bg, color: l.fg }}
+                    title="Click para quitar"
+                  >
+                    {l.text} ×
+                  </button>
+                ))}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowLabelPicker(o => !o)}
+                    className="inline-flex items-center h-5 px-2 rounded-[4px] text-[11px] border-0 bg-transparent"
+                    style={{ color: 'var(--ink-4)' }}
+                  >
+                    <Plus size={10} /> Etiqueta
+                  </button>
+                  {showLabelPicker && (
+                    <div
+                      className="absolute left-0 top-[calc(100%+4px)] z-10 rounded-[10px] overflow-hidden flex flex-col py-1"
+                      style={{ width: 180, background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-pop)' }}
+                    >
+                      {LABELS.map(l => {
+                        const active = edited.labels.includes(l.id);
+                        return (
+                          <button
+                            key={l.id}
+                            onClick={() => toggleLabel(l.id)}
+                            className="flex items-center gap-2 px-3 py-[6px] text-left text-[12px] border-0 bg-transparent transition-colors"
+                            style={{ color: 'var(--ink)' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <span className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: l.fg }} />
+                            <span className="flex-1">{l.text}</span>
+                            {active && <Check size={11} style={{ color: 'var(--accent)' }} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </Field>
 
             {/* Start date */}
             <Field label="Fecha inicio">
               <input
-                type="date"
-                value={edited.start ?? ''}
+                type="date" value={edited.start ?? ''}
                 onChange={e => patch({ start: e.target.value || undefined }, e.target.value ? `Fijó inicio el ${e.target.value}` : 'Quitó la fecha de inicio')}
                 className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
-                style={{
-                  background: 'var(--bg-2)',
-                  borderColor: 'var(--line)',
-                  color: edited.start ? 'var(--ink)' : 'var(--ink-4)',
-                  fontFamily: 'var(--font)',
-                }}
+                style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: edited.start ? 'var(--ink)' : 'var(--ink-4)', fontFamily: 'var(--font)' }}
               />
             </Field>
 
             {/* Due date */}
             <Field label="Fecha límite">
               <input
-                type="date"
-                value={edited.due ?? ''}
+                type="date" value={edited.due ?? ''}
                 onChange={e => patch({ due: e.target.value || undefined }, e.target.value ? `Fijó vencimiento el ${e.target.value}` : 'Quitó la fecha límite')}
                 className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
-                style={{
-                  background: 'var(--bg-2)',
-                  borderColor: 'var(--line)',
-                  color: edited.due ? 'var(--ink)' : 'var(--ink-4)',
-                  fontFamily: 'var(--font)',
-                }}
+                style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: edited.due ? 'var(--ink)' : 'var(--ink-4)', fontFamily: 'var(--font)' }}
               />
             </Field>
 
@@ -591,10 +603,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
               <div className="flex gap-2">
                 <div className="flex flex-col gap-1 flex-1">
                   <span className="text-[10px]" style={{ color: 'var(--ink-4)' }}>Estimado</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={edited.estimate ?? 0}
+                  <input type="number" min={0} value={edited.estimate ?? 0}
                     onChange={e => setEdited(prev => prev ? { ...prev, estimate: +e.target.value } : prev)}
                     onBlur={() => save({ estimate: edited.estimate }, `Actualizó estimado a ${edited.estimate}h`)}
                     className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
@@ -603,10 +612,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                 </div>
                 <div className="flex flex-col gap-1 flex-1">
                   <span className="text-[10px]" style={{ color: 'var(--ink-4)' }}>Real</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={edited.spent ?? 0}
+                  <input type="number" min={0} value={edited.spent ?? 0}
                     onChange={e => setEdited(prev => prev ? { ...prev, spent: +e.target.value } : prev)}
                     onBlur={() => save({ spent: edited.spent }, `Actualizó tiempo real a ${edited.spent}h`)}
                     className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
@@ -616,39 +622,13 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
               </div>
               {edited.estimate > 0 && (
                 <div className="h-[4px] rounded-full overflow-hidden mt-2" style={{ background: 'var(--bg-3)' }}>
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${spentPct}%`, background: overBudget ? 'var(--danger)' : 'var(--accent)' }}
-                  />
+                  <div className="h-full rounded-full transition-all" style={{ width: `${spentPct}%`, background: overBudget ? 'var(--danger)' : 'var(--accent)' }} />
                 </div>
               )}
             </Field>
 
-            {/* Labels */}
-            <Field label="Etiquetas">
-              <div className="flex flex-wrap gap-[6px]">
-                {labels.map(l => l && (
-                  <span
-                    key={l.id}
-                    className="inline-flex items-center h-5 px-2 rounded-[4px] text-[11px] font-medium"
-                    style={{ background: l.bg, color: l.fg }}
-                  >
-                    {l.text}
-                  </span>
-                ))}
-                <button
-                  className="inline-flex items-center h-5 px-2 rounded-[4px] text-[11px] border-0 bg-transparent"
-                  style={{ color: 'var(--ink-4)' }}
-                >
-                  + Etiqueta
-                </button>
-              </div>
-            </Field>
-
             <hr style={{ border: 0, borderTop: '1px solid var(--line)', margin: '4px 0' }} />
-            <div className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
-              {fmtDate(task.start)} · {task.ref}
-            </div>
+            <div className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{fmtDate(task.start)} · {task.ref}</div>
           </aside>
         </div>
       </div>
@@ -658,11 +638,7 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
 
 function IconBtn({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors"
-      style={{ color: 'var(--ink-2)' }}
-    >
+    <button onClick={onClick} className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors" style={{ color: 'var(--ink-2)' }}>
       {children}
     </button>
   );
@@ -683,9 +659,7 @@ function Section({ title, right, children }: { title: string; right?: React.Reac
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-[6px]">
-      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
-        {label}
-      </span>
+      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>{label}</span>
       <div>{children}</div>
     </div>
   );

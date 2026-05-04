@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { fetchTasks, fetchProjects, fetchUsers, fetchLabels } from './db';
+import { fetchTasks, fetchProjects, fetchUsers, fetchLabels, taskRowToTask } from './db';
+import { supabase } from './supabase';
 import {
   TASKS as SEED_TASKS,
   PROJECTS as SEED_PROJECTS,
@@ -28,6 +29,7 @@ export function useNorteData(): NorteData {
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
+  // Initial fetch
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -50,6 +52,33 @@ export function useNorteData(): NorteData {
 
     return () => { cancelled = true; };
   }, [tick]);
+
+  // Realtime: sync task changes across tabs/users
+  useEffect(() => {
+    const channel = supabase
+      .channel('norte-tasks-rt')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setTasks(prev => [...prev, taskRowToTask(payload.new as any)]);
+          } else if (payload.eventType === 'UPDATE') {
+            setTasks(prev =>
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              prev.map(t => t.id === (payload.new as any).id ? taskRowToTask(payload.new as any) : t)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setTasks(prev => prev.filter(t => t.id !== (payload.old as any).id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   return { tasks, projects, users, labels, loading, error, refetch: () => setTick(t => t + 1) };
 }

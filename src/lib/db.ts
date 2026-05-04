@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment } from './types';
+import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem } from './types';
 
 // ── Row types from Supabase ────────────────────────────────────────
 
@@ -22,6 +22,10 @@ interface TaskRow {
 }
 
 // ── Mappers ────────────────────────────────────────────────────────
+
+export function taskRowToTask(row: TaskRow): Task {
+  return rowToTask(row);
+}
 
 function rowToTask(row: TaskRow): Task {
   return {
@@ -106,11 +110,14 @@ export async function updateTask(
     status: Task['status'];
     priority: Task['priority'];
     assignees: string[];
+    label_ids: string[];
     start_date: string | null;
     due_date: string | null;
     description: string;
     estimate: number;
     spent: number;
+    subtasks_done: number;
+    subtasks_total: number;
   }>
 ): Promise<Task> {
   const { data, error } = await supabase
@@ -272,4 +279,54 @@ export async function insertTask(input: NewTaskInput): Promise<Task> {
 
   if (error) throw error;
   return rowToTask(data as TaskRow);
+}
+
+// ── Subtasks ───────────────────────────────────────────────────────
+
+export async function fetchSubtasks(taskId: string): Promise<SubtaskItem[]> {
+  const { data } = await supabase
+    .from('task_subtasks')
+    .select('*')
+    .eq('task_id', taskId)
+    .order('position');
+  return (data ?? []) as SubtaskItem[];
+}
+
+async function syncSubtaskCounts(taskId: string): Promise<void> {
+  const { data } = await supabase
+    .from('task_subtasks')
+    .select('done')
+    .eq('task_id', taskId);
+  const total = data?.length ?? 0;
+  const done  = data?.filter(s => s.done).length ?? 0;
+  await supabase.from('tasks').update({ subtasks_done: done, subtasks_total: total }).eq('id', taskId);
+}
+
+export async function insertSubtask(taskId: string, title: string): Promise<SubtaskItem> {
+  const { data: existing } = await supabase
+    .from('task_subtasks')
+    .select('position')
+    .eq('task_id', taskId)
+    .order('position', { ascending: false })
+    .limit(1);
+  const position = existing?.length ? (existing[0] as { position: number }).position + 1 : 0;
+
+  const { data, error } = await supabase
+    .from('task_subtasks')
+    .insert({ task_id: taskId, title, done: false, position })
+    .select()
+    .single();
+  if (error) throw error;
+  await syncSubtaskCounts(taskId);
+  return data as SubtaskItem;
+}
+
+export async function toggleSubtask(subtaskId: string, done: boolean, taskId: string): Promise<void> {
+  await supabase.from('task_subtasks').update({ done }).eq('id', subtaskId);
+  await syncSubtaskCounts(taskId);
+}
+
+export async function deleteSubtask(subtaskId: string, taskId: string): Promise<void> {
+  await supabase.from('task_subtasks').delete().eq('id', subtaskId);
+  await syncSubtaskCounts(taskId);
 }

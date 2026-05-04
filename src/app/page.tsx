@@ -123,7 +123,7 @@ export default function Home() {
           const blockerTasks = tasks.filter(t => t.labels.includes('l6'));
           return <SavedView title="Bloqueantes" description="Tareas marcadas como bloqueantes" tasks={blockerTasks} projects={projects} onOpenTask={setSelectedTask} />;
         }
-        default:        return <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
+        default:        return <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
       }
     }
     switch (activeView) {

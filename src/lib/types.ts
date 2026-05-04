@@ -70,6 +70,15 @@ export interface Attachment {
   created_at: string;
 }
 
+export interface SubtaskItem {
+  id: string;
+  task_id: string;
+  title: string;
+  done: boolean;
+  position: number;
+  created_at: string;
+}
+
 export interface Comment {
   id: string;
   task_id: string;
