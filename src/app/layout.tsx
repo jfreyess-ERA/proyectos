@@ -16,8 +16,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Norte — Gestión de proyectos",
-  description: "Sistema de gestión de proyectos para equipos",
+  title: "Sistema Gestión ERA Group Chile",
+  description: "Sistema de gestión de proyectos ERA Group Chile",
 };
 
 export default function RootLayout({

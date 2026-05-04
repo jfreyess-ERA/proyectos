@@ -51,8 +51,8 @@ export default function Home() {
   const visibleTasks = projectId ? tasks.filter(t => t.project === projectId) : tasks;
 
   const crumbs = isProjectView && project
-    ? ['Norte', project.name]
-    : ['Norte', 'Inicio'];
+    ? ['ERA Group', project.name]
+    : ['ERA Group', 'Inicio'];
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

@@ -80,14 +80,14 @@ export function Shell({
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,.25)',
             }}
           >
-            N
+            E
           </div>
           {!collapsed && (
             <div className="min-w-0">
               <div className="font-semibold text-[14.5px] tracking-tight whitespace-nowrap" style={{ color: 'var(--ink)' }}>
-                Norte
+                ERA Group Chile
               </div>
-              <div className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Estudio · Equipo</div>
+              <div className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Sistema de Gestión</div>
             </div>
           )}
         </div>

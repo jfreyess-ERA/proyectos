@@ -45,11 +45,11 @@ export default function LoginPage() {
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,.25)',
             }}
           >
-            N
+            E
           </div>
           <div>
-            <div className="font-bold text-[16px] tracking-tight" style={{ color: 'var(--ink)' }}>Norte</div>
-            <div className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Gestión de proyectos</div>
+            <div className="font-bold text-[16px] tracking-tight" style={{ color: 'var(--ink)' }}>ERA Group Chile</div>
+            <div className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Sistema Gestión de Proyectos</div>
           </div>
         </div>
 
