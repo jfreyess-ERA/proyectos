@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { X, LogOut, Moon, Sun, Trash2, UserPlus, Pencil, Check, ChevronDown } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { avatarBg } from '@/lib/data';
 import type { User } from '@/lib/types';
@@ -87,17 +86,25 @@ export function SettingsPanel({ open, onClose }: Props) {
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
-    if (!profile) return;
+    if (!profile || !session?.access_token) return;
     setSavingProfile(true);
     setProfileOk(false);
-    const parts = profileName.trim().split(' ');
-    const initials = parts.length >= 2
-      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-      : profileName.slice(0, 2).toUpperCase();
-    await supabase.from('users').update({ name: profileName, role: profileRole, initials }).eq('id', profile.id);
-    await refreshProfile();
-    setSavingProfile(false);
-    setProfileOk(true);
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ name: profileName, role: profileRole }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        console.error('Error guardando perfil:', data.error);
+        return;
+      }
+      await refreshProfile();
+      setProfileOk(true);
+    } finally {
+      setSavingProfile(false);
+    }
   }
 
   async function handleSaveUser(id: string) {
