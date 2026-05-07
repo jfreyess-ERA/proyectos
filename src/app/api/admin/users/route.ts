@@ -93,8 +93,16 @@ export async function PATCH(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const body = await req.json();
-  const { id, name, role, is_admin } = body;
+  const { id, name, role, is_admin, password } = body;
   if (!id) return NextResponse.json({ error: 'Falta id' }, { status: 400 });
+
+  // If only changing password, skip profile update
+  if (password) {
+    if (password.length < 6) return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 });
+    const { error: pwErr } = await supabaseAdmin.auth.admin.updateUserById(id, { password });
+    if (pwErr) return NextResponse.json({ error: pwErr.message }, { status: 400 });
+    if (!name && !role && is_admin === undefined) return NextResponse.json({ ok: true });
+  }
 
   const fields: Record<string, unknown> = {};
   if (name  !== undefined) fields.name     = name;
