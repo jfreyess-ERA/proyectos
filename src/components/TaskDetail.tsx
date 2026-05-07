@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Paperclip, Archive, MoreHorizontal, Plus, Send, Trash2, FileText, Image as ImageIcon, Upload, Check } from 'lucide-react';
 import {
   getProject, getLabel, getUser, fmtDate, PEOPLE, STATUSES, PRIORITIES, LABELS,
@@ -44,6 +44,11 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
   const labelPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
 
+  // ── Timer ──────────────────────────────────────────────────────────
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerElapsed, setTimerElapsed] = useState(0); // seconds
+  const timerStartRef  = useRef<number>(0);
+
   useEffect(() => {
     if (!task) return;
     setEdited(task);
@@ -66,6 +71,21 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Stop timer when task changes
+  useEffect(() => {
+    setTimerRunning(false);
+    setTimerElapsed(0);
+  }, [task?.id]);
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    timerStartRef.current = Date.now() - timerElapsed * 1000;
+    const interval = setInterval(() => {
+      setTimerElapsed(Math.floor((Date.now() - timerStartRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timerRunning]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!task || !edited) return null;
 
@@ -197,6 +217,25 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
         fetchActivity(taskId).then(setActivity).catch(() => {});
       }
     } catch (err) { console.error(err); }
+  }
+
+  function fmtTimer(secs: number): string {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  async function stopTimerAndLog() {
+    if (!timerRunning) return;
+    setTimerRunning(false);
+    const hoursAdded = timerElapsed / 3600;
+    if (hoursAdded < 0.001) return;
+    const newSpent = Math.round(((edited!.spent ?? 0) + hoursAdded) * 100) / 100;
+    setEdited(prev => prev ? { ...prev, spent: newSpent } : prev);
+    await save({ spent: newSpent }, `Registró ${fmtTimer(timerElapsed)} de trabajo`);
+    setTimerElapsed(0);
   }
 
   function fmtSize(bytes?: number) {
@@ -627,6 +666,57 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
                   <div className="h-full rounded-full transition-all" style={{ width: `${spentPct}%`, background: overBudget ? 'var(--danger)' : 'var(--accent)' }} />
                 </div>
               )}
+            </Field>
+
+            {/* Timer */}
+            <Field label="Temporizador">
+              <div className="flex flex-col gap-2">
+                <div
+                  className="text-[20px] font-mono font-semibold tabular-nums text-center py-2 rounded-[8px]"
+                  style={{
+                    background: timerRunning ? 'oklch(0.95 0.06 160)' : 'var(--bg-2)',
+                    color: timerRunning ? 'oklch(0.38 0.14 160)' : 'var(--ink)',
+                    border: `1px solid ${timerRunning ? 'oklch(0.80 0.10 160)' : 'var(--line)'}`,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {fmtTimer(timerElapsed)}
+                </div>
+                <div className="flex gap-2">
+                  {!timerRunning ? (
+                    <button
+                      onClick={() => setTimerRunning(true)}
+                      className="flex-1 h-8 rounded-[7px] text-[12px] font-medium border-0 transition-colors"
+                      style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+                    >
+                      ▶ Iniciar
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={stopTimerAndLog}
+                        className="flex-1 h-8 rounded-[7px] text-[12px] font-medium border-0"
+                        style={{ background: 'oklch(0.55 0.14 160)', color: 'white' }}
+                      >
+                        ■ Parar y guardar
+                      </button>
+                      <button
+                        onClick={() => { setTimerRunning(false); setTimerElapsed(0); }}
+                        className="h-8 px-3 rounded-[7px] text-[12px] border-0"
+                        style={{ background: 'var(--bg-3)', color: 'var(--ink-3)' }}
+                        title="Cancelar"
+                      >
+                        ✕
+                      </button>
+                    </>
+                  )}
+                </div>
+                {timerRunning && timerElapsed > 0 && (
+                  <div className="text-[11px] text-center" style={{ color: 'var(--ink-4)' }}>
+                    Se añadirá {(timerElapsed / 3600).toFixed(2)}h al tiempo real
+                  </div>
+                )}
+              </div>
             </Field>
 
             {/* Sprint */}

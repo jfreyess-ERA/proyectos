@@ -19,10 +19,23 @@ import { ProjectModal } from '@/components/ProjectModal';
 import { SprintModal } from '@/components/SprintModal';
 import { SprintView } from '@/components/SprintView';
 import { SavedView } from '@/components/SavedView';
+import { CrmDashboard } from '@/components/CrmDashboard';
+import { ProspectsView } from '@/components/ProspectsView';
+import { ProspectDetail } from '@/components/ProspectDetail';
+import { CreateProspectModal } from '@/components/CreateProspectModal';
+import { CrmTasksView } from '@/components/CrmTasksView';
+import { InteractionsView } from '@/components/InteractionsView';
+import { TriggersView } from '@/components/TriggersView';
+import { EmailTemplatesView } from '@/components/EmailTemplatesView';
+import { CrmCalendarView } from '@/components/CrmCalendarView';
+import { CrmImportModal } from '@/components/CrmImportModal';
+import { CrmReports } from '@/components/CrmReports';
+import { InviteUserModal } from '@/components/InviteUserModal';
 import { useNorteData } from '@/lib/useNorteData';
+import { useCrmData } from '@/lib/useCrmData';
 import { useAuth } from '@/lib/auth-context';
 import { getOrCreateShare } from '@/lib/db';
-import type { Task, Project, Sprint } from '@/lib/types';
+import type { Task, Project, Sprint, Prospect } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
 type ViewId = 'board' | 'list' | 'timeline' | 'calendar';
@@ -31,6 +44,11 @@ export default function Home() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
   const { tasks, projects, users, sprints, loading, error, refetch } = useNorteData();
+  const { prospects, interactions, crmTasks, triggers, templates, refetch: crmRefetch } = useCrmData();
+  const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
+  const [createProspectOpen, setCreateProspectOpen] = useState(false);
+  const [importProspectOpen, setImportProspectOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const [activeNav, setActiveNav]   = useState<NavId>('dashboard');
   const [activeView, setActiveView] = useState<ViewId>('board');
@@ -60,10 +78,24 @@ export default function Home() {
   const activeSprint  = sprintId  ? localSprints.find(s => s.id === sprintId) : undefined;
   const visibleTasks  = projectId ? tasks.filter(t => t.project === projectId) : tasks;
 
+  const isCrmView = activeNav.startsWith('crm:');
+  const CRM_LABELS: Record<string, string> = {
+    'crm:dashboard': 'Dashboard CRM',
+    'crm:prospects': 'Prospectos',
+    'crm:interactions': 'Interacciones',
+    'crm:tasks': 'Tareas CRM',
+    'crm:triggers': 'Triggers',
+    'crm:calendar': 'Calendario',
+    'crm:templates': 'Plantillas',
+    'crm:reports': 'Reportes CRM',
+  };
+
   const crumbs = isProjectView && project
     ? ['ERA Group', project.name]
     : isSprintView && activeSprint
     ? ['ERA Group', activeSprint.name]
+    : isCrmView
+    ? ['ERA Group', 'CRM', CRM_LABELS[activeNav] ?? 'CRM']
     : ['ERA Group', 'Inicio'];
 
   // Keyboard shortcuts
@@ -161,6 +193,58 @@ export default function Home() {
         case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
         case 'people':  return <PeopleView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
         case 'reports': return <ReportsView tasks={tasks} projects={projects} users={users} />;
+        case 'crm:dashboard': return (
+          <CrmDashboard
+            prospects={prospects} interactions={interactions}
+            crmTasks={crmTasks} triggers={triggers}
+            onViewProspects={() => handleNav('crm:prospects')}
+          />
+        );
+        case 'crm:prospects': return (
+          <ProspectsView
+            prospects={prospects} interactions={interactions} crmTasks={crmTasks}
+            triggers={triggers} users={users}
+            onOpenProspect={setSelectedProspect}
+            onCreateProspect={() => setCreateProspectOpen(true)}
+            onImport={() => setImportProspectOpen(true)}
+          />
+        );
+        case 'crm:interactions': return (
+          <InteractionsView
+            interactions={interactions} prospects={prospects}
+            onOpenProspect={setSelectedProspect}
+          />
+        );
+        case 'crm:calendar': return (
+          <CrmCalendarView
+            crmTasks={crmTasks} interactions={interactions}
+            prospects={prospects}
+            onOpenProspect={setSelectedProspect}
+          />
+        );
+        case 'crm:tasks': return (
+          <CrmTasksView
+            crmTasks={crmTasks} prospects={prospects}
+            onOpenProspect={setSelectedProspect}
+            onTasksChanged={crmRefetch}
+          />
+        );
+        case 'crm:triggers': return (
+          <TriggersView
+            triggers={triggers} prospects={prospects}
+            onOpenProspect={setSelectedProspect}
+            onTriggersChanged={crmRefetch}
+          />
+        );
+        case 'crm:templates': return (
+          <EmailTemplatesView templates={templates} prospects={prospects} onTemplatesChanged={crmRefetch} />
+        );
+        case 'crm:reports': return (
+          <CrmReports
+            prospects={prospects} interactions={interactions}
+            crmTasks={crmTasks} triggers={triggers} users={users}
+          />
+        );
         case 'saved:week': {
           const now = new Date(); const in7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
           const weekTasks = tasks.filter(t => { if (!t.due || t.status === 'done') return false; const d = new Date(t.due); return d >= now && d <= in7; });
@@ -239,8 +323,10 @@ export default function Home() {
         onClose={() => setCmdkOpen(false)}
         onNav={handleNav}
         onOpenTask={t => { setSelectedTask(t); setCmdkOpen(false); }}
+        onOpenProspect={p => { setSelectedProspect(p); setCmdkOpen(false); }}
         tasks={tasks}
         projects={projects}
+        prospects={prospects}
       />
 
       <CreateTaskModal
@@ -271,7 +357,49 @@ export default function Home() {
         onSaved={s => { setLocalSprints(prev => [...prev, s]); setActiveNav('sprint:' + s.id); }}
       />
 
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onInviteUser={() => { setSettingsOpen(false); setInviteOpen(true); }}
+      />
+
+      <InviteUserModal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        onInvited={() => refetch()}
+      />
+
+      <ProspectDetail
+        prospect={selectedProspect}
+        projects={projects}
+        onClose={() => setSelectedProspect(null)}
+        onUpdated={updated => {
+          setSelectedProspect(updated);
+          crmRefetch();
+        }}
+        onDeleted={() => {
+          setSelectedProspect(null);
+          crmRefetch();
+        }}
+      />
+
+      <CreateProspectModal
+        open={createProspectOpen}
+        existingProspects={prospects}
+        onClose={() => setCreateProspectOpen(false)}
+        onCreated={p => {
+          crmRefetch();
+          setSelectedProspect(p);
+          setCreateProspectOpen(false);
+        }}
+      />
+
+      <CrmImportModal
+        open={importProspectOpen}
+        existingProspects={prospects}
+        onClose={() => setImportProspectOpen(false)}
+        onImported={() => crmRefetch()}
+      />
     </>
   );
 }

@@ -5,6 +5,8 @@ import {
   Search, Plus, Filter, SortAsc, Star, Settings,
   PanelLeft, ChevronRight, SlidersHorizontal,
   LayoutGrid, List, GanttChart, Calendar,
+  Target, MessageSquare, ListChecks, Zap, Mail, LayoutDashboard, CalendarDays,
+  TrendingUp,
 } from 'lucide-react';
 import { PEOPLE } from '@/lib/data';
 import { Avatar } from './Avatar';
@@ -219,6 +221,69 @@ export function Shell({
                   </button>
                 );
               })}
+            </div>
+          )}
+
+          {/* CRM */}
+          {!collapsed && (
+            <div className="px-2 pt-3 pb-1">
+              <div className="px-2 pb-1.5 text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+                CRM
+              </div>
+              {[
+                { id: 'crm:dashboard',     icon: <LayoutDashboard size={15} />, label: 'Dashboard CRM' },
+                { id: 'crm:prospects',     icon: <Target size={15} />,          label: 'Prospectos' },
+                { id: 'crm:interactions',  icon: <MessageSquare size={15} />,   label: 'Interacciones' },
+                { id: 'crm:tasks',         icon: <ListChecks size={15} />,      label: 'Tareas CRM' },
+                { id: 'crm:triggers',      icon: <Zap size={15} />,             label: 'Triggers' },
+                { id: 'crm:calendar',      icon: <CalendarDays size={15} />,    label: 'Calendario' },
+                { id: 'crm:templates',     icon: <Mail size={15} />,            label: 'Plantillas' },
+                { id: 'crm:reports',       icon: <TrendingUp size={15} />,      label: 'Reportes CRM' },
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => onNavChange?.(item.id)}
+                  className="flex items-center gap-[10px] w-full text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors"
+                  style={{
+                    color: activeNav === item.id ? 'var(--ink)' : 'var(--ink-2)',
+                    background: activeNav === item.id ? 'var(--surface)' : 'transparent',
+                    boxShadow: activeNav === item.id ? 'var(--shadow-1)' : 'none',
+                    fontWeight: activeNav === item.id ? 500 : 400,
+                  }}
+                >
+                  <span style={{ color: activeNav === item.id ? 'var(--accent)' : 'var(--ink-3)', flexShrink: 0 }}>
+                    {item.icon}
+                  </span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* CRM (collapsed) */}
+          {collapsed && (
+            <div className="px-2 pt-3 pb-1">
+              {[
+                { id: 'crm:dashboard',    icon: <LayoutDashboard size={15} /> },
+                { id: 'crm:prospects',    icon: <Target size={15} /> },
+                { id: 'crm:tasks',        icon: <ListChecks size={15} /> },
+                { id: 'crm:triggers',     icon: <Zap size={15} /> },
+                { id: 'crm:calendar',     icon: <CalendarDays size={15} /> },
+                { id: 'crm:templates',    icon: <Mail size={15} /> },
+                { id: 'crm:reports',      icon: <TrendingUp size={15} /> },
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => onNavChange?.(item.id)}
+                  className="flex items-center justify-center w-full py-[6px] px-[10px] rounded-[6px] border-0 transition-colors"
+                  style={{
+                    background: activeNav === item.id ? 'var(--surface)' : 'transparent',
+                    color: activeNav === item.id ? 'var(--accent)' : 'var(--ink-3)',
+                  }}
+                >
+                  {item.icon}
+                </button>
+              ))}
             </div>
           )}
 

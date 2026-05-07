@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { X, LogOut, Moon, Sun, Trash2, UserPlus, Pencil, Check, ChevronDown } from 'lucide-react';
+import { X, LogOut, Moon, Sun, Trash2, UserPlus, Pencil, Check, ChevronDown, Mail } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { avatarBg } from '@/lib/data';
 import type { User } from '@/lib/types';
@@ -8,6 +8,7 @@ import type { User } from '@/lib/types';
 interface Props {
   open: boolean;
   onClose: () => void;
+  onInviteUser?: () => void;
 }
 
 type Tab = 'profile' | 'users';
@@ -17,7 +18,7 @@ interface UserRow extends User {
   is_admin?: boolean;
 }
 
-export function SettingsPanel({ open, onClose }: Props) {
+export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
   const { profile, signOut, session, refreshProfile } = useAuth();
   const [tab, setTab] = useState<Tab>('profile');
   const [dark, setDark] = useState(false);
@@ -303,13 +304,25 @@ export function SettingsPanel({ open, onClose }: Props) {
                   <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
                     Miembros ({users.length})
                   </div>
-                  <button
-                    onClick={() => { setShowCreateForm(f => !f); setFormError(''); setFormOk(false); }}
-                    className="flex items-center gap-1 h-6 px-2 rounded-[6px] text-[11.5px] font-medium border-0 transition-colors"
-                    style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
-                  >
-                    <UserPlus size={11} /> Nuevo
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {onInviteUser && (
+                      <button
+                        onClick={onInviteUser}
+                        className="flex items-center gap-1 h-6 px-2 rounded-[6px] text-[11.5px] font-medium border-0 transition-colors"
+                        style={{ background: 'var(--bg-3)', color: 'var(--ink-2)', border: '1px solid var(--line)' }}
+                        title="Invitar por email"
+                      >
+                        <Mail size={11} /> Invitar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { setShowCreateForm(f => !f); setFormError(''); setFormOk(false); }}
+                      className="flex items-center gap-1 h-6 px-2 rounded-[6px] text-[11.5px] font-medium border-0 transition-colors"
+                      style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+                    >
+                      <UserPlus size={11} /> Nuevo
+                    </button>
+                  </div>
                 </div>
 
                 {/* Create form (collapsible) */}

@@ -1,12 +1,13 @@
 'use client';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Home, Inbox, CheckSquare, Users, BarChart2, Plus, Moon } from 'lucide-react';
+import { Search, Home, Inbox, CheckSquare, Users, BarChart2, Plus, Moon,
+  LayoutDashboard, Target, MessageSquare, ListChecks, Zap, CalendarDays, Mail, TrendingUp } from 'lucide-react';
 import { PEOPLE } from '@/lib/data';
 import { Avatar } from './Avatar';
-import type { Task, Project } from '@/lib/types';
+import type { Task, Project, Prospect } from '@/lib/types';
 
 type NavId = string;
-type Kind = 'nav' | 'act' | 'proj' | 'task' | 'user';
+type Kind = 'nav' | 'act' | 'proj' | 'task' | 'user' | 'prospect';
 
 interface Item {
   id: string;
@@ -26,8 +27,10 @@ interface Props {
   onClose: () => void;
   onNav: (id: NavId) => void;
   onOpenTask: (task: Task) => void;
+  onOpenProspect?: (p: Prospect) => void;
   tasks: Task[];
   projects: Project[];
+  prospects?: Prospect[];
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -37,16 +40,17 @@ const PRIORITY_COLORS: Record<string, string> = {
   low:    'oklch(0.62 0.02 250)',
 };
 
-const GROUP_ORDER: Kind[] = ['nav', 'act', 'proj', 'task', 'user'];
+const GROUP_ORDER: Kind[] = ['nav', 'act', 'proj', 'task', 'user', 'prospect'];
 const GROUP_LABELS: Record<Kind, string> = {
-  nav:  'Navegar',
-  act:  'Acciones',
-  proj: 'Proyectos',
-  task: 'Tareas',
-  user: 'Personas',
+  nav:      'Navegar',
+  act:      'Acciones',
+  proj:     'Proyectos',
+  task:     'Tareas',
+  user:     'Personas',
+  prospect: 'Prospectos CRM',
 };
 
-export function CommandPalette({ open, onClose, onNav, onOpenTask, tasks, projects }: Props) {
+export function CommandPalette({ open, onClose, onNav, onOpenTask, onOpenProspect, tasks, projects, prospects = [] }: Props) {
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,11 +66,18 @@ export function CommandPalette({ open, onClose, onNav, onOpenTask, tasks, projec
 
   const items = useMemo<Item[]>(() => {
     const navs: Item[] = [
-      { id: 'go-dashboard', kind: 'nav', label: 'Ir a Inicio',      action: () => onNav('dashboard') },
-      { id: 'go-mytasks',   kind: 'nav', label: 'Ir a Mis tareas',  action: () => onNav('mytasks')   },
-      { id: 'go-inbox',     kind: 'nav', label: 'Ir a Bandeja',     action: () => onNav('inbox')     },
-      { id: 'go-people',    kind: 'nav', label: 'Ir a Equipo',      action: () => onNav('people')    },
-      { id: 'go-reports',   kind: 'nav', label: 'Ir a Reportes',    action: () => onNav('reports')   },
+      { id: 'go-dashboard', kind: 'nav', label: 'Ir a Inicio',         action: () => onNav('dashboard') },
+      { id: 'go-mytasks',   kind: 'nav', label: 'Ir a Mis tareas',     action: () => onNav('mytasks')   },
+      { id: 'go-inbox',     kind: 'nav', label: 'Ir a Bandeja',        action: () => onNav('inbox')     },
+      { id: 'go-people',    kind: 'nav', label: 'Ir a Equipo',         action: () => onNav('people')    },
+      { id: 'go-reports',   kind: 'nav', label: 'Ir a Reportes',       action: () => onNav('reports')   },
+      { id: 'go-crm',           kind: 'nav', label: 'CRM · Dashboard',     action: () => onNav('crm:dashboard')    },
+      { id: 'go-crm-prospects', kind: 'nav', label: 'CRM · Prospectos',    action: () => onNav('crm:prospects')    },
+      { id: 'go-crm-tasks',     kind: 'nav', label: 'CRM · Tareas',        action: () => onNav('crm:tasks')        },
+      { id: 'go-crm-triggers',  kind: 'nav', label: 'CRM · Triggers',      action: () => onNav('crm:triggers')     },
+      { id: 'go-crm-calendar',  kind: 'nav', label: 'CRM · Calendario',    action: () => onNav('crm:calendar')     },
+      { id: 'go-crm-templates', kind: 'nav', label: 'CRM · Plantillas',    action: () => onNav('crm:templates')    },
+      { id: 'go-crm-reports',   kind: 'nav', label: 'CRM · Reportes',      action: () => onNav('crm:reports')      },
     ];
     const acts: Item[] = [
       { id: 'new-task',    kind: 'act', label: 'Nueva tarea',         hint: 'N',  action: () => {} },
@@ -102,8 +113,16 @@ export function CommandPalette({ open, onClose, onNav, onOpenTask, tasks, projec
       userId: u.id,
       action: () => onNav('people'),
     }));
-    return [...navs, ...acts, ...projs, ...taskItems, ...users];
-  }, [onNav, onOpenTask, tasks, projects]);
+    const prospectItems: Item[] = prospects.map(p => ({
+      id:     'prospect-' + p.id,
+      kind:   'prospect' as Kind,
+      label:  p.company,
+      sub:    [p.contact_name, p.stage].filter(Boolean).join(' · '),
+      desc:   p.industry,
+      action: () => { onOpenProspect?.(p); },
+    }));
+    return [...navs, ...acts, ...projs, ...taskItems, ...users, ...prospectItems];
+  }, [onNav, onOpenTask, onOpenProspect, tasks, projects, prospects]);
 
   const norm = (s: string) =>
     s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -146,11 +165,18 @@ export function CommandPalette({ open, onClose, onNav, onOpenTask, tasks, projec
   };
 
   const navIcons: Record<string, React.ReactNode> = {
-    'go-dashboard': <Home size={14} />,
-    'go-mytasks':   <CheckSquare size={14} />,
-    'go-inbox':     <Inbox size={14} />,
-    'go-people':    <Users size={14} />,
-    'go-reports':   <BarChart2 size={14} />,
+    'go-dashboard':      <Home size={14} />,
+    'go-mytasks':        <CheckSquare size={14} />,
+    'go-inbox':          <Inbox size={14} />,
+    'go-people':         <Users size={14} />,
+    'go-reports':        <BarChart2 size={14} />,
+    'go-crm':            <LayoutDashboard size={14} />,
+    'go-crm-prospects':  <Target size={14} />,
+    'go-crm-tasks':      <ListChecks size={14} />,
+    'go-crm-triggers':   <Zap size={14} />,
+    'go-crm-calendar':   <CalendarDays size={14} />,
+    'go-crm-templates':  <Mail size={14} />,
+    'go-crm-reports':    <TrendingUp size={14} />,
   };
   const actIcons: Record<string, React.ReactNode> = {
     'new-task':    <Plus size={14} />,
@@ -256,6 +282,9 @@ export function CommandPalette({ open, onClose, onNav, onOpenTask, tasks, projec
                       )}
                       {it.kind === 'user' && it.userId && (
                         <Avatar userId={it.userId} size="sm" />
+                      )}
+                      {it.kind === 'prospect' && (
+                        <Target size={13} />
                       )}
                       {it.kind === 'nav' && navIcons[it.id]}
                       {it.kind === 'act' && actIcons[it.id]}

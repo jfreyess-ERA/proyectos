@@ -99,6 +99,103 @@ export interface Comment {
   created_at: string;
 }
 
+// ── CRM ────────────────────────────────────────────────────────────
+
+export type ProspectPriority = 'High' | 'Medium' | 'Low' | 'Strategic' | 'Watchlist';
+export type ProspectStatus   = 'Active' | 'Warm' | 'Paused' | 'Nurture' | 'Closed Won' | 'Closed Lost' | 'Dormant';
+export type ProspectStage    = 'New' | 'Contacted' | 'Meeting Requested' | 'Meeting Held' | 'Proposal' | 'Negotiation' | 'Won';
+
+export interface Prospect {
+  id: string;
+  company: string;
+  contact_name?: string;
+  role?: string;
+  linkedin?: string;
+  email?: string;
+  phone?: string;
+  industry?: string;
+  subsector?: string;
+  country: string;
+  priority: ProspectPriority;
+  status: ProspectStatus;
+  stage: ProspectStage;
+  owner_id?: string;
+  source?: string;
+  pain_points?: string;
+  era_value_angle?: string;
+  trigger_notes?: string;
+  trigger_source?: string;
+  last_trigger_date?: string;
+  reconnect_month?: string;
+  notes?: string;
+  project_id?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export type InteractionChannel = 'Email' | 'LinkedIn' | 'Phone' | 'WhatsApp' | 'Meeting' | 'Event' | 'Referral';
+export type InteractionOutcome = 'No response' | 'Positive' | 'Interested' | 'Meeting booked' | 'Not now' | 'Lost';
+
+export interface CrmInteraction {
+  id: string;
+  prospect_id: string;
+  date: string;
+  channel?: InteractionChannel;
+  direction?: 'Inbound' | 'Outbound';
+  type?: string;
+  summary?: string;
+  outcome?: InteractionOutcome;
+  next_step?: string;
+  follow_up_due?: string;
+  trigger_mentioned?: boolean;
+  template_used?: string;
+  owner_id?: string;
+  created_at: string;
+}
+
+export type CrmTaskType   = 'Follow-up' | 'Research' | 'Send case study' | 'Call' | 'Meeting' | 'Reconnect' | 'Proposal';
+export type CrmTaskStatus = 'Pending' | 'In Progress' | 'Waiting' | 'Done' | 'Deferred' | 'Cancelled';
+
+export interface CrmTask {
+  id: string;
+  prospect_id: string;
+  interaction_id?: string;
+  task_type?: CrmTaskType;
+  priority?: 'High' | 'Medium' | 'Low';
+  status: CrmTaskStatus;
+  due_date?: string;
+  reminder_window?: number;
+  notes?: string;
+  completed_date?: string;
+  owner_id?: string;
+  created_at: string;
+}
+
+export type TriggerType   = 'News' | 'Hiring' | 'Expansion' | 'Regulation' | 'Leadership change' | 'Earnings' | 'Results';
+export type TriggerStatus = 'Open' | 'Monitoring' | 'Closed';
+
+export interface CrmTrigger {
+  id: string;
+  prospect_id: string;
+  date_detected: string;
+  trigger_type?: TriggerType;
+  description?: string;
+  source_url?: string;
+  priority?: 'High' | 'Medium' | 'Low';
+  action_suggested?: string;
+  status: TriggerStatus;
+  created_at: string;
+}
+
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  use_case?: string;
+  subject?: string;
+  body?: string;
+  created_at: string;
+}
+
 export interface Label {
   id: string;
   text: string;

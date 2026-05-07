@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem, Sprint } from './types';
+import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem, Sprint, Prospect, CrmInteraction, CrmTask, CrmTrigger, EmailTemplate } from './types';
 
 // ── Row types from Supabase ────────────────────────────────────────
 
@@ -409,5 +409,158 @@ export async function bulkUpdateTasks(ids: string[], fields: Partial<{
   if ('priority' in fields) dbFields.priority = fields.priority;
   if ('assignees' in fields) dbFields.assignees = fields.assignees;
   const { error } = await supabase.from('tasks').update(dbFields).in('id', ids);
+  if (error) throw error;
+}
+
+// ── CRM: Prospects ────────────────────────────────────────────────
+
+export async function fetchProspects(): Promise<Prospect[]> {
+  const { data, error } = await supabase
+    .from('prospects')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Prospect[];
+}
+
+export async function insertProspect(input: Omit<Prospect, 'id' | 'created_at' | 'updated_at'>): Promise<Prospect> {
+  const { data, error } = await supabase
+    .from('prospects')
+    .insert({ ...input })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Prospect;
+}
+
+export async function updateProspect(id: string, fields: Partial<Omit<Prospect, 'id' | 'created_at'>>): Promise<Prospect> {
+  const { data, error } = await supabase
+    .from('prospects')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Prospect;
+}
+
+export async function deleteProspect(id: string): Promise<void> {
+  const { error } = await supabase.from('prospects').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── CRM: Interactions ─────────────────────────────────────────────
+
+export async function fetchInteractions(prospectId?: string): Promise<CrmInteraction[]> {
+  let q = supabase.from('crm_interactions').select('*').order('date', { ascending: false });
+  if (prospectId) q = q.eq('prospect_id', prospectId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as CrmInteraction[];
+}
+
+export async function insertInteraction(input: Omit<CrmInteraction, 'id' | 'created_at'>): Promise<CrmInteraction> {
+  const { data, error } = await supabase
+    .from('crm_interactions')
+    .insert({ ...input })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CrmInteraction;
+}
+
+export async function updateInteraction(id: string, fields: Partial<Omit<CrmInteraction, 'id' | 'created_at'>>): Promise<void> {
+  const { error } = await supabase.from('crm_interactions').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteInteraction(id: string): Promise<void> {
+  const { error } = await supabase.from('crm_interactions').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── CRM: Tasks ────────────────────────────────────────────────────
+
+export async function fetchCrmTasks(prospectId?: string): Promise<CrmTask[]> {
+  let q = supabase.from('crm_tasks').select('*').order('due_date', { ascending: true });
+  if (prospectId) q = q.eq('prospect_id', prospectId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as CrmTask[];
+}
+
+export async function insertCrmTask(input: Omit<CrmTask, 'id' | 'created_at'>): Promise<CrmTask> {
+  const { data, error } = await supabase
+    .from('crm_tasks')
+    .insert({ ...input })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CrmTask;
+}
+
+export async function updateCrmTask(id: string, fields: Partial<Omit<CrmTask, 'id' | 'created_at'>>): Promise<void> {
+  const { error } = await supabase.from('crm_tasks').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteCrmTask(id: string): Promise<void> {
+  const { error } = await supabase.from('crm_tasks').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── CRM: Triggers ─────────────────────────────────────────────────
+
+export async function fetchCrmTriggers(prospectId?: string): Promise<CrmTrigger[]> {
+  let q = supabase.from('crm_triggers').select('*').order('date_detected', { ascending: false });
+  if (prospectId) q = q.eq('prospect_id', prospectId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as CrmTrigger[];
+}
+
+export async function insertCrmTrigger(input: Omit<CrmTrigger, 'id' | 'created_at'>): Promise<CrmTrigger> {
+  const { data, error } = await supabase
+    .from('crm_triggers')
+    .insert({ ...input })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CrmTrigger;
+}
+
+export async function updateCrmTrigger(id: string, fields: Partial<Omit<CrmTrigger, 'id' | 'created_at'>>): Promise<void> {
+  const { error } = await supabase.from('crm_triggers').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+// ── CRM: Email Templates ──────────────────────────────────────────
+
+export async function fetchEmailTemplates(): Promise<EmailTemplate[]> {
+  const { data, error } = await supabase
+    .from('email_templates')
+    .select('*')
+    .order('name');
+  if (error) throw error;
+  return (data ?? []) as EmailTemplate[];
+}
+
+export async function insertEmailTemplate(input: Omit<EmailTemplate, 'id' | 'created_at'>): Promise<EmailTemplate> {
+  const { data, error } = await supabase
+    .from('email_templates')
+    .insert({ ...input })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as EmailTemplate;
+}
+
+export async function updateEmailTemplate(id: string, fields: Partial<Omit<EmailTemplate, 'id' | 'created_at'>>): Promise<void> {
+  const { error } = await supabase.from('email_templates').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteEmailTemplate(id: string): Promise<void> {
+  const { error } = await supabase.from('email_templates').delete().eq('id', id);
   if (error) throw error;
 }
