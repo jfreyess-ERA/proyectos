@@ -12,9 +12,9 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, MoreHorizontal, Clock, X } from 'lucide-react';
+import { Plus, MoreHorizontal, Clock, X, CheckSquare } from 'lucide-react';
 import { STATUSES, PRIORITIES, getProject, getLabel, fmtDate, dueClass, avatarBg } from '@/lib/data';
-import { updateTaskStatus } from '@/lib/db';
+import { updateTaskStatus, bulkUpdateTasks } from '@/lib/db';
 import { AvatarStack } from './Avatar';
 import type { Task, User } from '@/lib/types';
 
@@ -30,6 +30,8 @@ export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }
   const [activeId, setActiveId] = useState<string | null>(null);
   const [filterAssignees, setFilterAssignees] = useState<string[]>([]);
   const [filterPriorities, setFilterPriorities] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -53,6 +55,37 @@ export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }
   }
   function togglePriorityFilter(id: string) {
     setFilterPriorities(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkStatus(status: Task['status']) {
+    const ids = [...selectedIds];
+    setBulkSaving(true);
+    try {
+      await bulkUpdateTasks(ids, { status });
+      setStatusOverrides(prev => {
+        const next = { ...prev };
+        ids.forEach(id => { next[id] = status; });
+        return next;
+      });
+      setSelectedIds(new Set());
+    } finally { setBulkSaving(false); }
+  }
+
+  async function handleBulkPriority(priority: Task['priority']) {
+    const ids = [...selectedIds];
+    setBulkSaving(true);
+    try {
+      await bulkUpdateTasks(ids, { priority });
+      setSelectedIds(new Set());
+    } finally { setBulkSaving(false); }
   }
 
   function handleDragStart({ active }: DragStartEvent) {
@@ -79,7 +112,7 @@ export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex flex-col h-full min-h-0">
+      <div className="flex flex-col h-full min-h-0 relative">
         {/* Filter bar */}
         <div
           className="flex items-center gap-3 px-6 py-2 border-b flex-shrink-0 flex-wrap"
@@ -152,10 +185,57 @@ export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }
                 onOpenTask={onOpenTask}
                 onCreateTask={onCreateTask}
                 activeId={activeId}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
               />
             ))}
           </div>
         </div>
+
+        {/* Bulk action toolbar */}
+        {selectedIds.size > 0 && (
+          <div
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-[12px] shadow-lg z-40"
+            style={{ background: 'var(--ink)', color: 'var(--bg)', border: '1px solid var(--ink-2)', minWidth: 340 }}
+          >
+            <CheckSquare size={14} style={{ color: 'var(--accent)' }} />
+            <span className="text-[12.5px] font-semibold mr-1">{selectedIds.size} seleccionada{selectedIds.size !== 1 ? 's' : ''}</span>
+
+            <div className="w-px h-4 mx-1" style={{ background: 'rgba(255,255,255,.2)' }} />
+
+            <span className="text-[11px] opacity-60">Estado:</span>
+            <select
+              onChange={e => e.target.value && handleBulkStatus(e.target.value as Task['status'])}
+              value=""
+              disabled={bulkSaving}
+              className="h-6 px-2 rounded-[5px] text-[11px] border-0 cursor-pointer"
+              style={{ background: 'rgba(255,255,255,.12)', color: 'var(--bg)', fontFamily: 'var(--font)' }}
+            >
+              <option value="">Cambiar…</option>
+              {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+
+            <span className="text-[11px] opacity-60">Prioridad:</span>
+            <select
+              onChange={e => e.target.value && handleBulkPriority(e.target.value as Task['priority'])}
+              value=""
+              disabled={bulkSaving}
+              className="h-6 px-2 rounded-[5px] text-[11px] border-0 cursor-pointer"
+              style={{ background: 'rgba(255,255,255,.12)', color: 'var(--bg)', fontFamily: 'var(--font)' }}
+            >
+              <option value="">Cambiar…</option>
+              {PRIORITIES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="ml-auto w-6 h-6 flex items-center justify-center rounded-[5px] border-0"
+              style={{ background: 'rgba(255,255,255,.12)', color: 'var(--bg)', cursor: 'pointer' }}
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
       </div>
 
       <DragOverlay>
@@ -168,17 +248,15 @@ export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }
 /* ── Column ──────────────────────────────────────────────────── */
 
 function KanbanColumn({
-  status,
-  tasks,
-  onOpenTask,
-  onCreateTask,
-  activeId,
+  status, tasks, onOpenTask, onCreateTask, activeId, selectedIds, onToggleSelect,
 }: {
   status: (typeof STATUSES)[0];
   tasks: Task[];
   onOpenTask: (t: Task) => void;
   onCreateTask?: (defaultStatus: Task['status']) => void;
   activeId: string | null;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.id });
 
@@ -228,6 +306,8 @@ function KanbanColumn({
             task={task}
             onOpen={onOpenTask}
             isDragging={task.id === activeId}
+            selected={selectedIds.has(task.id)}
+            onToggleSelect={onToggleSelect}
           />
         ))}
 
@@ -255,13 +335,13 @@ function KanbanColumn({
 /* ── Draggable wrapper ───────────────────────────────────────── */
 
 function DraggableCard({
-  task,
-  onOpen,
-  isDragging,
+  task, onOpen, isDragging, selected, onToggleSelect,
 }: {
   task: Task;
   onOpen: (t: Task) => void;
   isDragging: boolean;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: task.id });
 
@@ -273,7 +353,7 @@ function DraggableCard({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <TaskCard task={task} onOpen={onOpen} />
+      <TaskCard task={task} onOpen={onOpen} selected={selected} onToggleSelect={onToggleSelect} />
     </div>
   );
 }
@@ -281,13 +361,13 @@ function DraggableCard({
 /* ── Task card ───────────────────────────────────────────────── */
 
 function TaskCard({
-  task,
-  onOpen,
-  overlay = false,
+  task, onOpen, overlay = false, selected = false, onToggleSelect,
 }: {
   task: Task;
   onOpen: (t: Task) => void;
   overlay?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }) {
   const project = getProject(task.project);
   const labels = task.labels.map(id => getLabel(id)).filter(Boolean);
@@ -304,18 +384,30 @@ function TaskCard({
   return (
     <div
       onClick={() => onOpen(task)}
-      className="rounded-[10px] p-3 flex flex-col gap-[8px] border cursor-pointer transition-shadow"
+      className="rounded-[10px] p-3 flex flex-col gap-[8px] border cursor-pointer transition-shadow group"
       style={{
-        background: 'var(--surface)',
-        borderColor: 'var(--line)',
+        background: selected ? 'var(--accent-bg)' : 'var(--surface)',
+        borderColor: selected ? 'var(--accent)' : 'var(--line)',
         boxShadow: overlay
           ? '0 8px 24px -8px rgba(40,30,80,.18), 0 2px 4px rgba(40,30,80,.06)'
           : 'var(--shadow-1)',
       }}
     >
-      {/* Top: ref + priority */}
+      {/* Top: ref + priority + checkbox */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-[6px]" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-3)' }}>
+          {/* Checkbox */}
+          <button
+            onClick={e => { e.stopPropagation(); onToggleSelect?.(task.id); }}
+            className="w-4 h-4 rounded-[3px] border flex items-center justify-center flex-shrink-0 transition-all opacity-0 group-hover:opacity-100"
+            style={{
+              borderColor: selected ? 'var(--accent)' : 'var(--line)',
+              background: selected ? 'var(--accent)' : 'transparent',
+              opacity: selected ? 1 : undefined,
+            }}
+          >
+            {selected && <span style={{ color: 'white', fontSize: 9, lineHeight: 1 }}>✓</span>}
+          </button>
           <span
             className="w-2 h-2 rounded-[2px] flex-shrink-0"
             style={{ background: project?.color }}

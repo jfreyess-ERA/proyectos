@@ -11,17 +11,19 @@ import {
   fetchSubtasks, insertSubtask, toggleSubtask, deleteSubtask,
 } from '@/lib/db';
 import { useAuth } from '@/lib/auth-context';
+import { assignTaskToSprint } from '@/lib/db';
 import { Avatar } from './Avatar';
-import type { Task, Comment, Activity, Attachment, User, SubtaskItem } from '@/lib/types';
+import type { Task, Comment, Activity, Attachment, User, SubtaskItem, Sprint } from '@/lib/types';
 
 interface Props {
   task: Task | null;
   users?: User[];
+  sprints?: Sprint[];
   onClose: () => void;
   onUpdated?: (t: Task) => void;
 }
 
-export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
+export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated }: Props) {
   const { profile } = useAuth();
   const allPeople = users.length > 0 ? users : PEOPLE;
 
@@ -626,6 +628,31 @@ export function TaskDetail({ task, users = [], onClose, onUpdated }: Props) {
                 </div>
               )}
             </Field>
+
+            {/* Sprint */}
+            {sprints.length > 0 && (
+              <Field label="Sprint">
+                <select
+                  value={edited.sprint_id ?? ''}
+                  onChange={async e => {
+                    const val = e.target.value || null;
+                    setEdited(prev => prev ? { ...prev, sprint_id: val ?? undefined } : prev);
+                    await assignTaskToSprint(taskId, val);
+                    const sp = sprints.find(s => s.id === val);
+                    if (profile?.id) {
+                      const msg = val ? `Asignó al sprint "${sp?.name}"` : 'Quitó del sprint';
+                      await logActivity(taskId, profile.id, msg);
+                      fetchActivity(taskId).then(setActivity).catch(() => {});
+                    }
+                  }}
+                  className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
+                  style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
+                >
+                  <option value="">Sin sprint</option>
+                  {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </Field>
+            )}
 
             <hr style={{ border: 0, borderTop: '1px solid var(--line)', margin: '4px 0' }} />
             <div className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{fmtDate(task.start)} · {task.ref}</div>

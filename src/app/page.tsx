@@ -16,10 +16,13 @@ import { PeopleView } from '@/components/PeopleView';
 import { ReportsView } from '@/components/ReportsView';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProjectModal } from '@/components/ProjectModal';
+import { SprintModal } from '@/components/SprintModal';
+import { SprintView } from '@/components/SprintView';
 import { SavedView } from '@/components/SavedView';
 import { useNorteData } from '@/lib/useNorteData';
 import { useAuth } from '@/lib/auth-context';
-import type { Task, Project } from '@/lib/types';
+import { getOrCreateShare } from '@/lib/db';
+import type { Task, Project, Sprint } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
 type ViewId = 'board' | 'list' | 'timeline' | 'calendar';
@@ -27,54 +30,75 @@ type ViewId = 'board' | 'list' | 'timeline' | 'calendar';
 export default function Home() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
-  const { tasks, projects, users, loading, error, refetch } = useNorteData();
+  const { tasks, projects, users, sprints, loading, error, refetch } = useNorteData();
 
-  const [activeNav, setActiveNav] = useState<NavId>('dashboard');
+  const [activeNav, setActiveNav]   = useState<NavId>('dashboard');
   const [activeView, setActiveView] = useState<ViewId>('board');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [cmdkOpen, setCmdkOpen] = useState(false);
+  const [cmdkOpen, setCmdkOpen]     = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDefaultStatus, setCreateDefaultStatus] = useState<Task['status']>('todo');
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen]   = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<Project | undefined>(undefined);
+  const [editingProject, setEditingProject]     = useState<Project | undefined>(undefined);
+  const [sprintModalOpen, setSprintModalOpen]   = useState(false);
+  const [shareLink, setShareLink]   = useState('');
+  const [shareCopied, setShareCopied] = useState(false);
+  const [localSprints, setLocalSprints] = useState<Sprint[]>([]);
+
+  useEffect(() => { setLocalSprints(sprints); }, [sprints]);
 
   useEffect(() => {
-    if (!authLoading && !session) {
-      router.replace('/login');
-    }
+    if (!authLoading && !session) router.replace('/login');
   }, [authLoading, session, router]);
 
   const isProjectView = activeNav.startsWith('project:');
-  const projectId = isProjectView ? activeNav.replace('project:', '') : undefined;
-  const project = projectId ? projects.find(p => p.id === projectId) : undefined;
-  const visibleTasks = projectId ? tasks.filter(t => t.project === projectId) : tasks;
+  const isSprintView  = activeNav.startsWith('sprint:');
+  const projectId     = isProjectView ? activeNav.replace('project:', '') : undefined;
+  const sprintId      = isSprintView  ? activeNav.replace('sprint:', '')  : undefined;
+  const project       = projectId ? projects.find(p => p.id === projectId) : undefined;
+  const activeSprint  = sprintId  ? localSprints.find(s => s.id === sprintId) : undefined;
+  const visibleTasks  = projectId ? tasks.filter(t => t.project === projectId) : tasks;
 
   const crumbs = isProjectView && project
     ? ['ERA Group', project.name]
+    : isSprintView && activeSprint
+    ? ['ERA Group', activeSprint.name]
     : ['ERA Group', 'Inicio'];
 
+  // Keyboard shortcuts
   useEffect(() => {
+    function isTyping() {
+      const el = document.activeElement;
+      return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement;
+    }
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setCmdkOpen(o => !o);
-      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setCmdkOpen(o => !o); return; }
       if (e.key === 'Escape') {
-        if (cmdkOpen) { setCmdkOpen(false); return; }
-        if (settingsOpen) { setSettingsOpen(false); return; }
+        if (cmdkOpen)         { setCmdkOpen(false); return; }
+        if (settingsOpen)     { setSettingsOpen(false); return; }
         if (projectModalOpen) { setProjectModalOpen(false); return; }
-        if (selectedTask) setSelectedTask(null);
+        if (sprintModalOpen)  { setSprintModalOpen(false); return; }
+        if (selectedTask)     { setSelectedTask(null); return; }
       }
+      if (isTyping()) return;
+      if (e.key === 'n')           { openCreateTask(); return; }
+      if (e.key === 'b' && isProjectView) { setActiveView('board'); return; }
+      if (e.key === 'l' && isProjectView) { setActiveView('list'); return; }
+      if (e.key === 'c' && isProjectView) { setActiveView('calendar'); return; }
+      if (e.key === 't' && isProjectView) { setActiveView('timeline'); return; }
+      if (e.key === 'g' && e.shiftKey)    { setActiveNav('dashboard'); return; }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [cmdkOpen, selectedTask, settingsOpen, projectModalOpen]);
+  }, [cmdkOpen, selectedTask, settingsOpen, projectModalOpen, sprintModalOpen, isProjectView]);
 
   function handleNav(id: NavId) {
     setActiveNav(id);
     setActiveView('board');
     setCmdkOpen(false);
+    setShareLink('');
+    setShareCopied(false);
   }
 
   function openCreateTask(defaultStatus: Task['status'] = 'todo') {
@@ -94,6 +118,20 @@ export default function Home() {
     setProjectModalOpen(true);
   }
 
+  async function handleShare() {
+    if (!projectId) return;
+    try {
+      const token = await getOrCreateShare(projectId);
+      const url = `${window.location.origin}/share/${token}`;
+      setShareLink(url);
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 3000);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   if (authLoading || !session) {
     return (
       <div className="flex items-center justify-center h-screen" style={{ background: 'var(--bg)' }}>
@@ -103,41 +141,43 @@ export default function Home() {
   }
 
   function renderContent() {
+    // Sprint view
+    if (isSprintView && activeSprint) {
+      return (
+        <SprintView
+          sprint={activeSprint}
+          tasks={tasks}
+          projects={projects}
+          onOpenTask={setSelectedTask}
+          onSprintUpdated={s => setLocalSprints(prev => prev.map(x => x.id === s.id ? s : x))}
+          onSprintDeleted={id => { setLocalSprints(prev => prev.filter(x => x.id !== id)); setActiveNav('dashboard'); }}
+        />
+      );
+    }
+
     if (!isProjectView) {
       switch (activeNav) {
         case 'inbox':   return <InboxView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
         case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
         case 'people':  return <PeopleView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
-        case 'reports': return <ReportsView tasks={tasks} projects={projects} />;
+        case 'reports': return <ReportsView tasks={tasks} projects={projects} users={users} />;
         case 'saved:week': {
-          const now = new Date();
-          const in7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-          const weekTasks = tasks.filter(t => {
-            if (!t.due || t.status === 'done') return false;
-            const d = new Date(t.due);
-            return d >= now && d <= in7;
-          });
+          const now = new Date(); const in7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const weekTasks = tasks.filter(t => { if (!t.due || t.status === 'done') return false; const d = new Date(t.due); return d >= now && d <= in7; });
           return <SavedView title="Vence esta semana" description="Tareas con fecha límite en los próximos 7 días" tasks={weekTasks} projects={projects} onOpenTask={setSelectedTask} />;
         }
-        case 'saved:blockers': {
-          const blockerTasks = tasks.filter(t => t.labels.includes('l6'));
-          return <SavedView title="Bloqueantes" description="Tareas marcadas como bloqueantes" tasks={blockerTasks} projects={projects} onOpenTask={setSelectedTask} />;
-        }
-        default:        return <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
+        case 'saved:blockers':
+          return <SavedView title="Bloqueantes" description="Tareas marcadas como bloqueantes" tasks={tasks.filter(t => t.labels.includes('l6'))} projects={projects} onOpenTask={setSelectedTask} />;
+        default:
+          return <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
       }
     }
+
     switch (activeView) {
       case 'list':     return <ListView tasks={visibleTasks} onOpenTask={setSelectedTask} />;
       case 'calendar': return <CalendarView tasks={visibleTasks} onOpenTask={setSelectedTask} />;
       case 'timeline': return <TimelineView tasks={visibleTasks} projects={projects} onOpenTask={setSelectedTask} />;
-      default:         return (
-        <Board
-          tasks={visibleTasks}
-          users={users}
-          onOpenTask={setSelectedTask}
-          onCreateTask={openCreateTask}
-        />
-      );
+      default:         return <Board tasks={visibleTasks} users={users} onOpenTask={setSelectedTask} onCreateTask={openCreateTask} />;
     }
   }
 
@@ -149,6 +189,7 @@ export default function Home() {
         crumbs={crumbs}
         projectId={projectId}
         projects={projects}
+        sprints={localSprints}
         currentUser={profile ?? undefined}
         onNavChange={handleNav}
         onViewChange={setActiveView}
@@ -157,10 +198,8 @@ export default function Home() {
         onOpenSettings={() => setSettingsOpen(true)}
         onCreateProject={openCreateProject}
         onEditProject={openEditProject}
-        onOpenTask={(taskId) => {
-          const t = tasks.find(t => t.id === taskId);
-          if (t) setSelectedTask(t);
-        }}
+        onOpenTask={(taskId) => { const t = tasks.find(t => t.id === taskId); if (t) setSelectedTask(t); }}
+        onCreateSprint={() => setSprintModalOpen(true)}
         loading={loading}
       >
         {error && (
@@ -169,12 +208,28 @@ export default function Home() {
             Error Supabase: {error}
           </div>
         )}
+        {/* Share button for project views */}
+        {isProjectView && (
+          <div className="flex items-center gap-2 px-6 pt-3 pb-0">
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1 h-7 px-3 rounded-[7px] text-[12px] font-medium border-0 transition-colors"
+              style={{ background: shareCopied ? 'oklch(0.96 0.03 160)' : 'var(--bg-3)', color: shareCopied ? 'oklch(0.38 0.12 160)' : 'var(--ink-3)' }}
+            >
+              {shareCopied ? '✓ Enlace copiado' : '🔗 Compartir con cliente'}
+            </button>
+            {shareLink && !shareCopied && (
+              <span className="text-[11px] truncate max-w-[300px]" style={{ color: 'var(--ink-4)', fontFamily: 'var(--font-mono)' }}>{shareLink}</span>
+            )}
+          </div>
+        )}
         {renderContent()}
       </Shell>
 
       <TaskDetail
         task={selectedTask}
         users={users}
+        sprints={localSprints.filter(s => selectedTask ? s.project_id === selectedTask.project : false)}
         onClose={() => setSelectedTask(null)}
         onUpdated={updated => { setSelectedTask(updated); refetch(); }}
       />
@@ -204,16 +259,19 @@ export default function Home() {
         onClose={() => setProjectModalOpen(false)}
         onSaved={() => {
           refetch();
-          if (editingProject && activeNav === 'project:' + editingProject.id) {
-            setActiveNav('dashboard');
-          }
+          if (editingProject && activeNav === 'project:' + editingProject.id) setActiveNav('dashboard');
         }}
       />
 
-      <SettingsPanel
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+      <SprintModal
+        open={sprintModalOpen}
+        projects={projects}
+        defaultProjectId={projectId}
+        onClose={() => setSprintModalOpen(false)}
+        onSaved={s => { setLocalSprints(prev => [...prev, s]); setActiveNav('sprint:' + s.id); }}
       />
+
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 }

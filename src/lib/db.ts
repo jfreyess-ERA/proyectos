@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem } from './types';
+import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem, Sprint } from './types';
 
 // ── Row types from Supabase ────────────────────────────────────────
 
@@ -19,6 +19,7 @@ interface TaskRow {
   spent: number;
   subtasks_done: number;
   subtasks_total: number;
+  sprint_id?: string;
 }
 
 // ── Mappers ────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ function rowToTask(row: TaskRow): Task {
     estimate:    row.estimate,
     spent:       row.spent,
     subtasks:    { done: row.subtasks_done, total: row.subtasks_total },
+    sprint_id:   row.sprint_id,
   };
 }
 
@@ -329,4 +331,83 @@ export async function toggleSubtask(subtaskId: string, done: boolean, taskId: st
 export async function deleteSubtask(subtaskId: string, taskId: string): Promise<void> {
   await supabase.from('task_subtasks').delete().eq('id', subtaskId);
   await syncSubtaskCounts(taskId);
+}
+
+// ── Sprints ────────────────────────────────────────────────────────
+
+export async function fetchSprints(projectId: string): Promise<Sprint[]> {
+  const { data } = await supabase
+    .from('sprints')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at');
+  return (data ?? []) as Sprint[];
+}
+
+export async function fetchAllSprints(): Promise<Sprint[]> {
+  const { data } = await supabase.from('sprints').select('*').order('created_at');
+  return (data ?? []) as Sprint[];
+}
+
+export async function insertSprint(input: {
+  project_id: string; name: string; goal?: string;
+  start_date?: string; end_date?: string; status?: Sprint['status'];
+}): Promise<Sprint> {
+  const { data, error } = await supabase
+    .from('sprints')
+    .insert({ ...input, status: input.status ?? 'planned' })
+    .select().single();
+  if (error) throw error;
+  return data as Sprint;
+}
+
+export async function updateSprint(id: string, fields: Partial<Omit<Sprint, 'id' | 'created_at'>>): Promise<void> {
+  const { error } = await supabase.from('sprints').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteSprint(id: string): Promise<void> {
+  const { error } = await supabase.from('sprints').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function assignTaskToSprint(taskId: string, sprintId: string | null): Promise<void> {
+  const { error } = await supabase.from('tasks').update({ sprint_id: sprintId }).eq('id', taskId);
+  if (error) throw error;
+}
+
+// ── Project shares (client view) ──────────────────────────────────
+
+export async function getOrCreateShare(projectId: string): Promise<string> {
+  const { data: existing } = await supabase
+    .from('project_shares')
+    .select('token')
+    .eq('project_id', projectId)
+    .eq('active', true)
+    .maybeSingle();
+  if (existing?.token) return existing.token;
+
+  const { data, error } = await supabase
+    .from('project_shares')
+    .insert({ project_id: projectId })
+    .select('token').single();
+  if (error) throw error;
+  return data.token;
+}
+
+export async function revokeShare(projectId: string): Promise<void> {
+  await supabase.from('project_shares').update({ active: false }).eq('project_id', projectId);
+}
+
+// ── Bulk task updates ─────────────────────────────────────────────
+
+export async function bulkUpdateTasks(ids: string[], fields: Partial<{
+  status: Task['status']; priority: Task['priority']; assignees: string[];
+}>): Promise<void> {
+  const dbFields: Record<string, unknown> = {};
+  if ('status' in fields)   dbFields.status   = fields.status;
+  if ('priority' in fields) dbFields.priority = fields.priority;
+  if ('assignees' in fields) dbFields.assignees = fields.assignees;
+  const { error } = await supabase.from('tasks').update(dbFields).in('id', ids);
+  if (error) throw error;
 }

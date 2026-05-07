@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { fetchTasks, fetchProjects, fetchUsers, fetchLabels, taskRowToTask } from './db';
+import { fetchTasks, fetchProjects, fetchUsers, fetchLabels, fetchAllSprints, taskRowToTask } from './db';
 import { supabase } from './supabase';
 import {
   TASKS as SEED_TASKS,
@@ -8,13 +8,14 @@ import {
   PEOPLE as SEED_PEOPLE,
   LABELS as SEED_LABELS,
 } from './data';
-import type { Task, Project, User, Label } from './types';
+import type { Task, Project, User, Label, Sprint } from './types';
 
 interface NorteData {
   tasks: Task[];
   projects: Project[];
   users: User[];
   labels: Label[];
+  sprints: Sprint[];
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -25,6 +26,7 @@ export function useNorteData(): NorteData {
   const [projects, setProjects] = useState<Project[]>(SEED_PROJECTS);
   const [users, setUsers] = useState<User[]>(SEED_PEOPLE);
   const [labels, setLabels] = useState<Label[]>(SEED_LABELS);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -35,13 +37,14 @@ export function useNorteData(): NorteData {
     setLoading(true);
     setError(null);
 
-    Promise.all([fetchTasks(), fetchProjects(), fetchUsers(), fetchLabels()])
-      .then(([t, p, u, l]) => {
+    Promise.all([fetchTasks(), fetchProjects(), fetchUsers(), fetchLabels(), fetchAllSprints()])
+      .then(([t, p, u, l, s]) => {
         if (cancelled) return;
         if (t.length > 0) setTasks(t);
         if (p.length > 0) setProjects(p);
         if (u.length > 0) setUsers(u);
         if (l.length > 0) setLabels(l);
+        setSprints(s);
       })
       .catch(err => {
         if (!cancelled) setError(err.message ?? 'Error conectando a Supabase');
@@ -80,5 +83,5 @@ export function useNorteData(): NorteData {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  return { tasks, projects, users, labels, loading, error, refetch: () => setTick(t => t + 1) };
+  return { tasks, projects, users, labels, sprints, loading, error, refetch: () => setTick(t => t + 1) };
 }

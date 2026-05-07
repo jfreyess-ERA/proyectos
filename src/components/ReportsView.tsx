@@ -1,13 +1,14 @@
 'use client';
 import { STATUSES, PRIORITIES, PEOPLE, avatarBg } from '@/lib/data';
-import type { Task, Project } from '@/lib/types';
+import type { Task, Project, User } from '@/lib/types';
 
 interface Props {
   tasks: Task[];
   projects: Project[];
+  users?: User[];
 }
 
-export function ReportsView({ tasks, projects }: Props) {
+export function ReportsView({ tasks, projects, users: propUsers }: Props) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const activeTasks = tasks.filter(t => t.status !== 'done');
   const overdue = tasks.filter(t =>
@@ -34,7 +35,8 @@ export function ReportsView({ tasks, projects }: Props) {
     return { ...p, total: pt.length, done, pct, totalEst, totalSpent };
   });
 
-  const workload = PEOPLE.map(u => {
+  const allPeople = (propUsers && propUsers.length > 0) ? propUsers : PEOPLE;
+  const workload = allPeople.map(u => {
     const assigned = activeTasks.filter(t => t.assignees.includes(u.id));
     const urgentHigh = assigned.filter(t => t.priority === 'urgent' || t.priority === 'high').length;
     return { user: u, count: assigned.length, urgentHigh };

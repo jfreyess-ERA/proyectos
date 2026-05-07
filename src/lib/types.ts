@@ -39,6 +39,18 @@ export interface Task {
   spent: number;
   subtasks: Subtasks;
   description?: string;
+  sprint_id?: string;
+}
+
+export interface Sprint {
+  id: string;
+  project_id: string;
+  name: string;
+  goal?: string;
+  start_date?: string;
+  end_date?: string;
+  status: 'planned' | 'active' | 'completed';
+  created_at: string;
 }
 
 export interface Activity {

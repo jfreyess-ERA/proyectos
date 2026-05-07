@@ -81,7 +81,9 @@ export function SettingsPanel({ open, onClose }: Props) {
   function toggleTheme() {
     const next = !dark;
     setDark(next);
-    document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light');
+    const val = next ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', val);
+    try { localStorage.setItem('era-theme', val); } catch (_) {}
   }
 
   async function handleSaveProfile(e: React.FormEvent) {

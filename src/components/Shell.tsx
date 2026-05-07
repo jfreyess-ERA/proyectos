@@ -9,7 +9,7 @@ import {
 import { PEOPLE } from '@/lib/data';
 import { Avatar } from './Avatar';
 import { NotificationBell } from './NotificationBell';
-import type { Project } from '@/lib/types';
+import type { Project, Sprint } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
 type ViewId = 'board' | 'list' | 'timeline' | 'calendar';
@@ -30,6 +30,8 @@ interface ShellProps {
   onCreateProject?: () => void;
   onEditProject?: (id: string) => void;
   onOpenTask?: (taskId: string) => void;
+  onCreateSprint?: () => void;
+  sprints?: Sprint[];
   children: React.ReactNode;
 }
 
@@ -48,6 +50,8 @@ export function Shell({
   onCreateProject,
   onEditProject,
   onOpenTask,
+  onCreateSprint,
+  sprints = [],
   children,
 }: ShellProps) {
   const [collapsed, setCollapsed] = useState(false);
@@ -178,6 +182,45 @@ export function Shell({
               </div>
             ))}
           </div>
+
+          {/* Sprints */}
+          {!collapsed && (
+            <div className="px-2 pt-3 pb-1">
+              <div className="flex items-center justify-between px-2 pb-1.5">
+                <span className="text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+                  Sprints
+                </span>
+                <button
+                  onClick={onCreateSprint}
+                  className="border-0 bg-transparent text-[14px] leading-none px-1 rounded"
+                  style={{ color: 'var(--ink-4)' }}
+                  title="Nuevo sprint"
+                >+</button>
+              </div>
+              {sprints.length === 0 && (
+                <div className="px-[10px] py-[4px] text-[12px]" style={{ color: 'var(--ink-4)' }}>Sin sprints</div>
+              )}
+              {sprints.map(s => {
+                const sprintNav = 'sprint:' + s.id;
+                const statusDot = s.status === 'active' ? 'var(--accent)' : s.status === 'completed' ? 'oklch(0.60 0.14 160)' : 'var(--ink-4)';
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => onNavChange?.(sprintNav)}
+                    className="flex items-center gap-[10px] w-full text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors overflow-hidden min-w-0"
+                    style={{
+                      color: activeNav === sprintNav ? 'var(--ink)' : 'var(--ink-2)',
+                      background: activeNav === sprintNav ? 'var(--surface)' : 'transparent',
+                      fontWeight: activeNav === sprintNav ? 500 : 400,
+                    }}
+                  >
+                    <span className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: statusDot }} />
+                    <span className="truncate min-w-0">{s.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Vistas guardadas */}
           {!collapsed && (
