@@ -1,10 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { X, LogOut, Moon, Sun, Trash2, UserPlus, Pencil, Check,
-         ChevronDown, Mail, Eye, EyeOff, RefreshCw, KeyRound, Copy } from 'lucide-react';
+         ChevronDown, Mail, Eye, EyeOff, RefreshCw, KeyRound, Copy, Tag, Plus } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { avatarBg } from '@/lib/data';
-import type { User } from '@/lib/types';
+import { supabase } from '@/lib/supabase';
+import type { User, Label } from '@/lib/types';
 
 interface Props {
   open: boolean;
@@ -12,7 +13,7 @@ interface Props {
   onInviteUser?: () => void;
 }
 
-type Tab = 'profile' | 'users';
+type Tab = 'profile' | 'users' | 'labels';
 
 interface UserRow extends User {
   email?: string;
@@ -130,6 +131,21 @@ function PasswordField({
   );
 }
 
+// Determines if a hex color is dark (for choosing white vs dark text)
+function isColorDark(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 < 128;
+}
+
+// Preset color palette for labels
+const LABEL_COLORS = [
+  '#3b82f6', '#8b5cf6', '#10b981', '#6366f1', '#f59e0b',
+  '#ef4444', '#6b7280', '#14b8a6', '#f97316', '#ec4899',
+  '#84cc16', '#06b6d4',
+];
+
 export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
   const { profile, signOut, session, refreshProfile } = useAuth();
   const [tab, setTab] = useState<Tab>('profile');
@@ -161,6 +177,14 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
   const [ownPwOk, setOwnPwOk] = useState(false);
   const [ownPwErr, setOwnPwErr] = useState('');
 
+  // Labels tab
+  const [labelsData, setLabelsData] = useState<Label[]>([]);
+  const [loadingLabels, setLoadingLabels] = useState(false);
+  const [newLabelText, setNewLabelText] = useState('');
+  const [newLabelBg, setNewLabelBg] = useState('#3b82f6');
+  const [savingLabel, setSavingLabel] = useState(false);
+  const [labelErr, setLabelErr] = useState('');
+
   // Create user form
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', role: '', password: '' });
@@ -182,6 +206,37 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
     if (!open || !isAdmin || tab !== 'users') return;
     fetchUsers();
   }, [open, isAdmin, tab]);
+
+  useEffect(() => {
+    if (!open || !isAdmin || tab !== 'labels') return;
+    loadLabels();
+  }, [open, isAdmin, tab]);
+
+  async function loadLabels() {
+    setLoadingLabels(true);
+    const { data } = await supabase.from('labels').select('*').order('text');
+    setLabelsData((data as Label[]) ?? []);
+    setLoadingLabels(false);
+  }
+
+  async function handleCreateLabel(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newLabelText.trim()) return;
+    setSavingLabel(true);
+    setLabelErr('');
+    // Compute fg: white for dark bg, dark for light bg
+    const fg = isColorDark(newLabelBg) ? '#ffffff' : '#1a1a2e';
+    const { error } = await supabase.from('labels').insert({ text: newLabelText.trim(), bg: newLabelBg, fg });
+    if (error) { setLabelErr(error.message); }
+    else { setNewLabelText(''); await loadLabels(); }
+    setSavingLabel(false);
+  }
+
+  async function handleDeleteLabel(id: string) {
+    if (!confirm('¿Eliminar esta etiqueta? Se quitará de todas las tareas que la usen.')) return;
+    await supabase.from('labels').delete().eq('id', id);
+    setLabelsData(prev => prev.filter(l => l.id !== id));
+  }
 
   async function fetchUsers() {
     if (!session?.access_token) {
@@ -351,11 +406,11 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
         {/* Tabs */}
         {isAdmin && (
           <div className="flex gap-[2px] px-5 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--line)' }}>
-            {(['profile', 'users'] as Tab[]).map(t => (
+            {(['profile', 'users', 'labels'] as Tab[]).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className="h-7 px-3 rounded-[6px] text-[12.5px] font-medium border-0 transition-colors"
                 style={{ background: tab === t ? 'var(--bg-3)' : 'transparent', color: tab === t ? 'var(--ink)' : 'var(--ink-3)' }}>
-                {t === 'profile' ? 'Mi perfil' : 'Usuarios'}
+                {t === 'profile' ? 'Mi perfil' : t === 'users' ? 'Usuarios' : 'Etiquetas'}
               </button>
             ))}
           </div>
@@ -457,6 +512,126 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                   style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>
                   <LogOut size={14} />Cerrar sesión
                 </button>
+              </div>
+            </>
+          )}
+
+          {/* ── Labels tab ── */}
+          {tab === 'labels' && isAdmin && (
+            <>
+              {/* Create label */}
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--ink-4)' }}>
+                  Nueva etiqueta
+                </div>
+                <form onSubmit={handleCreateLabel} className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11.5px] font-medium" style={{ color: 'var(--ink-3)' }}>Nombre</label>
+                    <input
+                      type="text"
+                      value={newLabelText}
+                      onChange={e => { setNewLabelText(e.target.value); setLabelErr(''); }}
+                      placeholder="Ej: Urgente, Bug, Diseño…"
+                      maxLength={40}
+                      className="h-8 px-3 rounded-[7px] text-[12.5px] outline-none"
+                      style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[11.5px] font-medium" style={{ color: 'var(--ink-3)' }}>Color</label>
+                    <div className="flex flex-wrap gap-2">
+                      {LABEL_COLORS.map(c => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setNewLabelBg(c)}
+                          className="w-6 h-6 rounded-full border-2 transition-transform"
+                          style={{
+                            background: c,
+                            borderColor: newLabelBg === c ? 'var(--ink)' : 'transparent',
+                            transform: newLabelBg === c ? 'scale(1.2)' : 'scale(1)',
+                          }}
+                          title={c}
+                        />
+                      ))}
+                      {/* Custom color */}
+                      <input
+                        type="color"
+                        value={newLabelBg}
+                        onChange={e => setNewLabelBg(e.target.value)}
+                        className="w-6 h-6 rounded-full cursor-pointer border-0 p-0"
+                        style={{ background: 'none' }}
+                        title="Color personalizado"
+                      />
+                    </div>
+                    {/* Preview */}
+                    {newLabelText && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Vista previa:</span>
+                        <span
+                          className="inline-flex items-center gap-[5px] px-[8px] py-[2px] rounded-full text-[11px] font-medium"
+                          style={{ background: newLabelBg, color: isColorDark(newLabelBg) ? '#fff' : '#1a1a2e' }}
+                        >
+                          {newLabelText}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {labelErr && <div className="text-[11.5px]" style={{ color: 'var(--danger)' }}>{labelErr}</div>}
+
+                  <button
+                    type="submit"
+                    disabled={savingLabel || !newLabelText.trim()}
+                    className="h-8 rounded-[7px] text-[12.5px] font-semibold border-0 flex items-center justify-center gap-2 transition-opacity"
+                    style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: savingLabel || !newLabelText.trim() ? 0.45 : 1 }}
+                  >
+                    <Plus size={13} />{savingLabel ? 'Creando…' : 'Crear etiqueta'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Existing labels */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
+                    Etiquetas existentes ({labelsData.length})
+                  </div>
+                  {loadingLabels && <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Cargando…</span>}
+                </div>
+                {labelsData.length === 0 && !loadingLabels && (
+                  <div className="py-4 text-center text-[13px]" style={{ color: 'var(--ink-4)' }}>
+                    Sin etiquetas aún. Crea la primera arriba.
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  {labelsData.map(l => (
+                    <div
+                      key={l.id}
+                      className="flex items-center justify-between px-3 py-2 rounded-[8px]"
+                      style={{ border: '1px solid var(--line)', background: 'var(--bg-2)' }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="inline-flex items-center gap-[5px] px-[8px] py-[3px] rounded-full text-[11px] font-medium"
+                          style={{ background: l.bg, color: l.fg }}
+                        >
+                          <Tag size={9} />
+                          {l.text}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteLabel(l.id)}
+                        className="w-6 h-6 flex items-center justify-center rounded-[5px] border-0 bg-transparent transition-colors"
+                        style={{ color: 'var(--ink-4)' }}
+                        title="Eliminar etiqueta"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </>
           )}
