@@ -31,6 +31,7 @@ import { CrmCalendarView } from '@/components/CrmCalendarView';
 import { CrmImportModal } from '@/components/CrmImportModal';
 import { CrmReports } from '@/components/CrmReports';
 import { InviteUserModal } from '@/components/InviteUserModal';
+import { UsersContext } from '@/lib/users-context';
 import { useNorteData } from '@/lib/useNorteData';
 import { useCrmData } from '@/lib/useCrmData';
 import { useAuth } from '@/lib/auth-context';
@@ -266,6 +267,7 @@ export default function Home() {
   }
 
   return (
+    <UsersContext.Provider value={users}>
     <>
       <Shell
         activeNav={activeNav}
@@ -403,5 +405,6 @@ export default function Home() {
         onImported={() => crmRefetch()}
       />
     </>
+    </UsersContext.Provider>
   );
 }

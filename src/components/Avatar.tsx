@@ -1,5 +1,6 @@
 'use client';
-import { getUser, avatarBg } from '@/lib/data';
+import { avatarBg } from '@/lib/data';
+import { useUsers } from '@/lib/users-context';
 
 interface Props {
   userId?: string;
@@ -11,10 +12,13 @@ interface Props {
 const sizes = { sm: 'w-5 h-5 text-[9px]', md: 'w-6 h-6 text-[10px]', lg: 'w-8 h-8 text-[11.5px]' };
 
 export function Avatar({ userId, name, hue, size = 'md' }: Props) {
-  const user = userId ? getUser(userId) : null;
-  const displayName = user?.name ?? name ?? '?';
+  const users = useUsers();
+  const user = userId ? users.find(u => u.id === userId) : null;
+  const displayName = user?.name ?? name ?? '';
   const displayHue = user?.hue ?? hue ?? 250;
-  const initials = displayName.split(' ').map(w => w[0]).slice(0, 2).join('');
+  const initials = displayName
+    ? displayName.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
 
   return (
     <span
