@@ -2,8 +2,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Paperclip, Archive, MoreHorizontal, Plus, Send, Trash2, FileText, Image as ImageIcon, Upload, Check } from 'lucide-react';
 import {
-  getProject, getLabel, getUser, fmtDate, PEOPLE, STATUSES, PRIORITIES, LABELS,
+  getProject, fmtDate, PEOPLE, STATUSES, PRIORITIES,
 } from '@/lib/data';
+import { useLabels } from '@/lib/labels-context';
 import {
   updateTask, fetchComments, insertComment,
   logActivity, fetchActivity,
@@ -25,6 +26,7 @@ interface Props {
 
 export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated }: Props) {
   const { profile } = useAuth();
+  const allLabels = useLabels();
   const allPeople = users.length > 0 ? users : PEOPLE;
 
   const [edited, setEdited]         = useState<Task | null>(null);
@@ -91,7 +93,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
 
   const taskId  = task.id;
   const project = getProject(edited.project);
-  const labels  = edited.labels.map(id => getLabel(id)).filter(Boolean);
+  const labels  = edited.labels.map(id => allLabels.find(l => l.id === id)).filter(Boolean);
   const spentPct   = edited.estimate > 0 ? Math.min(100, (edited.spent / edited.estimate) * 100) : 0;
   const overBudget = edited.spent > edited.estimate;
 
@@ -141,7 +143,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
   function toggleLabel(labelId: string) {
     const current = edited!.labels;
     const next    = current.includes(labelId) ? current.filter(id => id !== labelId) : [...current, labelId];
-    const lbl     = LABELS.find(l => l.id === labelId);
+    const lbl     = allLabels.find(l => l.id === labelId);
     const action  = current.includes(labelId) ? `Quitó etiqueta "${lbl?.text}"` : `Agregó etiqueta "${lbl?.text}"`;
     setEdited(prev => prev ? { ...prev, labels: next } : prev);
     save({ labels: next }, action);
@@ -452,7 +454,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
               <div className="flex flex-col gap-4">
                 {comments.length === 0 && <div className="text-[12px] py-1" style={{ color: 'var(--ink-4)' }}>Aún no hay comentarios.</div>}
                 {comments.map(c => {
-                  const author = allPeople.find(u => u.id === c.user_id) ?? getUser(c.user_id);
+                  const author = allPeople.find(u => u.id === c.user_id) ?? undefined;
                   const dt = new Date(c.created_at);
                   return (
                     <div key={c.id} className="flex gap-3">
@@ -499,7 +501,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
               <Section title="Actividad">
                 <div className="flex flex-col gap-[10px]">
                   {activity.map(a => {
-                    const actor = allPeople.find(u => u.id === a.user_id) ?? getUser(a.user_id);
+                    const actor = allPeople.find(u => u.id === a.user_id) ?? undefined;
                     return (
                       <div key={a.id} className="flex items-start gap-2">
                         <Avatar userId={a.user_id} size="sm" />
@@ -596,7 +598,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
                       className="absolute left-0 top-[calc(100%+4px)] z-10 rounded-[10px] overflow-hidden flex flex-col py-1"
                       style={{ width: 180, background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-pop)' }}
                     >
-                      {LABELS.map(l => {
+                      {allLabels.map(l => {
                         const active = edited.labels.includes(l.id);
                         return (
                           <button

@@ -32,6 +32,7 @@ import { CrmImportModal } from '@/components/CrmImportModal';
 import { CrmReports } from '@/components/CrmReports';
 import { InviteUserModal } from '@/components/InviteUserModal';
 import { UsersContext } from '@/lib/users-context';
+import { LabelsContext } from '@/lib/labels-context';
 import { useNorteData } from '@/lib/useNorteData';
 import { useCrmData } from '@/lib/useCrmData';
 import { useAuth } from '@/lib/auth-context';
@@ -44,7 +45,7 @@ type ViewId = 'board' | 'list' | 'timeline' | 'calendar';
 export default function Home() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
-  const { tasks, projects, users, sprints, loading, error, refetch } = useNorteData();
+  const { tasks, projects, users, labels, sprints, loading, error, refetch } = useNorteData();
   const { prospects, interactions, crmTasks, triggers, templates, refetch: crmRefetch } = useCrmData();
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [createProspectOpen, setCreateProspectOpen] = useState(false);
@@ -268,6 +269,7 @@ export default function Home() {
 
   return (
     <UsersContext.Provider value={users}>
+    <LabelsContext.Provider value={labels}>
     <>
       <Shell
         activeNav={activeNav}
@@ -405,6 +407,7 @@ export default function Home() {
         onImported={() => crmRefetch()}
       />
     </>
+    </LabelsContext.Provider>
     </UsersContext.Provider>
   );
 }
