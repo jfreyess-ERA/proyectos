@@ -57,6 +57,7 @@ export function Shell({
   children,
 }: ShellProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const me = currentUser ?? PEOPLE[0];
 
   const activeProject = projects.find(p => p.id === projectId);
@@ -66,14 +67,27 @@ export function Shell({
       className="flex h-screen overflow-hidden"
       style={{ background: 'var(--bg)' }}
     >
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          style={{ background: 'rgba(0,0,0,0.4)' }}
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className="flex flex-col border-r border-[var(--line)] overflow-hidden transition-all duration-200 flex-shrink-0"
+        className="flex flex-col border-r border-[var(--line)] overflow-hidden transition-all duration-200 flex-shrink-0 fixed md:relative z-50 md:z-auto h-full"
         style={{
           width: collapsed ? 60 : 'var(--sidebar-w)',
           background: 'var(--bg-2)',
+          transform: mobileOpen ? 'translateX(0)' : undefined,
+          left: 0,
+          top: 0,
         }}
       >
+        <style>{`@media (max-width: 767px) { aside { transform: ${mobileOpen ? 'translateX(0)' : 'translateX(-100%)'}; } }`}</style>
         {/* Brand */}
         <div
           className="flex items-center gap-[10px] px-4 border-b border-[var(--line)] flex-shrink-0"
@@ -116,7 +130,7 @@ export function Shell({
             ].map(item => (
               <button
                 key={item.id}
-                onClick={() => onNavChange?.(item.id)}
+                onClick={() => { onNavChange?.(item.id); setMobileOpen(false); }}
                 className="flex items-center gap-[10px] w-full text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors"
                 style={{
                   color: activeNav === item.id ? 'var(--ink)' : 'var(--ink-2)',
@@ -158,7 +172,7 @@ export function Shell({
             {projects.map(p => (
               <div key={p.id} className="flex items-center group">
                 <button
-                  onClick={() => onNavChange?.('project:' + p.id)}
+                  onClick={() => { onNavChange?.('project:' + p.id); setMobileOpen(false); }}
                   className="flex items-center gap-[10px] flex-1 text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors overflow-hidden min-w-0"
                   style={{
                     color: activeNav === 'project:' + p.id ? 'var(--ink)' : 'var(--ink-2)',
@@ -208,7 +222,7 @@ export function Shell({
                 return (
                   <button
                     key={s.id}
-                    onClick={() => onNavChange?.(sprintNav)}
+                    onClick={() => { onNavChange?.(sprintNav); setMobileOpen(false); }}
                     className="flex items-center gap-[10px] w-full text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors overflow-hidden min-w-0"
                     style={{
                       color: activeNav === sprintNav ? 'var(--ink)' : 'var(--ink-2)',
@@ -242,7 +256,7 @@ export function Shell({
               ].map(item => (
                 <button
                   key={item.id}
-                  onClick={() => onNavChange?.(item.id)}
+                  onClick={() => { onNavChange?.(item.id); setMobileOpen(false); }}
                   className="flex items-center gap-[10px] w-full text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors"
                   style={{
                     color: activeNav === item.id ? 'var(--ink)' : 'var(--ink-2)',
@@ -274,7 +288,7 @@ export function Shell({
               ].map(item => (
                 <button
                   key={item.id}
-                  onClick={() => onNavChange?.(item.id)}
+                  onClick={() => { onNavChange?.(item.id); setMobileOpen(false); }}
                   className="flex items-center justify-center w-full py-[6px] px-[10px] rounded-[6px] border-0 transition-colors"
                   style={{
                     background: activeNav === item.id ? 'var(--surface)' : 'transparent',
@@ -299,7 +313,7 @@ export function Shell({
               ].map(item => (
                 <button
                   key={item.id}
-                  onClick={() => onNavChange?.(item.id)}
+                  onClick={() => { onNavChange?.(item.id); setMobileOpen(false); }}
                   className="flex items-center gap-[10px] w-full text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors"
                   style={{
                     color: activeNav === item.id ? 'var(--ink)' : 'var(--ink-2)',
@@ -342,15 +356,24 @@ export function Shell({
       </aside>
 
       {/* Main */}
-      <div className="flex flex-col flex-1 min-w-0 min-h-0" style={{ background: 'var(--bg)' }}>
+      <div className="flex flex-col flex-1 min-w-0 min-h-0 md:ml-0" style={{ background: 'var(--bg)' }}>
         {/* Header */}
         <header
-          className="flex items-center gap-4 px-6 border-b border-[var(--line)] flex-shrink-0"
+          className="flex items-center gap-4 px-4 md:px-6 border-b border-[var(--line)] flex-shrink-0"
           style={{ height: 'var(--header-h)', background: 'var(--bg)' }}
         >
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setMobileOpen(o => !o)}
+            className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors md:hidden"
+            style={{ color: 'var(--ink-2)' }}
+          >
+            <PanelLeft size={16} />
+          </button>
+          {/* Collapse — desktop only */}
           <button
             onClick={() => setCollapsed(c => !c)}
-            className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors"
+            className="w-8 h-8 items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors hidden md:flex"
             style={{ color: 'var(--ink-2)' }}
             title="Plegar barra lateral"
           >
