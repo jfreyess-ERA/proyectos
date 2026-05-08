@@ -1,15 +1,16 @@
 'use client';
-import { PEOPLE, getProject, avatarBg } from '@/lib/data';
-import type { Task, Project } from '@/lib/types';
+import { avatarBg } from '@/lib/data';
+import type { Task, Project, User } from '@/lib/types';
 
 interface Props {
   tasks: Task[];
   projects: Project[];
+  users: User[];
   onOpenTask: (task: Task) => void;
 }
 
-export function PeopleView({ tasks, projects }: Props) {
-  const stats = PEOPLE.map(u => {
+export function PeopleView({ tasks, projects, users }: Props) {
+  const stats = users.map(u => {
     const assigned = tasks.filter(t => t.assignees.includes(u.id));
     const active = assigned.filter(t => t.status !== 'done');
     const done = assigned.filter(t => t.status === 'done').length;
@@ -35,7 +36,7 @@ export function PeopleView({ tasks, projects }: Props) {
           Equipo
         </h1>
         <p className="text-[14px] mt-1" style={{ color: 'var(--ink-3)' }}>
-          {PEOPLE.length} personas · {tasks.filter(t => t.status !== 'done').length} tareas activas en total
+          {users.length} personas · {tasks.filter(t => t.status !== 'done').length} tareas activas en total
         </p>
       </div>
 
