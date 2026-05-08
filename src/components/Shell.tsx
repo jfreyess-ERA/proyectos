@@ -23,6 +23,8 @@ interface ShellProps {
   projectId?: string;
   projects: Project[];
   loading?: boolean;
+  inboxCount?: number;
+  myTasksCount?: number;
   currentUser?: { name: string; role: string; id: string; initials: string; hue: number };
   onNavChange?: (id: NavId) => void;
   onViewChange?: (id: ViewId) => void;
@@ -44,6 +46,8 @@ export function Shell({
   projectId,
   projects,
   currentUser,
+  inboxCount = 0,
+  myTasksCount = 0,
   onNavChange,
   onViewChange,
   onOpenCmdk,
@@ -78,16 +82,15 @@ export function Shell({
 
       {/* Sidebar */}
       <aside
-        className="flex flex-col border-r border-[var(--line)] overflow-hidden transition-all duration-200 flex-shrink-0 fixed md:relative z-50 md:z-auto h-full"
+        className="flex flex-col border-r border-[var(--line)] overflow-hidden transition-all duration-200 flex-shrink-0 fixed md:static z-50 md:z-auto h-full md:transform-none"
         style={{
           width: collapsed ? 60 : 'var(--sidebar-w)',
           background: 'var(--bg-2)',
-          transform: mobileOpen ? 'translateX(0)' : undefined,
           left: 0,
           top: 0,
+          transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
-        <style>{`@media (max-width: 767px) { aside { transform: ${mobileOpen ? 'translateX(0)' : 'translateX(-100%)'}; } }`}</style>
         {/* Brand */}
         <div
           className="flex items-center gap-[10px] px-4 border-b border-[var(--line)] flex-shrink-0"
@@ -123,8 +126,8 @@ export function Shell({
             )}
             {[
               { id: 'dashboard', icon: <Home size={16} />,       label: 'Inicio' },
-              { id: 'inbox',     icon: <Inbox size={16} />,      label: 'Bandeja',    count: 4 },
-              { id: 'mytasks',   icon: <CheckSquare size={16} />, label: 'Mis tareas', count: 7 },
+              { id: 'inbox',     icon: <Inbox size={16} />,      label: 'Bandeja',    count: inboxCount || undefined },
+              { id: 'mytasks',   icon: <CheckSquare size={16} />, label: 'Mis tareas', count: myTasksCount || undefined },
               { id: 'people',    icon: <Users size={16} />,      label: 'Equipo' },
               { id: 'reports',   icon: <BarChart2 size={16} />,  label: 'Reportes' },
             ].map(item => (

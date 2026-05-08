@@ -285,6 +285,8 @@ export default function Home() {
         onOpenTask={(taskId) => { const t = tasks.find(t => t.id === taskId); if (t) setSelectedTask(t); }}
         onCreateSprint={() => setSprintModalOpen(true)}
         loading={loading}
+        inboxCount={tasks.filter(t => t.status !== 'done' && t.due && new Date(t.due) < new Date()).length}
+        myTasksCount={profile ? tasks.filter(t => t.status !== 'done' && t.assignees?.includes(profile.id)).length : 0}
       >
         {error && (
           <div className="mx-6 mt-4 px-4 py-3 rounded-[8px] text-[13px]"
