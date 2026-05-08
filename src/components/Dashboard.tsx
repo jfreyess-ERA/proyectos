@@ -55,32 +55,33 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
   const maxDay = Math.max(...days.map(d => d.count), 1);
 
   return (
-    <div className="p-6 max-w-[1200px]">
+    <div className="p-4 md:p-6 max-w-[1200px]">
       {/* Hero */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
+      <div className="flex items-start justify-between mb-6 gap-3">
+        <div className="min-w-0">
           <div className="text-[11px] font-semibold tracking-widest uppercase mb-1" style={{ color: 'var(--ink-4)' }}>
             {today.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
           </div>
-          <h1 className="text-[28px] font-bold tracking-tight leading-tight" style={{ color: 'var(--ink)' }}>
+          <h1 className="text-[24px] md:text-[28px] font-bold tracking-tight leading-tight" style={{ color: 'var(--ink)' }}>
             Hola, {me.name.split(' ')[0]}.
           </h1>
-          <p className="text-[14px] mt-1" style={{ color: 'var(--ink-3)' }}>
+          <p className="text-[13px] md:text-[14px] mt-1" style={{ color: 'var(--ink-3)' }}>
             Tienes <strong style={{ color: 'var(--ink)' }}>{myTasks.length}</strong> tareas activas
             {' '}y <strong style={{ color: overdue.length > 0 ? 'var(--danger)' : 'var(--ink)' }}>{dueWeek.length}</strong> vencen esta semana.
           </p>
         </div>
         <button
           onClick={onCreateTask}
-          className="h-8 px-3 text-[13px] font-medium rounded-[7px] flex items-center gap-[6px] border-0"
+          className="h-8 px-3 text-[13px] font-medium rounded-[7px] flex items-center gap-[6px] border-0 flex-shrink-0"
           style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
         >
-          + Nueva tarea
+          <span className="hidden sm:inline">+ Nueva tarea</span>
+          <span className="sm:hidden">+</span>
         </button>
       </div>
 
       {/* KPI strip */}
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {[
           { icon: <CheckCircle size={15} />, label: 'Completadas', value: `${done}`, sub: `${completionRate}% del total`, color: 'var(--accent)' },
           { icon: <Flag size={15} />,        label: 'Atrasadas',   value: `${overdue.length}`, sub: overdue.length > 0 ? 'Requieren atención' : 'Al día', color: overdue.length > 0 ? 'var(--danger)' : 'var(--accent)' },
@@ -103,9 +104,9 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Estado general */}
-        <Card className="col-span-2">
+        <Card className="col-span-1 md:col-span-2">
           <CardHead title="Estado del trabajo" meta={`${total} tareas`} />
           <div className="flex gap-6 mb-4">
             {statusCounts.map(s => (
@@ -168,7 +169,7 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
         </Card>
 
         {/* Proyectos */}
-        <Card className="col-span-2">
+        <Card className="col-span-1 md:col-span-2">
           <CardHead title="Progreso por proyecto" meta={`${projectStats.filter(p => p.total > 0).length} activos`} />
           <div className="flex flex-col gap-3">
             {projectStats.filter(p => p.total > 0).map(p => (
