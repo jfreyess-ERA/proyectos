@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Home, Inbox, CheckSquare, Users, BarChart2,
   Search, Plus, Filter, SortAsc, Star, Settings,
@@ -62,7 +62,19 @@ export function Shell({
 }: ShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const me = currentUser ?? PEOPLE[0];
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+      if (!e.matches) setMobileOpen(false);
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const activeProject = projects.find(p => p.id === projectId);
 
@@ -88,7 +100,7 @@ export function Shell({
           background: 'var(--bg-2)',
           left: 0,
           top: 0,
-          transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transform: isMobile ? (mobileOpen ? 'translateX(0)' : 'translateX(-100%)') : undefined,
         }}
       >
         {/* Brand */}
