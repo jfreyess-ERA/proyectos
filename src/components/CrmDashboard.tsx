@@ -1,5 +1,14 @@
 'use client';
+import { useState } from 'react';
 import type { Prospect, CrmInteraction, CrmTask, CrmTrigger } from '@/lib/types';
+
+const RANGE_OPTIONS = [
+  { label: '1 semana',  days: 7  },
+  { label: '2 semanas', days: 14 },
+  { label: '3 semanas', days: 21 },
+  { label: '1 mes',     days: 30 },
+  { label: '2 meses',   days: 60 },
+];
 
 interface Props {
   prospects: Prospect[];
@@ -21,8 +30,9 @@ const STAGE_COLOR: Record<string, string> = {
 };
 
 export function CrmDashboard({ prospects, interactions, crmTasks, triggers, onViewProspects }: Props) {
+  const [rangeDays, setRangeDays] = useState(7);
   const today = new Date().toISOString().slice(0, 10);
-  const in7days = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const inRangeDays = new Date(Date.now() + rangeDays * 86400000).toISOString().slice(0, 10);
   const days30ago = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const thisMonth = new Date().toISOString().slice(0, 7);
 
@@ -34,7 +44,7 @@ export function CrmDashboard({ prospects, interactions, crmTasks, triggers, onVi
   const pendingTasks = crmTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress' || t.status === 'Waiting');
   const overdueTasks = pendingTasks.filter(t => t.due_date && t.due_date < today);
   const followupsToday = pendingTasks.filter(t => t.due_date === today);
-  const followups7 = pendingTasks.filter(t => t.due_date && t.due_date >= today && t.due_date <= in7days);
+  const followupsInRange = pendingTasks.filter(t => t.due_date && t.due_date >= today && t.due_date <= inRangeDays);
   const openTriggers = triggers.filter(t => t.status === 'Open').length;
 
   const thisMonthInteractions = interactions.filter(i => i.date.startsWith(thisMonth)).length;
@@ -73,13 +83,30 @@ export function CrmDashboard({ prospects, interactions, crmTasks, triggers, onVi
 
   return (
     <div className="p-6 max-w-[1200px]">
-      <div className="mb-6">
-        <h1 className="text-[24px] font-bold tracking-tight" style={{ color: 'var(--ink)' }}>
-          Dashboard CRM
-        </h1>
-        <p className="text-[14px] mt-1" style={{ color: 'var(--ink-3)' }}>
-          {prospects.length} prospectos · {thisMonthInteractions} interacciones este mes
-        </p>
+      <div className="flex items-start justify-between mb-6 gap-3">
+        <div>
+          <h1 className="text-[24px] font-bold tracking-tight" style={{ color: 'var(--ink)' }}>
+            Dashboard CRM
+          </h1>
+          <p className="text-[14px] mt-1" style={{ color: 'var(--ink-3)' }}>
+            {prospects.length} prospectos · {thisMonthInteractions} interacciones este mes · {followupsInRange.length} tareas en los próximos {RANGE_OPTIONS.find(r => r.days === rangeDays)?.label}
+          </p>
+        </div>
+        <select
+          value={rangeDays}
+          onChange={e => setRangeDays(Number(e.target.value))}
+          className="h-8 px-2 rounded-[7px] text-[12px] outline-none cursor-pointer flex-shrink-0"
+          style={{
+            border: '1px solid var(--line)',
+            background: 'var(--surface)',
+            color: 'var(--ink)',
+            fontFamily: 'var(--font)',
+          }}
+        >
+          {RANGE_OPTIONS.map(opt => (
+            <option key={opt.days} value={opt.days}>{opt.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* KPI Grid */}
@@ -158,7 +185,7 @@ export function CrmDashboard({ prospects, interactions, crmTasks, triggers, onVi
         {/* Próximas tareas */}
         <div className="col-span-1 rounded-[12px] p-5" style={{ background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-1)' }}>
           <div className="text-[13px] font-semibold mb-4" style={{ color: 'var(--ink)' }}>
-            Próximas tareas · {followups7.length} esta semana
+            Próximas tareas · {followupsInRange.length} en {RANGE_OPTIONS.find(r => r.days === rangeDays)?.label}
           </div>
           <div className="flex flex-col gap-2">
             {upcomingTasks.length === 0 && (
