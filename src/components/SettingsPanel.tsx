@@ -149,11 +149,17 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
   const [editForms, setEditForms] = useState<Record<string, { name: string; role: string; is_admin: boolean }>>({});
   const [savingUser, setSavingUser] = useState<string | null>(null);
 
-  // Per-user password change
+  // Per-user password change (admin panel)
   const [pwForms, setPwForms] = useState<Record<string, string>>({});
   const [savingPw, setSavingPw] = useState<string | null>(null);
   const [pwOk, setPwOk] = useState<string | null>(null);
   const [pwErr, setPwErr] = useState<Record<string, string>>({});
+
+  // Own password change (profile tab)
+  const [ownPw, setOwnPw] = useState('');
+  const [savingOwnPw, setSavingOwnPw] = useState(false);
+  const [ownPwOk, setOwnPwOk] = useState(false);
+  const [ownPwErr, setOwnPwErr] = useState('');
 
   // Create user form
   const [creating, setCreating] = useState(false);
@@ -274,6 +280,21 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
     }
   }
 
+  async function handleChangeOwnPassword() {
+    if (ownPw.length < 6) { setOwnPwErr('Mínimo 6 caracteres'); return; }
+    setSavingOwnPw(true);
+    setOwnPwErr('');
+    setOwnPwOk(false);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { error } = await supabase.auth.updateUser({ password: ownPw });
+      if (error) { setOwnPwErr(error.message); }
+      else { setOwnPwOk(true); setOwnPw(''); setTimeout(() => setOwnPwOk(false), 3000); }
+    } finally {
+      setSavingOwnPw(false);
+    }
+  }
+
   async function handleDeleteUser(id: string) {
     if (!confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
     await fetch(`/api/admin/users?id=${id}`, {
@@ -391,6 +412,28 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                     <Check size={13} />{savingProfile ? 'Guardando…' : 'Guardar cambios'}
                   </button>
                 </form>
+              </div>
+
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--ink-4)' }}>Cambiar contraseña</div>
+                <div className="flex flex-col gap-2">
+                  <PasswordField
+                    value={ownPw}
+                    onChange={v => { setOwnPw(v); setOwnPwErr(''); setOwnPwOk(false); }}
+                    placeholder="Nueva contraseña"
+                    label="Nueva contraseña"
+                  />
+                  {ownPwErr && <div className="text-[11.5px]" style={{ color: 'var(--danger)' }}>{ownPwErr}</div>}
+                  {ownPwOk && <div className="text-[11.5px]" style={{ color: 'oklch(0.55 0.14 160)' }}>✓ Contraseña actualizada</div>}
+                  <button
+                    onClick={handleChangeOwnPassword}
+                    disabled={savingOwnPw || ownPw.length < 6}
+                    className="h-8 rounded-[7px] text-[12.5px] font-semibold border-0 flex items-center justify-center gap-1 transition-opacity"
+                    style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: savingOwnPw || ownPw.length < 6 ? 0.45 : 1 }}
+                  >
+                    <KeyRound size={13} />{savingOwnPw ? 'Guardando…' : 'Actualizar contraseña'}
+                  </button>
+                </div>
               </div>
 
               <div>
