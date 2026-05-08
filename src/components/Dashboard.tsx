@@ -93,14 +93,21 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
             {' '}y <strong style={{ color: overdue.length > 0 ? 'var(--danger)' : 'var(--ink)' }}>{dueInRange.length}</strong> vencen en los próximos {RANGE_OPTIONS.find(r => r.days === rangeDays)?.label ?? `${rangeDays} días`}.
           </p>
         </div>
-        <button
-          onClick={onCreateTask}
-          className="h-8 px-3 text-[13px] font-medium rounded-[7px] flex items-center gap-[6px] border-0 flex-shrink-0"
-          style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+        <select
+          value={rangeDays}
+          onChange={e => setRangeDays(Number(e.target.value))}
+          className="h-8 px-2 rounded-[7px] text-[12px] outline-none cursor-pointer flex-shrink-0"
+          style={{
+            border: '1px solid var(--line)',
+            background: 'var(--surface)',
+            color: 'var(--ink)',
+            fontFamily: 'var(--font)',
+          }}
         >
-          <span className="hidden sm:inline">+ Nueva tarea</span>
-          <span className="sm:hidden">+</span>
-        </button>
+          {RANGE_OPTIONS.map(opt => (
+            <option key={opt.days} value={opt.days}>{opt.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* KPI strip */}
@@ -162,27 +169,7 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
 
         {/* Carga semanal */}
         <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[13.5px] font-semibold" style={{ color: 'var(--ink)' }}>Vencimientos próximos</h3>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{dueInRange.length} tareas</span>
-              <select
-                value={rangeDays}
-                onChange={e => setRangeDays(Number(e.target.value))}
-                className="h-[26px] px-2 rounded-[6px] text-[12px] outline-none cursor-pointer"
-                style={{
-                  border: '1px solid var(--line)',
-                  background: 'var(--bg-2)',
-                  color: 'var(--ink)',
-                  fontFamily: 'var(--font)',
-                }}
-              >
-                {RANGE_OPTIONS.map(opt => (
-                  <option key={opt.days} value={opt.days}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <CardHead title="Vencimientos próximos" meta={`${dueInRange.length} tareas`} />
           <div className="flex items-end gap-[6px] h-[80px] mt-2">
             {days.map(d => (
               <div key={d.iso} className="flex-1 flex flex-col items-center gap-1">
