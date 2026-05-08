@@ -2,12 +2,6 @@
 import { useState, useEffect } from 'react';
 import { fetchTasks, fetchProjects, fetchUsers, fetchLabels, fetchAllSprints, taskRowToTask } from './db';
 import { supabase } from './supabase';
-import {
-  TASKS as SEED_TASKS,
-  PROJECTS as SEED_PROJECTS,
-  PEOPLE as SEED_PEOPLE,
-  LABELS as SEED_LABELS,
-} from './data';
 import type { Task, Project, User, Label, Sprint } from './types';
 
 interface NorteData {
@@ -22,10 +16,10 @@ interface NorteData {
 }
 
 export function useNorteData(): NorteData {
-  const [tasks, setTasks] = useState<Task[]>(SEED_TASKS);
-  const [projects, setProjects] = useState<Project[]>(SEED_PROJECTS);
-  const [users, setUsers] = useState<User[]>(SEED_PEOPLE);
-  const [labels, setLabels] = useState<Label[]>(SEED_LABELS);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [labels, setLabels] = useState<Label[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,10 +34,10 @@ export function useNorteData(): NorteData {
     Promise.all([fetchTasks(), fetchProjects(), fetchUsers(), fetchLabels(), fetchAllSprints()])
       .then(([t, p, u, l, s]) => {
         if (cancelled) return;
-        if (t.length > 0) setTasks(t);
-        if (p.length > 0) setProjects(p);
-        if (u.length > 0) setUsers(u);
-        if (l.length > 0) setLabels(l);
+        setTasks(t);
+        setProjects(p);
+        setUsers(u);
+        setLabels(l);
         setSprints(s);
       })
       .catch(err => {
