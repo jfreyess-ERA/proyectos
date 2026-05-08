@@ -163,27 +163,24 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
         {/* Carga semanal */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-[13.5px] font-semibold" style={{ color: 'var(--ink)' }}>Vencimientos próximos</h3>
-            </div>
+            <h3 className="text-[13.5px] font-semibold" style={{ color: 'var(--ink)' }}>Vencimientos próximos</h3>
             <div className="flex items-center gap-2">
               <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{dueInRange.length} tareas</span>
-              <div className="flex gap-[2px] rounded-[7px] p-[2px]" style={{ background: 'var(--bg-3)' }}>
+              <select
+                value={rangeDays}
+                onChange={e => setRangeDays(Number(e.target.value))}
+                className="h-[26px] px-2 rounded-[6px] text-[12px] outline-none cursor-pointer"
+                style={{
+                  border: '1px solid var(--line)',
+                  background: 'var(--bg-2)',
+                  color: 'var(--ink)',
+                  fontFamily: 'var(--font)',
+                }}
+              >
                 {RANGE_OPTIONS.map(opt => (
-                  <button
-                    key={opt.days}
-                    onClick={() => setRangeDays(opt.days)}
-                    className="h-[22px] px-[8px] rounded-[5px] text-[11px] font-medium border-0 transition-colors"
-                    style={{
-                      background: rangeDays === opt.days ? 'var(--surface)' : 'transparent',
-                      color: rangeDays === opt.days ? 'var(--ink)' : 'var(--ink-4)',
-                      boxShadow: rangeDays === opt.days ? 'var(--shadow-1)' : 'none',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
+                  <option key={opt.days} value={opt.days}>{opt.label}</option>
                 ))}
-              </div>
+              </select>
             </div>
           </div>
           <div className="flex items-end gap-[6px] h-[80px] mt-2">
