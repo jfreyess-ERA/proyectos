@@ -1,8 +1,17 @@
 'use client';
+import { useState } from 'react';
 import { Flag, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 import { PEOPLE, STATUSES, getProject, fmtDate, dueClass } from '@/lib/data';
 import { useAuth } from '@/lib/auth-context';
 import type { Task, Project } from '@/lib/types';
+
+const RANGE_OPTIONS = [
+  { label: '1 semana',  days: 7  },
+  { label: '2 semanas', days: 14 },
+  { label: '3 semanas', days: 21 },
+  { label: '1 mes',     days: 30 },
+  { label: '2 meses',   days: 60 },
+];
 
 interface Props {
   tasks: Task[];
@@ -14,16 +23,17 @@ interface Props {
 export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) {
   const { profile } = useAuth();
   const me = profile ?? PEOPLE[0];
+  const [rangeDays, setRangeDays] = useState(7);
 
   const myTasks = tasks.filter(t => t.assignees.includes(me.id) && t.status !== 'done');
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const overdue = tasks.filter(t => t.due && t.status !== 'done' && new Date(t.due + 'T00:00:00') < today);
-  const dueWeek = tasks.filter(t => {
+  const dueInRange = tasks.filter(t => {
     if (!t.due || t.status === 'done') return false;
     const d = new Date(t.due + 'T00:00:00');
     const diff = (d.getTime() - today.getTime()) / 86400000;
-    return diff >= 0 && diff <= 7;
+    return diff >= 0 && diff <= rangeDays;
   });
 
   const done  = tasks.filter(t => t.status === 'done').length;
@@ -44,14 +54,27 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
     return { ...p, total: ts.length, done: d, pct: ts.length ? d / ts.length : 0 };
   });
 
-  // 7-day workload: tasks due each day
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + i);
-    const iso = d.toISOString().slice(0, 10);
-    const count = tasks.filter(t => t.due === iso && t.status !== 'done').length;
-    return { label: d.toLocaleDateString('es', { weekday: 'short', day: 'numeric' }), count, iso };
-  });
+  // Workload chart: one bar per day for the selected range
+  // Group by week when range > 14 days for readability
+  const groupByWeek = rangeDays > 14;
+  const days = groupByWeek
+    ? Array.from({ length: Math.ceil(rangeDays / 7) }, (_, wi) => {
+        const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() + wi * 7);
+        const weekEnd   = new Date(today); weekEnd.setDate(weekEnd.getDate() + Math.min((wi + 1) * 7 - 1, rangeDays - 1));
+        const count = tasks.filter(t => {
+          if (!t.due || t.status === 'done') return false;
+          const d = new Date(t.due + 'T00:00:00');
+          return d >= weekStart && d <= weekEnd;
+        }).length;
+        const label = `S${wi + 1}`;
+        return { label, count, iso: weekStart.toISOString().slice(0, 10) };
+      })
+    : Array.from({ length: rangeDays }, (_, i) => {
+        const d = new Date(today); d.setDate(d.getDate() + i);
+        const iso = d.toISOString().slice(0, 10);
+        const count = tasks.filter(t => t.due === iso && t.status !== 'done').length;
+        return { label: d.toLocaleDateString('es', { weekday: 'short', day: 'numeric' }), count, iso };
+      });
   const maxDay = Math.max(...days.map(d => d.count), 1);
 
   return (
@@ -67,7 +90,7 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
           </h1>
           <p className="text-[13px] md:text-[14px] mt-1" style={{ color: 'var(--ink-3)' }}>
             Tienes <strong style={{ color: 'var(--ink)' }}>{myTasks.length}</strong> tareas activas
-            {' '}y <strong style={{ color: overdue.length > 0 ? 'var(--danger)' : 'var(--ink)' }}>{dueWeek.length}</strong> vencen esta semana.
+            {' '}y <strong style={{ color: overdue.length > 0 ? 'var(--danger)' : 'var(--ink)' }}>{dueInRange.length}</strong> vencen en los próximos {RANGE_OPTIONS.find(r => r.days === rangeDays)?.label ?? `${rangeDays} días`}.
           </p>
         </div>
         <button
@@ -139,7 +162,30 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
 
         {/* Carga semanal */}
         <Card>
-          <CardHead title="Vencimientos próximos 7 días" meta={`${dueWeek.length} tareas`} />
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-[13.5px] font-semibold" style={{ color: 'var(--ink)' }}>Vencimientos próximos</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{dueInRange.length} tareas</span>
+              <div className="flex gap-[2px] rounded-[7px] p-[2px]" style={{ background: 'var(--bg-3)' }}>
+                {RANGE_OPTIONS.map(opt => (
+                  <button
+                    key={opt.days}
+                    onClick={() => setRangeDays(opt.days)}
+                    className="h-[22px] px-[8px] rounded-[5px] text-[11px] font-medium border-0 transition-colors"
+                    style={{
+                      background: rangeDays === opt.days ? 'var(--surface)' : 'transparent',
+                      color: rangeDays === opt.days ? 'var(--ink)' : 'var(--ink-4)',
+                      boxShadow: rangeDays === opt.days ? 'var(--shadow-1)' : 'none',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
           <div className="flex items-end gap-[6px] h-[80px] mt-2">
             {days.map(d => (
               <div key={d.iso} className="flex-1 flex flex-col items-center gap-1">
