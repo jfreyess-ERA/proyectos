@@ -144,6 +144,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
   // User list
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState('');
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [editForms, setEditForms] = useState<Record<string, { name: string; role: string; is_admin: boolean }>>({});
   const [savingUser, setSavingUser] = useState<string | null>(null);
@@ -177,13 +178,21 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
   }, [open, isAdmin, tab]);
 
   async function fetchUsers() {
-    if (!session?.access_token) return;
+    if (!session?.access_token) {
+      setUsersError('Sin sesión activa');
+      return;
+    }
     setLoadingUsers(true);
+    setUsersError('');
     try {
       const res = await fetch('/api/admin/users', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json();
+      if (!res.ok) {
+        setUsersError(`Error ${res.status}: ${data?.error ?? 'desconocido'}`);
+        return;
+      }
       if (Array.isArray(data)) {
         setUsers(data);
         const forms: Record<string, { name: string; role: string; is_admin: boolean }> = {};
@@ -192,6 +201,8 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
         });
         setEditForms(forms);
       }
+    } catch (e: unknown) {
+      setUsersError(e instanceof Error ? e.message : 'Error de red');
     } finally {
       setLoadingUsers(false);
     }
@@ -410,6 +421,11 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
           {/* ── Users tab ── */}
           {tab === 'users' && isAdmin && (
             <>
+              {usersError && (
+                <div className="px-3 py-2 rounded-[8px] text-[12px] mb-3" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
+                  {usersError}
+                </div>
+              )}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
