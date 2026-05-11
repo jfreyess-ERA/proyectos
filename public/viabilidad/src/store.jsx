@@ -342,9 +342,15 @@ function StoreProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
-      const [{ data: analyses, error: aErr }, { data: expenses, error: eErr }] = await Promise.all([
-        sb.from("viability_analyses").select("*").order("updated_at", { ascending: false }),
-        sb.from("viability_expenses").select("*"),
+      const timeout = new Promise((_, rej) =>
+        setTimeout(() => rej(new Error("Tiempo de espera agotado (15s)")), 15000)
+      );
+      const [{ data: analyses, error: aErr }, { data: expenses, error: eErr }] = await Promise.race([
+        Promise.all([
+          sb.from("viability_analyses").select("*").order("updated_at", { ascending: false }),
+          sb.from("viability_expenses").select("*"),
+        ]),
+        timeout,
       ]);
       if (aErr) throw aErr;
       if (eErr) throw eErr;
@@ -453,17 +459,6 @@ function StoreProvider({ children }) {
       }
     },
   }), [clients, activeClientId, loading, error, loadAll]);
-
-  if (loading) {
-    return React.createElement("div", { className: "boot" }, "Cargando análisis…");
-  }
-
-  if (error) {
-    return React.createElement("div", { className: "boot", style: { color: "#c00" } },
-      React.createElement("div", null, "Error al conectar: " + error),
-      React.createElement("button", { onClick: loadAll, style: { marginTop: 12, padding: "6px 16px", cursor: "pointer" } }, "Reintentar")
-    );
-  }
 
   return React.createElement(StoreContext.Provider, { value: api }, children);
 }

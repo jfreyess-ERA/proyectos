@@ -6,7 +6,6 @@ function App() {
   const { t } = useI18n();
   const store = useStore();
   const [section, setSection] = React.useState("data");
-  const [authChecked, setAuthChecked] = React.useState(false);
 
   // ── Auth guard ────────────────────────────────────────────────
   React.useEffect(() => {
@@ -14,16 +13,14 @@ function App() {
     const sbAuth = supabase.createClient(supabaseUrl, supabaseAnon);
     sbAuth.auth.getSession().then(({ data }) => {
       if (!data.session) {
-        window.location.href = loginUrl + "?next=/viabilidad/";
-      } else {
-        setAuthChecked(true);
+        window.location.href = loginUrl + "?next=/viabilidad/index.html";
       }
     });
   }, []);
 
   // ── Handle ?prospect_id= URL param ───────────────────────────
   React.useEffect(() => {
-    if (!authChecked || store.loading) return;
+    if (store.loading) return;
     const params = new URLSearchParams(window.location.search);
     const prospectId = params.get("prospect_id");
     const prospectName = params.get("prospect_name") || "";
@@ -45,10 +42,17 @@ function App() {
     url.searchParams.delete("prospect_id");
     url.searchParams.delete("prospect_name");
     window.history.replaceState({}, "", url.toString());
-  }, [authChecked, store.loading]);
+  }, [store.loading]);
 
-  if (!authChecked) {
-    return React.createElement("div", { className: "boot" }, "Verificando sesión…");
+  if (store.loading) {
+    return React.createElement("div", { className: "boot" }, "Cargando análisis…");
+  }
+
+  if (store.error) {
+    return React.createElement("div", { className: "boot", style: { color: "#c00" } },
+      React.createElement("div", null, "Error al conectar: " + store.error),
+      React.createElement("button", { onClick: store.reload, style: { marginTop: 12, padding: "6px 16px", cursor: "pointer" } }, "Reintentar")
+    );
   }
 
   const active = store.state.clients.find(c => c.id === store.state.activeClientId);

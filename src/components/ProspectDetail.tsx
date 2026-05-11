@@ -263,7 +263,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
           <div className="flex items-center gap-1 ml-3 flex-shrink-0">
             {(prospect.stage === 'Won' || prospect.status === 'Closed Won') && (
               <a
-                href={`/viabilidad/?prospect_id=${prospect.id}&prospect_name=${encodeURIComponent(prospect.company)}`}
+                href={`/viabilidad/index.html?prospect_id=${prospect.id}&prospect_name=${encodeURIComponent(prospect.company)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-7 px-2 rounded-[6px] text-[11.5px] font-medium border-0 flex items-center gap-1 no-underline flex-shrink-0"
