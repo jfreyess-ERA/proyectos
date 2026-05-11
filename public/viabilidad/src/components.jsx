@@ -7,12 +7,9 @@ function Topbar({ children }) {
   return (
     <div className="topbar no-print">
       <div className="brand">
-        <div
-          className="brand-logo-slot"
-          dangerouslySetInnerHTML={{ __html: `<image-slot id="era-logo" shape="rect" placeholder="Arrastrá aquí el logo ERA Group (PNG)" style="width:120px;height:36px;background:transparent;border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);"></image-slot>` }}
-        />
+        <img src="/era-logo.png" alt="ERA Group" style={{ height: 28, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
         <span className="brand-sep">·</span>
-        <span className="brand-tagline">{t.tagline}</span>
+        <img src="/era-tagline.png" alt="value through insight" style={{ height: 11, width: "auto", objectFit: "contain", opacity: 0.75, filter: "brightness(0) invert(1)" }} />
       </div>
       <div className="topbar-spacer" />
       <div className="topbar-actions">

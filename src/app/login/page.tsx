@@ -37,20 +37,9 @@ export default function LoginPage() {
         }}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 mb-8">
-          <div
-            className="w-9 h-9 rounded-[10px] flex items-center justify-center text-white font-bold text-[16px]"
-            style={{
-              background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,.25)',
-            }}
-          >
-            E
-          </div>
-          <div>
-            <div className="font-bold text-[16px] tracking-tight" style={{ color: 'var(--ink)' }}>ERA Group Chile</div>
-            <div className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Sistema Gestión de Proyectos</div>
-          </div>
+        <div className="flex flex-col items-center gap-2 mb-8">
+          <img src="/era-logo.png" alt="ERA Group" className="h-[48px] w-auto object-contain" />
+          <img src="/era-tagline.png" alt="value through insight" className="h-[14px] w-auto object-contain opacity-60" />
         </div>
 
         <h1 className="text-[20px] font-bold mb-1" style={{ color: 'var(--ink)' }}>

@@ -108,21 +108,12 @@ export function Shell({
           className="flex items-center gap-[10px] px-4 border-b border-[var(--line)] flex-shrink-0"
           style={{ height: 'var(--header-h)' }}
         >
-          <div
-            className="w-[26px] h-[26px] rounded-[7px] flex items-center justify-center text-white font-bold text-[13px] flex-shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,.25)',
-            }}
-          >
-            E
-          </div>
-          {!collapsed && (
-            <div className="min-w-0">
-              <div className="font-semibold text-[14.5px] tracking-tight whitespace-nowrap" style={{ color: 'var(--ink)' }}>
-                ERA Group Chile
-              </div>
-              <div className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Sistema de Gestión</div>
+          {collapsed ? (
+            <img src="/era-icon.png" alt="ERA Group" className="w-[30px] h-[30px] object-contain flex-shrink-0" />
+          ) : (
+            <div className="min-w-0 py-2">
+              <img src="/era-logo.png" alt="ERA Group" className="h-[32px] w-auto object-contain" />
+              <img src="/era-tagline.png" alt="value through insight" className="h-[12px] w-auto object-contain mt-1 opacity-70" />
             </div>
           )}
         </div>
