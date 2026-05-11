@@ -135,7 +135,7 @@ export async function updateTask(
   return rowToTask(data as TaskRow);
 }
 
-export async function insertProject(input: { name: string; key: string; color: string }): Promise<Project> {
+export async function insertProject(input: { name: string; key: string; color: string; client?: string }): Promise<Project> {
   const { data, error } = await supabase
     .from('projects')
     .insert({ id: crypto.randomUUID(), ...input, favorite: false })
@@ -147,7 +147,7 @@ export async function insertProject(input: { name: string; key: string; color: s
 
 export async function updateProject(
   id: string,
-  fields: Partial<{ name: string; color: string; favorite: boolean }>
+  fields: Partial<{ name: string; color: string; favorite: boolean; client: string | null }>
 ): Promise<void> {
   const { error } = await supabase.from('projects').update(fields).eq('id', id);
   if (error) throw error;

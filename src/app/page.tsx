@@ -361,6 +361,7 @@ export default function Home() {
       <ProjectModal
         open={projectModalOpen}
         project={editingProject}
+        existingClients={[...new Set(projects.map(p => p.client).filter(Boolean) as string[])].sort()}
         onClose={() => setProjectModalOpen(false)}
         onSaved={() => {
           refetch();

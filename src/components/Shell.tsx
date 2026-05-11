@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import {
   Home, Inbox, CheckSquare, Users, BarChart2,
   Search, Plus, Filter, SortAsc, Star, Settings,
-  PanelLeft, ChevronRight, SlidersHorizontal,
+  PanelLeft, ChevronRight, ChevronDown, SlidersHorizontal,
   LayoutGrid, List, GanttChart, Calendar, Layers,
   Target, MessageSquare, ListChecks, Zap, Mail, LayoutDashboard, CalendarDays,
   TrendingUp, PieChart,
@@ -160,52 +160,16 @@ export function Shell({
             ))}
           </div>
 
-          {/* Proyectos */}
-          <div className="px-2 pt-3 pb-1">
-            {!collapsed && (
-              <div className="flex items-center justify-between px-2 pb-1.5">
-                <span className="text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
-                  Proyectos
-                </span>
-                <button
-                  onClick={onCreateProject}
-                  className="border-0 bg-transparent text-[14px] leading-none px-1 rounded"
-                  style={{ color: 'var(--ink-4)' }}
-                  title="Nuevo proyecto"
-                >
-                  +
-                </button>
-              </div>
-            )}
-            {projects.map(p => (
-              <div key={p.id} className="flex items-center group">
-                <button
-                  onClick={() => { onNavChange?.('project:' + p.id); setMobileOpen(false); }}
-                  className="flex items-center gap-[10px] flex-1 text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors overflow-hidden min-w-0"
-                  style={{
-                    color: activeNav === 'project:' + p.id ? 'var(--ink)' : 'var(--ink-2)',
-                    background: activeNav === 'project:' + p.id ? 'var(--surface)' : 'transparent',
-                    fontWeight: activeNav === 'project:' + p.id ? 500 : 400,
-                  }}
-                >
-                  <span className="w-[10px] h-[10px] rounded-[3px] flex-shrink-0" style={{ background: p.color }} />
-                  {!collapsed && (
-                    <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{p.name}</span>
-                  )}
-                </button>
-                {!collapsed && onEditProject && (
-                  <button
-                    onClick={e => { e.stopPropagation(); onEditProject(p.id); }}
-                    className="w-5 h-5 flex items-center justify-center rounded-[4px] border-0 bg-transparent opacity-0 group-hover:opacity-100 flex-shrink-0 mr-1 transition-opacity"
-                    style={{ color: 'var(--ink-4)', fontSize: 11 }}
-                    title="Editar proyecto"
-                  >
-                    ···
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+          {/* Proyectos agrupados por cliente */}
+          <ProjectsSection
+            projects={projects}
+            activeNav={activeNav}
+            collapsed={collapsed}
+            onNavChange={onNavChange}
+            onCreateProject={onCreateProject}
+            onEditProject={onEditProject}
+            setMobileOpen={setMobileOpen}
+          />
 
           {/* Sprints */}
           {!collapsed && (
@@ -555,6 +519,183 @@ export function Shell({
           {children}
         </main>
       </div>
+    </div>
+  );
+}
+
+// ── Projects sidebar section ──────────────────────────────────────
+
+function ProjectsSection({
+  projects, activeNav, collapsed,
+  onNavChange, onCreateProject, onEditProject, setMobileOpen,
+}: {
+  projects: Project[];
+  activeNav: string;
+  collapsed: boolean;
+  onNavChange?: (id: string) => void;
+  onCreateProject?: () => void;
+  onEditProject?: (id: string) => void;
+  setMobileOpen: (v: boolean) => void;
+}) {
+  const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
+
+  function toggleClient(client: string) {
+    setCollapsedClients(prev => {
+      const next = new Set(prev);
+      next.has(client) ? next.delete(client) : next.add(client);
+      return next;
+    });
+  }
+
+  // Group projects by client
+  const grouped = new Map<string, Project[]>();
+  const noClient: Project[] = [];
+
+  for (const p of projects) {
+    const c = p.client?.trim();
+    if (c) {
+      if (!grouped.has(c)) grouped.set(c, []);
+      grouped.get(c)!.push(p);
+    } else {
+      noClient.push(p);
+    }
+  }
+
+  // Sort clients alphabetically
+  const sortedClients = [...grouped.keys()].sort((a, b) => a.localeCompare(b));
+
+  function ProjectRow({ p }: { p: Project }) {
+    const isActive = activeNav === 'project:' + p.id;
+    return (
+      <div className="flex items-center group">
+        <button
+          onClick={() => { onNavChange?.('project:' + p.id); setMobileOpen(false); }}
+          className="flex items-center gap-[10px] flex-1 text-left px-[10px] py-[5px] rounded-[6px] text-[13px] border-0 transition-colors overflow-hidden min-w-0"
+          style={{
+            color: isActive ? 'var(--ink)' : 'var(--ink-2)',
+            background: isActive ? 'var(--surface)' : 'transparent',
+            fontWeight: isActive ? 500 : 400,
+          }}
+        >
+          <span className="w-[9px] h-[9px] rounded-[2px] flex-shrink-0" style={{ background: p.color }} />
+          {!collapsed && (
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-[12.5px]">{p.name}</span>
+          )}
+        </button>
+        {!collapsed && onEditProject && (
+          <button
+            onClick={e => { e.stopPropagation(); onEditProject(p.id); }}
+            className="w-5 h-5 flex items-center justify-center rounded-[4px] border-0 bg-transparent opacity-0 group-hover:opacity-100 flex-shrink-0 mr-1 transition-opacity"
+            style={{ color: 'var(--ink-4)', fontSize: 11 }}
+            title="Editar proyecto"
+          >
+            ···
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-2 pt-3 pb-1">
+      {!collapsed && (
+        <div className="flex items-center justify-between px-2 pb-1.5">
+          <span className="text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+            Proyectos
+          </span>
+          <button
+            onClick={onCreateProject}
+            className="border-0 bg-transparent text-[14px] leading-none px-1 rounded"
+            style={{ color: 'var(--ink-4)' }}
+            title="Nuevo proyecto"
+          >
+            +
+          </button>
+        </div>
+      )}
+
+      {/* Collapsed sidebar: just show dots */}
+      {collapsed && (
+        <>
+          {projects.map(p => (
+            <div key={p.id} className="flex items-center justify-center py-[4px]">
+              <button
+                onClick={() => { onNavChange?.('project:' + p.id); setMobileOpen(false); }}
+                title={p.name}
+                className="w-5 h-5 flex items-center justify-center rounded-[4px] border-0 bg-transparent"
+                style={{
+                  outline: activeNav === 'project:' + p.id ? `2px solid ${p.color}` : 'none',
+                  outlineOffset: 1,
+                }}
+              >
+                <span className="w-[10px] h-[10px] rounded-[3px]" style={{ background: p.color }} />
+              </button>
+            </div>
+          ))}
+        </>
+      )}
+
+      {/* Expanded sidebar: grouped by client */}
+      {!collapsed && (
+        <>
+          {sortedClients.map(clientName => {
+            const clientProjects = grouped.get(clientName)!;
+            const isClientCollapsed = collapsedClients.has(clientName);
+            const hasActiveProject = clientProjects.some(p => activeNav === 'project:' + p.id);
+
+            return (
+              <div key={clientName} className="mb-[2px]">
+                {/* Client header */}
+                <button
+                  onClick={() => toggleClient(clientName)}
+                  className="w-full flex items-center gap-[6px] px-2 py-[4px] rounded-[5px] border-0 bg-transparent text-left transition-colors"
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span style={{ color: 'var(--ink-4)', flexShrink: 0 }}>
+                    {isClientCollapsed
+                      ? <ChevronRight size={11} />
+                      : <ChevronDown size={11} />
+                    }
+                  </span>
+                  <span
+                    className="text-[11.5px] font-semibold truncate min-w-0 flex-1"
+                    style={{ color: hasActiveProject ? 'var(--ink)' : 'var(--ink-3)' }}
+                  >
+                    {clientName}
+                  </span>
+                  <span
+                    className="text-[10px] tabular-nums flex-shrink-0"
+                    style={{ color: 'var(--ink-4)' }}
+                  >
+                    {clientProjects.length}
+                  </span>
+                </button>
+
+                {/* Nested projects */}
+                {!isClientCollapsed && (
+                  <div className="ml-3 border-l" style={{ borderColor: 'var(--line)' }}>
+                    <div className="ml-[6px]">
+                      {clientProjects.map(p => <ProjectRow key={p.id} p={p} />)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Projects without client */}
+          {noClient.length > 0 && (
+            <div className="mt-1">
+              {sortedClients.length > 0 && (
+                <div className="px-2 pt-1 pb-[3px]">
+                  <span className="text-[10.5px]" style={{ color: 'var(--ink-4)' }}>Sin cliente</span>
+                </div>
+              )}
+              {noClient.map(p => <ProjectRow key={p.id} p={p} />)}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

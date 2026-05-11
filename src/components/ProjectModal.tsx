@@ -22,17 +22,19 @@ const COLOR_PALETTE = [
 interface Props {
   open: boolean;
   project?: Project;
+  existingClients?: string[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-export function ProjectModal({ open, project, onClose, onSaved }: Props) {
+export function ProjectModal({ open, project, existingClients = [], onClose, onSaved }: Props) {
   const isEdit = !!project;
-  const [name, setName] = useState('');
-  const [key, setKey] = useState('');
-  const [color, setColor] = useState(COLOR_PALETTE[0]);
+  const [name, setName]     = useState('');
+  const [key, setKey]       = useState('');
+  const [color, setColor]   = useState(COLOR_PALETTE[0]);
+  const [client, setClient] = useState('');
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]   = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -40,10 +42,12 @@ export function ProjectModal({ open, project, onClose, onSaved }: Props) {
       setName(project.name);
       setKey(project.key);
       setColor(project.color);
+      setClient(project.client ?? '');
     } else {
       setName('');
       setKey('');
       setColor(COLOR_PALETTE[0]);
+      setClient('');
     }
     setError('');
   }, [open, project]);
@@ -61,10 +65,11 @@ export function ProjectModal({ open, project, onClose, onSaved }: Props) {
     setSaving(true);
     setError('');
     try {
+      const clientVal = client.trim() || null;
       if (isEdit && project) {
-        await updateProject(project.id, { name, color });
+        await updateProject(project.id, { name, color, client: clientVal });
       } else {
-        await insertProject({ name, key: key.toUpperCase(), color });
+        await insertProject({ name, key: key.toUpperCase(), color, client: clientVal ?? undefined });
       }
       onSaved();
       onClose();
@@ -131,20 +136,39 @@ export function ProjectModal({ open, project, onClose, onSaved }: Props) {
           <div className="flex items-center gap-3 px-3 py-[10px] rounded-[10px]" style={{ background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
             <span className="w-[28px] h-[28px] rounded-[7px] flex-shrink-0" style={{ background: color }} />
             <div className="min-w-0">
+              {client && (
+                <div className="text-[10px] font-medium mb-[1px] truncate" style={{ color: 'var(--ink-4)' }}>{client}</div>
+              )}
               <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--ink)' }}>{name || 'Nombre del proyecto'}</div>
               <div className="text-[11px]" style={{ color: 'var(--ink-4)', fontFamily: 'var(--font-mono)' }}>{key || 'CLAVE'}</div>
             </div>
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>Nombre</label>
+            <label className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>Cliente</label>
+            <input
+              list="client-suggestions"
+              type="text"
+              value={client}
+              onChange={e => setClient(e.target.value)}
+              placeholder="Nombre de la empresa cliente"
+              autoFocus
+              className="h-9 px-3 rounded-[8px] text-[13px] outline-none"
+              style={{ border: '1px solid var(--line)', background: 'var(--bg-2)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
+            />
+            <datalist id="client-suggestions">
+              {existingClients.map(c => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>Nombre del proyecto</label>
             <input
               type="text"
               value={name}
               onChange={e => handleNameChange(e.target.value)}
               required
               placeholder="Rediseño de marca"
-              autoFocus
               className="h-9 px-3 rounded-[8px] text-[13px] outline-none"
               style={{ border: '1px solid var(--line)', background: 'var(--bg-2)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
             />

@@ -18,6 +18,7 @@ export interface Project {
   key: string;
   color: string;
   favorite: boolean;
+  client?: string;
 }
 
 export interface Subtasks {
