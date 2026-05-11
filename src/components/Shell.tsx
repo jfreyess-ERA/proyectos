@@ -6,7 +6,7 @@ import {
   PanelLeft, ChevronRight, SlidersHorizontal,
   LayoutGrid, List, GanttChart, Calendar,
   Target, MessageSquare, ListChecks, Zap, Mail, LayoutDashboard, CalendarDays,
-  TrendingUp,
+  TrendingUp, PieChart,
 } from 'lucide-react';
 import { PEOPLE } from '@/lib/data';
 import { Avatar } from './Avatar';
@@ -313,6 +313,41 @@ export function Shell({
                   {item.icon}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Análisis de Viabilidad */}
+          {!collapsed && (
+            <div className="px-2 pt-3 pb-1">
+              <div className="px-2 pb-1.5 text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+                Herramientas
+              </div>
+              <a
+                href="/viabilidad/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors no-underline"
+                style={{ color: 'var(--ink-2)', background: 'transparent', fontWeight: 400 }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <PieChart size={16} style={{ color: 'var(--ink-3)', flexShrink: 0 }} />
+                <span>Análisis de Viabilidad</span>
+              </a>
+            </div>
+          )}
+          {collapsed && (
+            <div className="px-2 pt-3 pb-1">
+              <a
+                href="/viabilidad/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center w-full py-[6px] px-[10px] rounded-[6px] border-0 transition-colors"
+                style={{ background: 'transparent', color: 'var(--ink-3)' }}
+                title="Análisis de Viabilidad"
+              >
+                <PieChart size={15} />
+              </a>
             </div>
           )}
 

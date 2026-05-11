@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ERA Group · Análisis de Viabilidad</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <div id="root">
+    <div class="boot">Cargando…</div>
+  </div>
+
+  <script src="src/image-slot.js"></script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <!-- React -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+  <!-- Config (anon key is public — safe to expose) -->
+  <script>
+    window.VIABILITY_CONFIG = {
+      supabaseUrl:  'https://warndvmvbtedzigxopwh.supabase.co',
+      supabaseAnon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indhcm5kdm12YnRlZHppZ3hvcHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczODU2NDAsImV4cCI6MjA5Mjk2MTY0MH0.ZOXu9qpK1TPMHOhJhTUKuBF_bDOdObXgJ4VUKlDlda8',
+      loginUrl:     '/login',
+    };
+  </script>
+
+  <script type="text/babel" src="src/i18n.jsx"></script>
+  <script type="text/babel" src="src/store.jsx"></script>
+  <script type="text/babel" src="src/components.jsx"></script>
+  <script type="text/babel" src="src/views-clients.jsx"></script>
+  <script type="text/babel" src="src/views-expenses.jsx"></script>
+  <script type="text/babel" src="src/views-profiling.jsx"></script>
+  <script type="text/babel" src="src/views-evolution.jsx"></script>
+  <script type="text/babel" src="src/views-projection.jsx"></script>
+  <script type="text/babel" src="src/views-dashboard.jsx"></script>
+  <script type="text/babel" src="src/app.jsx"></script>
+</body>
+</html>
