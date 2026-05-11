@@ -56,9 +56,10 @@ function ExpensesView({ client }) {
         active={mode}
         onChange={setMode}
         tabs={[
-          { id: "table", label: t.expenses.modes.table },
+          { id: "table",  label: t.expenses.modes.table },
           { id: "manual", label: t.expenses.modes.manual },
-          { id: "paste", label: t.expenses.modes.paste },
+          { id: "paste",  label: t.expenses.modes.paste },
+          { id: "excel",  label: "Excel" },
         ]}
       />
 
@@ -70,6 +71,12 @@ function ExpensesView({ client }) {
       )}
       {mode === "paste" && (
         <PasteImport client={client} catLabel={catLabel} onImport={(rows) => {
+          store.setExpenses(client.id, [...expenses, ...rows]);
+          setMode("table");
+        }} />
+      )}
+      {mode === "excel" && (
+        <ExcelImport client={client} catLabel={catLabel} onImport={(rows) => {
           store.setExpenses(client.id, [...expenses, ...rows]);
           setMode("table");
         }} />
@@ -315,4 +322,273 @@ function AddCategoryModal({ open, onClose, onCreate }) {
   );
 }
 
-Object.assign(window, { ExpensesView, ExpenseTable, ManualEntry, PasteImport, AddCategoryModal });
+// ── Excel Import ──────────────────────────────────────────────────
+
+const IMPORT_FIELDS = [
+  { id: "skip",          label: "— No importar —",       type: "skip" },
+  { id: "category",      label: "Categoría",              type: "text" },
+  { id: "subcategory",   label: "Subcategoría",           type: "text" },
+  { id: "supplier",      label: "Proveedor",              type: "text" },
+  { id: "amount",        label: "Monto total",            type: "number" },
+  { id: "suppliers",     label: "N° proveedores",         type: "number" },
+  { id: "savingsPct",    label: "% Ahorro estimado",      type: "number" },
+  { id: "savingsMinPct", label: "% Ahorro mínimo",        type: "number" },
+  { id: "savingsMaxPct", label: "% Ahorro máximo",        type: "number" },
+  { id: "scopePct",      label: "% Alcance",              type: "number" },
+  { id: "feasibility",   label: "Factibilidad (1–5)",     type: "number" },
+  { id: "months",        label: "Meses implementación",   type: "number" },
+  { id: "notes",         label: "Notas",                  type: "text"   },
+  { id: "monthly",       label: "Serie mensual (M1…Mn)",  type: "series" },
+];
+
+function autoDetectField(header) {
+  const h = (header || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  if (/categ/.test(h))                           return "category";
+  if (/sub/.test(h))                             return "subcategory";
+  if (/prov|supplier|vendor/.test(h))            return "supplier";
+  if (/monto|amount|total|gasto|costo|spend/.test(h)) return "amount";
+  if (/n.?prov|num.*prov|#.*prov/.test(h))       return "suppliers";
+  if (/min.*ah|ah.*min|saving.*min|min.*sav/.test(h)) return "savingsMinPct";
+  if (/max.*ah|ah.*max|saving.*max|max.*sav/.test(h)) return "savingsMaxPct";
+  if (/ahorro|saving|saving_pct|sav/.test(h))    return "savingsPct";
+  if (/alcance|scope/.test(h))                   return "scopePct";
+  if (/fact|feasib/.test(h))                     return "feasibility";
+  if (/mes.*impl|impl.*mes|month.*impl/.test(h)) return "months";
+  if (/nota|note|obs/.test(h))                   return "notes";
+  if (/^m\d+$|^mes\s*\d+$|^month\s*\d+$|^period\s*\d+$/.test(h)) return "monthly";
+  return "skip";
+}
+
+function parseNum(v) {
+  if (v == null || v === "") return 0;
+  const s = String(v).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
+  return parseFloat(s) || 0;
+}
+
+function ExcelImport({ client, catLabel, onImport }) {
+  const [step, setStep]       = React.useState(1); // 1=upload 2=map 3=preview
+  const [headers, setHeaders] = React.useState([]);
+  const [rows, setRows]       = React.useState([]);   // raw string rows from Excel
+  const [mapping, setMapping] = React.useState({});   // colIndex -> fieldId
+  const [fileName, setFileName] = React.useState("");
+  const [error, setError]     = React.useState("");
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setError("");
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        if (!data || data.length < 2) { setError("El archivo no tiene suficientes filas."); return; }
+        const hdrs = data[0].map(h => String(h ?? "").trim());
+        const dataRows = data.slice(1).filter(r => r.some(c => c !== "" && c != null));
+        setHeaders(hdrs);
+        setRows(dataRows);
+        // Auto-detect mapping
+        const autoMap = {};
+        hdrs.forEach((h, i) => { autoMap[i] = autoDetectField(h); });
+        setMapping(autoMap);
+        setStep(2);
+      } catch (err) {
+        setError("No se pudo leer el archivo: " + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function buildExpenses() {
+    // Find which cols map to 'monthly' series
+    const seriesCols = Object.entries(mapping)
+      .filter(([, f]) => f === "monthly")
+      .map(([i]) => parseInt(i));
+
+    return rows.map(row => {
+      const exp = { ...blankExpense(client.categories[0]?.id) };
+
+      Object.entries(mapping).forEach(([colIdx, fieldId]) => {
+        if (fieldId === "skip" || fieldId === "monthly") return;
+        const val = row[parseInt(colIdx)];
+        if (fieldId === "category") {
+          const catId = client.categories.find(c => {
+            const label = (catLabel(c) || "").toLowerCase();
+            return label.includes((String(val) || "").toLowerCase()) ||
+              (String(val) || "").toLowerCase().includes(label);
+          })?.id || client.categories[0]?.id;
+          exp.categoryId = catId;
+        } else if (["subcategory", "supplier", "notes"].includes(fieldId)) {
+          exp[fieldId] = String(val ?? "");
+        } else {
+          exp[fieldId] = parseNum(val);
+        }
+      });
+
+      if (seriesCols.length > 0) {
+        const monthly = seriesCols.map(i => parseNum(row[i]));
+        exp.monthly = monthly;
+        exp.amount  = monthly.reduce((a, b) => a + b, 0);
+      }
+
+      return exp;
+    });
+  }
+
+  const preview = step >= 2 ? buildExpenses() : [];
+
+  // ── Step 1: Upload ─────────────────────────────────────────────
+  if (step === 1) {
+    return (
+      <div className="card" style={{ maxWidth: 520 }}>
+        <h3 className="h3">Importar desde Excel</h3>
+        <p className="lede" style={{ marginBottom: 16 }}>
+          Sube un archivo <strong>.xlsx</strong> o <strong>.xls</strong>. Se tomará la primera hoja del libro.
+          Luego podrás elegir qué columna corresponde a cada campo.
+        </p>
+        <label style={{
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          gap: 10, padding: "32px 24px", border: "2px dashed var(--line)", borderRadius: 10,
+          cursor: "pointer", background: "var(--surface-2)", transition: "background .15s",
+        }}
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile({ target: { files: [f] } }); }}
+        >
+          <span style={{ fontSize: 36 }}>📊</span>
+          <span style={{ fontWeight: 600, color: "var(--text-1)" }}>Haz clic o arrastra tu archivo aquí</span>
+          <span style={{ fontSize: 12, color: "var(--text-3)" }}>.xlsx / .xls / .csv</span>
+          <input type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={handleFile} />
+        </label>
+        {error && <p style={{ color: "var(--danger)", fontSize: 13, marginTop: 10 }}>{error}</p>}
+      </div>
+    );
+  }
+
+  // ── Step 2 + 3: Map + Preview ──────────────────────────────────
+  const seriesCount = Object.values(mapping).filter(f => f === "monthly").length;
+
+  return (
+    <div className="stack lg">
+      {/* Header */}
+      <div className="row between" style={{ alignItems: "flex-start" }}>
+        <div>
+          <h3 className="h3">Mapear campos · <span style={{ fontWeight: 400, color: "var(--text-3)" }}>{fileName}</span></h3>
+          <p className="lede" style={{ marginBottom: 0 }}>
+            {rows.length} filas detectadas. Asigna cada columna del Excel al campo correspondiente.
+          </p>
+        </div>
+        <button className="btn ghost" onClick={() => { setStep(1); setHeaders([]); setRows([]); setFileName(""); }}>
+          ← Cambiar archivo
+        </button>
+      </div>
+
+      {/* Mapping table */}
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <table className="t" style={{ fontSize: 13 }}>
+          <thead>
+            <tr>
+              <th style={{ width: 40, textAlign: "center" }}>#</th>
+              <th>Columna en Excel</th>
+              <th>Muestra de valores</th>
+              <th style={{ width: 220 }}>Campo destino</th>
+            </tr>
+          </thead>
+          <tbody>
+            {headers.map((h, i) => {
+              const sample = rows.slice(0, 3).map(r => r[i]).filter(v => v !== "" && v != null).join(" · ");
+              const fieldId = mapping[i] || "skip";
+              return (
+                <tr key={i} style={{ background: fieldId !== "skip" ? "var(--surface-2)" : "" }}>
+                  <td style={{ textAlign: "center", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>{i + 1}</td>
+                  <td style={{ fontWeight: 600 }}>{h || <span style={{ color: "var(--text-3)" }}>(sin nombre)</span>}</td>
+                  <td style={{ color: "var(--text-3)", fontSize: 12, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {sample || "—"}
+                  </td>
+                  <td>
+                    <select
+                      className="select"
+                      value={fieldId}
+                      onChange={e => setMapping(m => ({ ...m, [i]: e.target.value }))}
+                      style={{ width: "100%" }}
+                    >
+                      {IMPORT_FIELDS.map(f => (
+                        <option key={f.id} value={f.id}>{f.label}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {seriesCount > 0 && (
+        <div className="pill" style={{ alignSelf: "flex-start", background: "var(--accent-bg)", color: "var(--accent)" }}>
+          📅 {seriesCount} columna{seriesCount !== 1 ? "s" : ""} de serie mensual detectadas
+        </div>
+      )}
+
+      {/* Preview */}
+      <div>
+        <h4 className="h3" style={{ marginBottom: 10 }}>Vista previa · {preview.length} filas</h4>
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ maxHeight: 300, overflow: "auto" }}>
+            <table className="t" style={{ fontSize: 12 }}>
+              <thead>
+                <tr>
+                  <th>Categoría</th>
+                  <th>Subcategoría</th>
+                  <th>Proveedor</th>
+                  <th className="right">Monto</th>
+                  <th className="right">% Ahorro</th>
+                  {seriesCount > 0 && <th className="right">Períodos</th>}
+                  <th>Notas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.slice(0, 20).map((p, i) => {
+                  const cat = client.categories.find(c => c.id === p.categoryId);
+                  return (
+                    <tr key={i}>
+                      <td><CategorySwatch color={cat?.color || "#ccc"} label={catLabel(cat)} /></td>
+                      <td>{p.subcategory || "—"}</td>
+                      <td>{p.supplier || "—"}</td>
+                      <td className="right tabular">{fmtMoney(p.amount, client.currency)}</td>
+                      <td className="right tabular">{p.savingsPct > 0 ? p.savingsPct.toFixed(1) + "%" : "—"}</td>
+                      {seriesCount > 0 && <td className="right tabular">{p.monthly?.length ?? "—"}</td>}
+                      <td style={{ color: "var(--text-3)", fontSize: 11 }}>{p.notes || "—"}</td>
+                    </tr>
+                  );
+                })}
+                {preview.length > 20 && (
+                  <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--text-3)", padding: "8px 0" }}>
+                    +{preview.length - 20} filas más…
+                  </td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="row" style={{ justifyContent: "flex-end", gap: 10 }}>
+        <button className="btn ghost" onClick={() => { setStep(1); setHeaders([]); setRows([]); setFileName(""); }}>
+          Cancelar
+        </button>
+        <button
+          className="btn primary"
+          disabled={preview.length === 0}
+          onClick={() => onImport(preview)}
+        >
+          Importar {preview.length} fila{preview.length !== 1 ? "s" : ""}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { ExpensesView, ExpenseTable, ManualEntry, PasteImport, ExcelImport, AddCategoryModal });
