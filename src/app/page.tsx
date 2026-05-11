@@ -131,7 +131,7 @@ export default function Home() {
 
   function handleNav(id: NavId) {
     setActiveNav(id);
-    setActiveView('board');
+    setActiveView(id.startsWith('project:') ? 'stages' : 'board');
     setCmdkOpen(false);
     setShareLink('');
     setShareCopied(false);
