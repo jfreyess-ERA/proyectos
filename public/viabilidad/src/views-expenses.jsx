@@ -361,8 +361,58 @@ function autoDetectField(header) {
 
 function parseNum(v) {
   if (v == null || v === "") return 0;
-  const s = String(v).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
-  return parseFloat(s) || 0;
+  if (typeof v === "number") return v;
+  // Handle "5%" → 5, "12,5" → 12.5, "1.234,56" → 1234.56
+  let s = String(v).trim().replace(/[^\d.,%,-]/g, "");
+  const isPct = s.endsWith("%");
+  s = s.replace("%", "");
+  // European format: 1.234,56 → last separator is comma
+  if (/\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else {
+    // US/neutral: just replace comma decimal
+    s = s.replace(",", ".");
+  }
+  const n = parseFloat(s) || 0;
+  // If value looks like a decimal fraction (0.05) and field expects %, multiply
+  return n;
+}
+
+// Normalize string: remove accents, lowercase, collapse spaces/punctuation
+function normStr(s) {
+  return String(s || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Find best matching category by word overlap (accent-insensitive)
+function matchCategory(val, categories, catLabel) {
+  const normVal = normStr(val);
+  if (!normVal) return categories[0]?.id;
+  const valWords = normVal.split(" ").filter(w => w.length > 2);
+
+  let bestId = null, bestScore = -1;
+  for (const c of categories) {
+    const normLabel = normStr(catLabel(c));
+    const normKey   = normStr(c.key);
+
+    // Exact match
+    if (normLabel === normVal || normKey === normVal) return c.id;
+
+    // Word overlap score
+    const labelWords = normLabel.split(" ").filter(w => w.length > 2);
+    const overlap = valWords.filter(w =>
+      labelWords.some(lw => lw.includes(w) || w.includes(lw))
+    ).length;
+    const score = valWords.length > 0 ? overlap / valWords.length : 0;
+    if (score > bestScore) { bestScore = score; bestId = c.id; }
+  }
+
+  // Accept match only if at least one meaningful word matched
+  return bestScore > 0 ? bestId : null;
 }
 
 function ExcelImport({ client, catLabel, onImport }) {
@@ -414,16 +464,18 @@ function ExcelImport({ client, catLabel, onImport }) {
         if (fieldId === "skip" || fieldId === "monthly") return;
         const val = row[parseInt(colIdx)];
         if (fieldId === "category") {
-          const catId = client.categories.find(c => {
-            const label = (catLabel(c) || "").toLowerCase();
-            return label.includes((String(val) || "").toLowerCase()) ||
-              (String(val) || "").toLowerCase().includes(label);
-          })?.id || client.categories[0]?.id;
-          exp.categoryId = catId;
+          const catId = matchCategory(val, client.categories, catLabel);
+          exp.categoryId = catId || client.categories[0]?.id;
+          // If no match, store the original text as subcategory so data isn't lost
+          if (!catId && val) exp._unmatchedCategory = String(val);
         } else if (["subcategory", "supplier", "notes"].includes(fieldId)) {
           exp[fieldId] = String(val ?? "");
         } else {
-          exp[fieldId] = parseNum(val);
+          let n = parseNum(val);
+          // Auto-convert decimal fractions to % for pct fields (0.05 → 5)
+          const isPctField = ["savingsPct","savingsMinPct","savingsMaxPct","scopePct"].includes(fieldId);
+          if (isPctField && n > 0 && n <= 1) n = Math.round(n * 100 * 10) / 10;
+          exp[fieldId] = n;
         }
       });
 
@@ -531,6 +583,21 @@ function ExcelImport({ client, catLabel, onImport }) {
         </div>
       )}
 
+      {/* Unmatched category warning */}
+      {(() => {
+        const unmatched = [...new Set(preview.filter(p => p._unmatchedCategory).map(p => p._unmatchedCategory))];
+        if (!unmatched.length) return null;
+        return (
+          <div style={{ padding: "10px 14px", borderRadius: 8, background: "oklch(0.97 0.03 25)", border: "1px solid oklch(0.85 0.08 25)", fontSize: 13, color: "oklch(0.40 0.14 25)" }}>
+            <strong>⚠ {unmatched.length} categoría{unmatched.length !== 1 ? "s" : ""} sin coincidencia:</strong>{" "}
+            {unmatched.join(" · ")}
+            <div style={{ marginTop: 4, fontSize: 12, opacity: 0.8 }}>
+              Asigna la columna a "Subcategoría" para conservar el texto, o crea las categorías en el sistema primero.
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Preview */}
       <div>
         <h4 className="h3" style={{ marginBottom: 10 }}>Vista previa · {preview.length} filas</h4>
@@ -553,7 +620,12 @@ function ExcelImport({ client, catLabel, onImport }) {
                   const cat = client.categories.find(c => c.id === p.categoryId);
                   return (
                     <tr key={i}>
-                      <td><CategorySwatch color={cat?.color || "#ccc"} label={catLabel(cat)} /></td>
+                      <td>
+                        {p._unmatchedCategory
+                          ? <span style={{ color: "var(--danger)", fontSize: 11 }}>⚠ {p._unmatchedCategory}</span>
+                          : <CategorySwatch color={cat?.color || "#ccc"} label={catLabel(cat)} />
+                        }
+                      </td>
                       <td>{p.subcategory || "—"}</td>
                       <td>{p.supplier || "—"}</td>
                       <td className="right tabular">{fmtMoney(p.amount, client.currency)}</td>
