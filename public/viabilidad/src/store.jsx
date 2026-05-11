@@ -160,7 +160,7 @@ function expRowToExpense(row) {
 
 function expenseToRow(expense, analysisId) {
   return {
-    id: expense.id,
+    // id omitted — Supabase auto-generates UUID; local ids may be non-UUID strings
     analysis_id: analysisId,
     category_id: expense.categoryId,
     subcategory: expense.subcategory,
