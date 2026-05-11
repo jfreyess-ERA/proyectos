@@ -10,7 +10,7 @@ function EvolutionView({ client }) {
   const totals = monthlyTotals(client);
   const total = totals.reduce((a, b) => a + b, 0);
 
-  const [chartType, setChartType] = React.useState("stacked");
+  const [chartType, setChartType] = React.useState("lines");
   const [selectedCats, setSelectedCats] = React.useState(null); // null => all
   const [trendType, setTrendType] = React.useState("linear"); // none|linear|ma3|exp|poly
   const [showTrendOnTotal, setShowTrendOnTotal] = React.useState(true);
@@ -249,8 +249,26 @@ function LineChart({ months, series, currency = "EUR", showLegend = false }) {
   const ticks = 5;
   const tickVals = Array.from({ length: ticks + 1 }, (_, i) => (max / ticks) * i);
 
-  const pathFor = (vals) => vals.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-  const areaFor = (vals) => pathFor(vals) + ` L${x(11)},${y(0)} L${x(0)},${y(0)} Z`;
+  // Catmull-Rom → cubic Bézier: smooth curve through all data points
+  const smoothPath = (vals) => {
+    const pts = vals.map((v, i) => [x(i), y(v)]);
+    if (pts.length < 2) return `M${pts[0][0]},${pts[0][1]}`;
+    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[Math.min(pts.length - 1, i + 2)];
+      const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+      const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+      const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return d;
+  };
+  const pathFor = smoothPath;
+  const areaFor = (vals) => smoothPath(vals) + ` L${x(vals.length - 1)},${y(0)} L${x(0)},${y(0)} Z`;
 
   return (
     <div>
@@ -443,7 +461,17 @@ function Sparkline({ values, color = "currentColor", w = 180, h = 32 }) {
   const min = Math.min(...values, 0);
   const x = (i) => (i / (values.length - 1)) * w;
   const y = (v) => h - ((v - min) / (max - min || 1)) * h;
-  const path = values.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const smooth = (vals) => {
+    const pts = vals.map((v, i) => [x(i), y(v)]);
+    if (pts.length < 2) return `M${pts[0][0]},${pts[0][1]}`;
+    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+      d += ` C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)},${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)},${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return d;
+  };
+  const path = smooth(values);
   const area = path + ` L${x(values.length - 1)},${h} L${x(0)},${h} Z`;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} style={{ width: w, height: h, display: "block" }}>
