@@ -22,6 +22,7 @@ interface ShellProps {
   crumbs?: string[];
   projectId?: string;
   projects: Project[];
+  myProjectIds?: Set<string>;
   loading?: boolean;
   inboxCount?: number;
   myTasksCount?: number;
@@ -46,6 +47,7 @@ export function Shell({
   crumbs = ['Norte'],
   projectId,
   projects,
+  myProjectIds,
   currentUser,
   inboxCount = 0,
   myTasksCount = 0,
@@ -163,6 +165,7 @@ export function Shell({
           {/* Proyectos agrupados por cliente */}
           <ProjectsSection
             projects={projects}
+            myProjectIds={myProjectIds}
             activeNav={activeNav}
             collapsed={collapsed}
             onNavChange={onNavChange}
@@ -526,10 +529,11 @@ export function Shell({
 // ── Projects sidebar section ──────────────────────────────────────
 
 function ProjectsSection({
-  projects, activeNav, collapsed,
+  projects, myProjectIds, activeNav, collapsed,
   onNavChange, onCreateProject, onEditProject, setMobileOpen,
 }: {
   projects: Project[];
+  myProjectIds?: Set<string>;
   activeNav: string;
   collapsed: boolean;
   onNavChange?: (id: string) => void;
@@ -538,6 +542,12 @@ function ProjectsSection({
   setMobileOpen: (v: boolean) => void;
 }) {
   const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
+  const [showOnlyMine, setShowOnlyMine] = useState(false);
+
+  // Apply filter
+  const visibleProjects = showOnlyMine && myProjectIds
+    ? projects.filter(p => myProjectIds.has(p.id))
+    : projects;
 
   function toggleClient(client: string) {
     setCollapsedClients(prev => {
@@ -547,11 +557,11 @@ function ProjectsSection({
     });
   }
 
-  // Group projects by client
+  // Group visible projects by client
   const grouped = new Map<string, Project[]>();
   const noClient: Project[] = [];
 
-  for (const p of projects) {
+  for (const p of visibleProjects) {
     const c = p.client?.trim();
     if (c) {
       if (!grouped.has(c)) grouped.set(c, []);
@@ -603,21 +613,55 @@ function ProjectsSection({
           <span className="text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
             Proyectos
           </span>
-          <button
-            onClick={onCreateProject}
-            className="border-0 bg-transparent text-[14px] leading-none px-1 rounded"
-            style={{ color: 'var(--ink-4)' }}
-            title="Nuevo proyecto"
-          >
-            +
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Mine / All toggle — only shown if myProjectIds exists */}
+            {myProjectIds && (
+              <div
+                className="flex items-center rounded-[5px] overflow-hidden border"
+                style={{ borderColor: 'var(--line)' }}
+              >
+                <button
+                  onClick={() => setShowOnlyMine(false)}
+                  className="h-[18px] px-[6px] text-[10px] border-0 transition-colors"
+                  style={{
+                    background: !showOnlyMine ? 'var(--accent)' : 'transparent',
+                    color: !showOnlyMine ? 'var(--on-accent)' : 'var(--ink-4)',
+                    fontWeight: !showOnlyMine ? 600 : 400,
+                  }}
+                  title="Ver todos los proyectos"
+                >
+                  Todos
+                </button>
+                <button
+                  onClick={() => setShowOnlyMine(true)}
+                  className="h-[18px] px-[6px] text-[10px] border-0 transition-colors"
+                  style={{
+                    background: showOnlyMine ? 'var(--accent)' : 'transparent',
+                    color: showOnlyMine ? 'var(--on-accent)' : 'var(--ink-4)',
+                    fontWeight: showOnlyMine ? 600 : 400,
+                  }}
+                  title="Ver solo mis proyectos"
+                >
+                  Míos
+                </button>
+              </div>
+            )}
+            <button
+              onClick={onCreateProject}
+              className="border-0 bg-transparent text-[14px] leading-none px-1 rounded"
+              style={{ color: 'var(--ink-4)' }}
+              title="Nuevo proyecto"
+            >
+              +
+            </button>
+          </div>
         </div>
       )}
 
       {/* Collapsed sidebar: just show dots */}
       {collapsed && (
         <>
-          {projects.map(p => (
+          {visibleProjects.map(p => (
             <div key={p.id} className="flex items-center justify-center py-[4px]">
               <button
                 onClick={() => { onNavChange?.('project:' + p.id); setMobileOpen(false); }}

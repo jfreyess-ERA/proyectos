@@ -282,6 +282,10 @@ export default function Home() {
         crumbs={crumbs}
         projectId={projectId}
         projects={projects}
+        myProjectIds={profile
+          ? new Set(tasks.filter(t => t.assignees?.includes(profile.id)).map(t => t.project))
+          : undefined
+        }
         sprints={localSprints}
         currentUser={profile ?? undefined}
         onNavChange={handleNav}
