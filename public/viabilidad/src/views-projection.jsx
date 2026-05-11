@@ -589,8 +589,8 @@ function GanttView({ client }) {
                         const label = t.gantt.stagesShort[seg.stage];
                         const isFirst = si === 0;
                         const isLast = si === segments.length - 1;
-                        if (seg.dur <= 3) {
-                          // Show individual labels
+                        if (seg.stage !== "G" || seg.dur <= 3) {
+                          // Show individual labels for all stages except long Seguimiento
                           return (
                             <div key={si} style={barSeg(color, label, seg.dur, isFirst, isLast, false)}>
                               {Array.from({ length: seg.dur }, (_, j) => (
@@ -599,7 +599,7 @@ function GanttView({ client }) {
                             </div>
                           );
                         }
-                        // Long segment: label | ··· | label
+                        // Seguimiento largo: label | ··· | label
                         return (
                           <div key={si} style={{ ...barSeg(color, label, seg.dur, isFirst, isLast, false), padding: 0, justifyContent: "space-between" }}>
                             <span style={{ padding: "0 5px", flexShrink: 0 }}>{label}</span>
