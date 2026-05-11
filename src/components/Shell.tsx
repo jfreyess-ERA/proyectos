@@ -111,9 +111,9 @@ export function Shell({
           {collapsed ? (
             <img src="/era-icon.png" alt="ERA Group" className="w-[30px] h-[30px] object-contain flex-shrink-0" />
           ) : (
-            <div className="flex items-center gap-3 min-w-0 py-2">
-              <img src="/era-logo.png" alt="ERA Group" className="h-[45px] w-auto object-contain flex-shrink-0" />
-              <img src="/era-tagline.png" alt="value through insight" className="h-[22px] w-auto object-contain opacity-90" />
+            <div className="flex flex-col gap-1 py-1">
+              <img src="/era-logo.png" alt="ERA Group" className="h-[45px] w-auto object-contain" />
+              <img src="/era-tagline.png" alt="value through insight" className="h-[28px] w-auto object-contain" />
             </div>
           )}
         </div>
