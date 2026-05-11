@@ -45,7 +45,7 @@ function blankClient(name = "") {
     contact: { name: "", role: "", email: "", phone: "" },
     notes: "",
     stage: 1,
-    categories: DEFAULT_CATEGORIES.map(c => ({ ...c })),
+    categories: [],
     expenses: [],
     scenario: {
       feePct: 30,
@@ -221,6 +221,7 @@ function periodLabels(n, lang = "es") {
 // ── Seed data ──────────────────────────────────────────────────────
 function seedClient() {
   const c = blankClient("Industrias Mediterráneas S.A.");
+  c.categories = DEFAULT_CATEGORIES.map(x => ({ ...x })); // demo uses preset cats
   c.tradeName = "MedIndus";
   c.taxId = "B-87654321";
   c.sector = "Manufactura · Componentes industriales";
