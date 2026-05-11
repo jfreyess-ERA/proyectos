@@ -545,6 +545,43 @@ function GanttView({ client }) {
                 if (d > 0) segments.push({ stage: k, from: cursor, to: cursor + d });
                 cursor += d;
               }
+
+              // Build compressed cells: long segments (>3m) collapse middle to "···"
+              const cells = [];
+              let mi = 0;
+              while (mi < monthsArr.length) {
+                const monthIdx = monthsArr[mi] - 1;
+                const seg = segments.find(s => monthIdx >= s.from && monthIdx < s.to);
+                if (!seg) { cells.push({ type: "empty", key: "e" + mi }); mi++; continue; }
+                // Count consecutive months in this segment
+                let count = 0;
+                while (mi + count < monthsArr.length) {
+                  const idx = monthsArr[mi + count] - 1;
+                  if (idx >= seg.from && idx < seg.to) count++; else break;
+                }
+                const color = STAGE_COLORS[seg.stage];
+                const label = t.gantt.stagesShort[seg.stage];
+                if (count <= 3) {
+                  for (let j = 0; j < count; j++)
+                    cells.push({ type: "seg", key: "s" + (mi + j), color, label, colspan: 1 });
+                } else {
+                  // First cell
+                  cells.push({ type: "seg", key: "s" + mi, color, label, colspan: 1 });
+                  // Dots spanning the middle (all but first and last)
+                  const mid = count - 2;
+                  cells.push({ type: "dots", key: "d" + mi, color, colspan: mid });
+                  // Last cell
+                  cells.push({ type: "seg", key: "s" + (mi + count - 1), color, label, colspan: 1 });
+                }
+                mi += count;
+              }
+
+              const cellStyle = (color) => ({
+                background: color, color: "#fff", textAlign: "center",
+                fontSize: 9, fontWeight: 700, padding: "4px 2px",
+                borderRadius: 2, letterSpacing: 0.3,
+              });
+
               return (
                 <tr key={g.categoryId}>
                   <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
@@ -556,28 +593,22 @@ function GanttView({ client }) {
                   </td>
                   {STAGE_KEYS.map(k => (
                     <td key={"e-" + k} className="right">
-                      <input className="input right" type="number" min="0" max="24" value={p.stages[k]}
+                      <input className="input right" type="number" min="0" max="48" value={p.stages[k]}
                         onChange={e => setPlan(g.categoryId, { stages: { [k]: Math.max(0, +e.target.value || 0) } })}
                         style={{ width: 44 }} />
                     </td>
                   ))}
                   <td className="right tabular" style={{ fontWeight: 700 }}>{total}m</td>
-                  {monthsArr.map(m => {
-                    const monthIdx = m - 1;
-                    const seg = segments.find(s => monthIdx >= s.from && monthIdx < s.to);
-                    if (!seg) return <td key={m} style={{ padding: 4 }}></td>;
+                  {cells.map(cell => {
+                    if (cell.type === "empty") return <td key={cell.key} style={{ padding: 4 }} />;
+                    if (cell.type === "dots") return (
+                      <td key={cell.key} colSpan={cell.colspan} style={{ padding: 2 }}>
+                        <div style={{ ...cellStyle(cell.color), letterSpacing: 2, opacity: 0.85 }}>···</div>
+                      </td>
+                    );
                     return (
-                      <td key={m} style={{ padding: 2 }}>
-                        <div style={{
-                          background: STAGE_COLORS[seg.stage],
-                          color: "#fff",
-                          textAlign: "center",
-                          fontSize: 9,
-                          fontWeight: 700,
-                          padding: "4px 2px",
-                          borderRadius: 2,
-                          letterSpacing: 0.3,
-                        }}>{t.gantt.stagesShort[seg.stage]}</div>
+                      <td key={cell.key} colSpan={cell.colspan} style={{ padding: 2 }}>
+                        <div style={cellStyle(cell.color)}>{cell.label}</div>
                       </td>
                     );
                   })}
