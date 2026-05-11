@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/auth-context';
 import { assignTaskToSprint } from '@/lib/db';
 import { Avatar } from './Avatar';
 import type { Task, Comment, Activity, Attachment, User, SubtaskItem, Sprint } from '@/lib/types';
+import { PROJECT_STAGES } from './StageBoard';
 
 interface Props {
   task: Task | null;
@@ -109,8 +110,9 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
       if ('description' in fields) dbFields.description = fields.description;
       if ('assignees' in fields)   dbFields.assignees   = fields.assignees;
       if ('labels' in fields)      dbFields.label_ids   = fields.labels;
-      if ('estimate' in fields)    dbFields.estimate    = fields.estimate;
-      if ('spent' in fields)       dbFields.spent       = fields.spent;
+      if ('estimate' in fields)      dbFields.estimate      = fields.estimate;
+      if ('spent' in fields)         dbFields.spent         = fields.spent;
+      if ('project_stage' in fields) dbFields.project_stage = fields.project_stage ?? null;
 
       const updated = await updateTask(taskId, dbFields as Parameters<typeof updateTask>[1]);
       setEdited(updated);
@@ -719,6 +721,29 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
                   </div>
                 )}
               </div>
+            </Field>
+
+            {/* Project Stage */}
+            <Field label="Etapa ERA">
+              <select
+                value={edited.project_stage ?? ''}
+                onChange={async e => {
+                  const val = (e.target.value || undefined) as Task['project_stage'] | undefined;
+                  setEdited(prev => prev ? { ...prev, project_stage: val } : prev);
+                  const stageLabel = PROJECT_STAGES.find(s => s.id === val)?.label;
+                  await save(
+                    { project_stage: val },
+                    val ? `Cambió la etapa a "${stageLabel}"` : 'Quitó la etapa del proyecto',
+                  );
+                }}
+                className="h-[28px] px-2 rounded-[6px] text-[12px] border outline-none w-full"
+                style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
+              >
+                <option value="">Sin etapa</option>
+                {PROJECT_STAGES.map(s => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
+              </select>
             </Field>
 
             {/* Sprint */}

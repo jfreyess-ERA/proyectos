@@ -1,4 +1,5 @@
 export type Status = 'backlog' | 'todo' | 'doing' | 'review' | 'done';
+export type ProjectStage = 'situacion' | 'opciones' | 'implementacion' | 'seguimiento';
 export type Priority = 'urgent' | 'high' | 'med' | 'low';
 
 export interface User {
@@ -40,6 +41,7 @@ export interface Task {
   subtasks: Subtasks;
   description?: string;
   sprint_id?: string;
+  project_stage?: ProjectStage;
 }
 
 export interface Sprint {

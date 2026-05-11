@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Shell } from '@/components/Shell';
 import { Dashboard } from '@/components/Dashboard';
 import { Board } from '@/components/Board';
+import { StageBoard } from '@/components/StageBoard';
 import { ListView } from '@/components/ListView';
 import { CalendarView } from '@/components/CalendarView';
 import { TimelineView } from '@/components/TimelineView';
@@ -40,7 +41,7 @@ import { getOrCreateShare } from '@/lib/db';
 import type { Task, Project, Sprint, Prospect } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
-type ViewId = 'board' | 'list' | 'timeline' | 'calendar';
+type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
 
 export default function Home() {
   const router = useRouter();
@@ -118,6 +119,7 @@ export default function Home() {
       if (isTyping()) return;
       if (e.key === 'n')           { openCreateTask(); return; }
       if (e.key === 'b' && isProjectView) { setActiveView('board'); return; }
+      if (e.key === 'e' && isProjectView) { setActiveView('stages'); return; }
       if (e.key === 'l' && isProjectView) { setActiveView('list'); return; }
       if (e.key === 'c' && isProjectView) { setActiveView('calendar'); return; }
       if (e.key === 't' && isProjectView) { setActiveView('timeline'); return; }
@@ -260,6 +262,7 @@ export default function Home() {
     }
 
     switch (activeView) {
+      case 'stages':   return <StageBoard tasks={visibleTasks} users={users} onOpenTask={setSelectedTask} onCreateTask={openCreateTask} />;
       case 'list':     return <ListView tasks={visibleTasks} onOpenTask={setSelectedTask} />;
       case 'calendar': return <CalendarView tasks={visibleTasks} onOpenTask={setSelectedTask} />;
       case 'timeline': return <TimelineView tasks={visibleTasks} projects={projects} onOpenTask={setSelectedTask} />;

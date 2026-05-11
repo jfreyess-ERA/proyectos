@@ -20,6 +20,7 @@ interface TaskRow {
   subtasks_done: number;
   subtasks_total: number;
   sprint_id?: string;
+  project_stage?: string;
 }
 
 // ── Mappers ────────────────────────────────────────────────────────
@@ -30,21 +31,22 @@ export function taskRowToTask(row: TaskRow): Task {
 
 function rowToTask(row: TaskRow): Task {
   return {
-    id:          row.id,
-    ref:         row.ref,
-    project:     row.project_id,
-    title:       row.title,
-    description: row.description,
-    status:      row.status as Task['status'],
-    priority:    row.priority as Task['priority'],
-    assignees:   row.assignees ?? [],
-    labels:      row.label_ids ?? [],
-    start:       row.start_date,
-    due:         row.due_date,
-    estimate:    row.estimate,
-    spent:       row.spent,
-    subtasks:    { done: row.subtasks_done, total: row.subtasks_total },
-    sprint_id:   row.sprint_id,
+    id:            row.id,
+    ref:           row.ref,
+    project:       row.project_id,
+    title:         row.title,
+    description:   row.description,
+    status:        row.status as Task['status'],
+    priority:      row.priority as Task['priority'],
+    assignees:     row.assignees ?? [],
+    labels:        row.label_ids ?? [],
+    start:         row.start_date,
+    due:           row.due_date,
+    estimate:      row.estimate,
+    spent:         row.spent,
+    subtasks:      { done: row.subtasks_done, total: row.subtasks_total },
+    sprint_id:     row.sprint_id,
+    project_stage: row.project_stage as Task['project_stage'],
   };
 }
 
@@ -120,6 +122,7 @@ export async function updateTask(
     spent: number;
     subtasks_done: number;
     subtasks_total: number;
+    project_stage: Task['project_stage'] | null;
   }>
 ): Promise<Task> {
   const { data, error } = await supabase

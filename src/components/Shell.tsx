@@ -4,7 +4,7 @@ import {
   Home, Inbox, CheckSquare, Users, BarChart2,
   Search, Plus, Filter, SortAsc, Star, Settings,
   PanelLeft, ChevronRight, SlidersHorizontal,
-  LayoutGrid, List, GanttChart, Calendar,
+  LayoutGrid, List, GanttChart, Calendar, Layers,
   Target, MessageSquare, ListChecks, Zap, Mail, LayoutDashboard, CalendarDays,
   TrendingUp, PieChart,
 } from 'lucide-react';
@@ -14,7 +14,7 @@ import { NotificationBell } from './NotificationBell';
 import type { Project, Sprint } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
-type ViewId = 'board' | 'list' | 'timeline' | 'calendar';
+type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
 
 interface ShellProps {
   activeNav: NavId;
@@ -500,6 +500,7 @@ export function Shell({
             >
               {[
                 { id: 'board' as ViewId,    icon: <LayoutGrid size={13} />,  label: 'Tablero' },
+                { id: 'stages' as ViewId,   icon: <Layers size={13} />,      label: 'Etapas' },
                 { id: 'list' as ViewId,     icon: <List size={13} />,        label: 'Lista' },
                 { id: 'timeline' as ViewId, icon: <GanttChart size={13} />,  label: 'Timeline' },
                 { id: 'calendar' as ViewId, icon: <Calendar size={13} />,    label: 'Calendario' },
