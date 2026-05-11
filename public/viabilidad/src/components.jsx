@@ -7,9 +7,9 @@ function Topbar({ children }) {
   return (
     <div className="topbar no-print">
       <div className="brand">
-        <img src="/era-logo.png" alt="ERA Group" style={{ height: 28, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+        <img src="/era-logo-cropped.png" alt="ERA Group" style={{ height: 30, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
         <span className="brand-sep">·</span>
-        <img src="/era-tagline.png" alt="value through insight" style={{ height: 11, width: "auto", objectFit: "contain", opacity: 0.75, filter: "brightness(0) invert(1)" }} />
+        <img src="/era-tagline-cropped.png" alt="value through insight" style={{ height: 14, width: "auto", objectFit: "contain", opacity: 0.85, filter: "brightness(0) invert(1)" }} />
       </div>
       <div className="topbar-spacer" />
       <div className="topbar-actions">

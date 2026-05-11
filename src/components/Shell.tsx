@@ -109,11 +109,11 @@ export function Shell({
           style={{ height: 'var(--header-h)' }}
         >
           {collapsed ? (
-            <img src="/era-icon.png" alt="ERA Group" className="w-[30px] h-[30px] object-contain flex-shrink-0" />
+            <img src="/era-icon-cropped.png" alt="ERA Group" className="w-[32px] h-[32px] object-contain flex-shrink-0" />
           ) : (
-            <div className="flex flex-col gap-1 py-1">
-              <img src="/era-logo.png" alt="ERA Group" className="h-[45px] w-auto object-contain" />
-              <img src="/era-tagline.png" alt="value through insight" className="h-[28px] w-auto object-contain" />
+            <div className="flex flex-col gap-[6px] py-2">
+              <img src="/era-logo-cropped.png" alt="ERA Group" className="h-[38px] w-auto object-contain" />
+              <img src="/era-tagline-cropped.png" alt="value through insight" className="h-[13px] w-auto object-contain opacity-80" />
             </div>
           )}
         </div>

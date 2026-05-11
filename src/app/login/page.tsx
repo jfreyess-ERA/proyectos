@@ -37,8 +37,9 @@ export default function LoginPage() {
         }}
       >
         {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <img src="/era-logo.png" alt="ERA Group" className="h-[73px] w-auto object-contain" />
+        <div className="flex flex-col items-center gap-2 mb-8">
+          <img src="/era-logo-cropped.png" alt="ERA Group" className="h-[64px] w-auto object-contain" />
+          <img src="/era-tagline-cropped.png" alt="value through insight" className="h-[16px] w-auto object-contain opacity-80" />
         </div>
 
         <h1 className="text-[20px] font-bold mb-1" style={{ color: 'var(--ink)' }}>
