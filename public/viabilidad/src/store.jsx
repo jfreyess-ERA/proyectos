@@ -438,6 +438,11 @@ function StoreProvider({ children }) {
       schedSave(clientId);
     },
 
+    setScenario: (clientId, scenario) => {
+      setClients(prev => prev.map(c => c.id === clientId ? { ...c, scenario, updatedAt: Date.now() } : c));
+      schedSave(clientId);
+    },
+
     seedDemo: async () => {
       const c = seedClient();
       const { expenses } = c;
