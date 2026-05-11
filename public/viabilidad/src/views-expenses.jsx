@@ -76,7 +76,12 @@ function ExpensesView({ client }) {
         }} />
       )}
       {mode === "excel" && (
-        <ExcelImport client={client} catLabel={catLabel} onImport={(rows) => {
+        <ExcelImport client={client} catLabel={catLabel} onImport={(rows, newCats) => {
+          // First create any new categories, then append expenses
+          (newCats || []).forEach(cat => {
+            const { _isNew, ...catData } = cat;
+            store.addCategory(client.id, catData);
+          });
           store.setExpenses(client.id, [...expenses, ...rows]);
           setMode("table");
         }} />
@@ -324,6 +329,13 @@ function AddCategoryModal({ open, onClose, onCreate }) {
 
 // ── Excel Import ──────────────────────────────────────────────────
 
+const AUTO_CAT_COLORS = [
+  "oklch(0.52 0.16 265)", "oklch(0.50 0.16 160)", "oklch(0.52 0.16 25)",
+  "oklch(0.54 0.14 50)",  "oklch(0.50 0.16 300)", "oklch(0.50 0.14 220)",
+  "oklch(0.52 0.14 340)", "oklch(0.54 0.12 90)",  "oklch(0.46 0.10 250)",
+  "oklch(0.50 0.14 190)", "oklch(0.48 0.16 285)", "oklch(0.52 0.14 130)",
+];
+
 const IMPORT_FIELDS = [
   { id: "skip",          label: "— No importar —",       type: "skip" },
   { id: "category",      label: "Categoría",              type: "text" },
@@ -457,17 +469,48 @@ function ExcelImport({ client, catLabel, onImport }) {
       .filter(([, f]) => f === "monthly")
       .map(([i]) => parseInt(i));
 
-    return rows.map(row => {
+    // First pass: collect all unique unmatched category names
+    const unmatchedNames = new Set();
+    if (Object.values(mapping).includes("category")) {
+      rows.forEach(row => {
+        Object.entries(mapping).forEach(([colIdx, fieldId]) => {
+          if (fieldId !== "category") return;
+          const val = row[parseInt(colIdx)];
+          if (val && !matchCategory(val, client.categories, catLabel)) {
+            unmatchedNames.add(String(val).trim());
+          }
+        });
+      });
+    }
+
+    // Create new category objects for each unmatched name
+    const existingColors = new Set(client.categories.map(c => c.color));
+    let colorIdx = 0;
+    const newCatMap = {}; // name → category object
+    unmatchedNames.forEach(name => {
+      // Pick a color not already in use
+      let color;
+      do { color = AUTO_CAT_COLORS[colorIdx % AUTO_CAT_COLORS.length]; colorIdx++; }
+      while (existingColors.has(color) && colorIdx < AUTO_CAT_COLORS.length * 2);
+      existingColors.add(color);
+      const key = normStr(name).replace(/\s+/g, "_").slice(0, 40) || uid("k");
+      newCatMap[name] = { id: uid("cat"), key, label: name, color, _isNew: true };
+    });
+    const newCategories = Object.values(newCatMap);
+
+    // All categories (existing + new) for matching
+    const allCategories = [...client.categories, ...newCategories];
+
+    const expenses = rows.map(row => {
       const exp = { ...blankExpense(client.categories[0]?.id) };
 
       Object.entries(mapping).forEach(([colIdx, fieldId]) => {
         if (fieldId === "skip" || fieldId === "monthly") return;
         const val = row[parseInt(colIdx)];
         if (fieldId === "category") {
-          const catId = matchCategory(val, client.categories, catLabel);
+          // Try existing categories first, then new ones
+          const catId = matchCategory(val, allCategories, c => c.label || catLabel(c));
           exp.categoryId = catId || client.categories[0]?.id;
-          // If no match, store the original text as subcategory so data isn't lost
-          if (!catId && val) exp._unmatchedCategory = String(val);
         } else if (["subcategory", "supplier", "notes"].includes(fieldId)) {
           exp[fieldId] = String(val ?? "");
         } else {
@@ -487,9 +530,12 @@ function ExcelImport({ client, catLabel, onImport }) {
 
       return exp;
     });
+
+    return { expenses, newCategories, allCategories };
   }
 
-  const preview = step >= 2 ? buildExpenses() : [];
+  const { expenses: preview, newCategories: previewNewCats, allCategories: previewAllCats } =
+    step >= 2 ? buildExpenses() : { expenses: [], newCategories: [], allCategories: client.categories };
 
   // ── Step 1: Upload ─────────────────────────────────────────────
   if (step === 1) {
@@ -583,20 +629,20 @@ function ExcelImport({ client, catLabel, onImport }) {
         </div>
       )}
 
-      {/* Unmatched category warning */}
-      {(() => {
-        const unmatched = [...new Set(preview.filter(p => p._unmatchedCategory).map(p => p._unmatchedCategory))];
-        if (!unmatched.length) return null;
-        return (
-          <div style={{ padding: "10px 14px", borderRadius: 8, background: "oklch(0.97 0.03 25)", border: "1px solid oklch(0.85 0.08 25)", fontSize: 13, color: "oklch(0.40 0.14 25)" }}>
-            <strong>⚠ {unmatched.length} categoría{unmatched.length !== 1 ? "s" : ""} sin coincidencia:</strong>{" "}
-            {unmatched.join(" · ")}
-            <div style={{ marginTop: 4, fontSize: 12, opacity: 0.8 }}>
-              Asigna la columna a "Subcategoría" para conservar el texto, o crea las categorías en el sistema primero.
-            </div>
-          </div>
-        );
-      })()}
+      {/* New categories info banner */}
+      {previewNewCats.length > 0 && (
+        <div style={{ padding: "10px 14px", borderRadius: 8, background: "oklch(0.96 0.04 265)", border: "1px solid oklch(0.82 0.10 265)", fontSize: 13, color: "oklch(0.38 0.14 265)" }}>
+          <strong>✦ {previewNewCats.length} categoría{previewNewCats.length !== 1 ? "s" : ""} nueva{previewNewCats.length !== 1 ? "s" : ""} se crearán al importar:</strong>{" "}
+          <span style={{ display: "inline-flex", flexWrap: "wrap", gap: "6px 10px", marginTop: 4 }}>
+            {previewNewCats.map(c => (
+              <span key={c.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: c.color, flexShrink: 0, display: "inline-block" }} />
+                <span>{c.label}</span>
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
 
       {/* Preview */}
       <div>
@@ -617,14 +663,19 @@ function ExcelImport({ client, catLabel, onImport }) {
               </thead>
               <tbody>
                 {preview.slice(0, 20).map((p, i) => {
-                  const cat = client.categories.find(c => c.id === p.categoryId);
+                  const cat = previewAllCats.find(c => c.id === p.categoryId);
+                  const isNew = cat?._isNew;
                   return (
                     <tr key={i}>
                       <td>
-                        {p._unmatchedCategory
-                          ? <span style={{ color: "var(--danger)", fontSize: 11 }}>⚠ {p._unmatchedCategory}</span>
-                          : <CategorySwatch color={cat?.color || "#ccc"} label={catLabel(cat)} />
-                        }
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          <CategorySwatch color={cat?.color || "#ccc"} label={cat?.label || catLabel(cat)} />
+                          {isNew && (
+                            <span style={{ fontSize: 10, fontWeight: 700, background: "oklch(0.82 0.10 265)", color: "oklch(0.38 0.14 265)", borderRadius: 4, padding: "1px 4px", verticalAlign: "middle" }}>
+                              nuevo
+                            </span>
+                          )}
+                        </span>
                       </td>
                       <td>{p.subcategory || "—"}</td>
                       <td>{p.supplier || "—"}</td>
@@ -654,9 +705,10 @@ function ExcelImport({ client, catLabel, onImport }) {
         <button
           className="btn primary"
           disabled={preview.length === 0}
-          onClick={() => onImport(preview)}
+          onClick={() => onImport(preview, previewNewCats)}
         >
           Importar {preview.length} fila{preview.length !== 1 ? "s" : ""}
+          {previewNewCats.length > 0 && ` + ${previewNewCats.length} cat.`}
         </button>
       </div>
     </div>
