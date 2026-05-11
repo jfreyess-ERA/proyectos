@@ -505,23 +505,23 @@ function GanttView({ client }) {
       </div>
 
       <div className="card flat" style={{ padding: 0, overflow: "auto" }}>
-        <table className="t" style={{ tableLayout: "fixed", minWidth: 1100 }}>
+        <table className="t" style={{ tableLayout: "fixed", minWidth: 900 }}>
           <colgroup>
             <col style={{ width: 220 }} />
             <col style={{ width: 56 }} />
             <col style={{ width: 60 }} />
             {STAGE_KEYS.map(k => <col key={"c-" + k} style={{ width: 54 }} />)}
             <col style={{ width: 60 }} />
-            {monthsArr.map(m => <col key={m} />)}
+            <col style={{ width: "100%" }} />
           </colgroup>
           <thead>
             <tr>
               <th rowSpan="2" style={{ verticalAlign: "bottom" }}>{t.expenses.cols.category}</th>
               <th rowSpan="2" className="right" style={{ verticalAlign: "bottom" }}>N°</th>
               <th rowSpan="2" className="right" style={{ verticalAlign: "bottom" }}>{t.gantt.start}</th>
-              <th colSpan={STAGE_KEYS.length} className="right" style={{ textAlign: "center", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>Meses por etapa</th>
+              <th colSpan={STAGE_KEYS.length} style={{ textAlign: "center", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>Meses por etapa</th>
               <th rowSpan="2" className="right" style={{ verticalAlign: "bottom" }}>Total</th>
-              <th colSpan={totalMonths} className="right" style={{ textAlign: "center", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>Cronograma</th>
+              <th style={{ textAlign: "center", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>Cronograma</th>
             </tr>
             <tr>
               {STAGE_KEYS.map(k => (
@@ -530,56 +530,37 @@ function GanttView({ client }) {
                   {t.gantt.stagesShort[k]}
                 </th>
               ))}
-              {monthsArr.map(m => <th key={m} className="right" style={{ paddingLeft: 6, paddingRight: 6 }}>M{m}</th>)}
+              <th />
             </tr>
           </thead>
           <tbody>
             {groups.map((g, i) => {
               const p = planFor(g.categoryId);
               const total = STAGE_KEYS.reduce((s, k) => s + (+p.stages[k] || 0), 0);
-              // Stage segments: [{stage, from (month idx), to (exclusive)}]
               const segments = [];
               let cursor = p.start;
               for (const k of STAGE_KEYS) {
                 const d = +p.stages[k] || 0;
-                if (d > 0) segments.push({ stage: k, from: cursor, to: cursor + d });
+                if (d > 0) segments.push({ stage: k, dur: d });
                 cursor += d;
               }
 
-              // Build compressed cells: long segments (>3m) collapse middle to "···"
-              const cells = [];
-              let mi = 0;
-              while (mi < monthsArr.length) {
-                const monthIdx = monthsArr[mi] - 1;
-                const seg = segments.find(s => monthIdx >= s.from && monthIdx < s.to);
-                if (!seg) { cells.push({ type: "empty", key: "e" + mi }); mi++; continue; }
-                // Count consecutive months in this segment
-                let count = 0;
-                while (mi + count < monthsArr.length) {
-                  const idx = monthsArr[mi + count] - 1;
-                  if (idx >= seg.from && idx < seg.to) count++; else break;
-                }
-                const color = STAGE_COLORS[seg.stage];
-                const label = t.gantt.stagesShort[seg.stage];
-                if (count <= 3) {
-                  for (let j = 0; j < count; j++)
-                    cells.push({ type: "seg", key: "s" + (mi + j), color, label, colspan: 1 });
-                } else {
-                  // First cell
-                  cells.push({ type: "seg", key: "s" + mi, color, label, colspan: 1 });
-                  // Dots spanning the middle (all but first and last)
-                  const mid = count - 2;
-                  cells.push({ type: "dots", key: "d" + mi, color, colspan: mid });
-                  // Last cell
-                  cells.push({ type: "seg", key: "s" + (mi + count - 1), color, label, colspan: 1 });
-                }
-                mi += count;
-              }
-
-              const cellStyle = (color) => ({
-                background: color, color: "#fff", textAlign: "center",
-                fontSize: 9, fontWeight: 700, padding: "4px 2px",
-                borderRadius: 2, letterSpacing: 0.3,
+              // Bar segment style
+              const barSeg = (color, label, dur, first, last, isDots) => ({
+                flex: dur,
+                background: color,
+                color: "#fff",
+                fontSize: 9,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "0 3px",
+                borderRadius: first && last ? 3 : first ? "3px 0 0 3px" : last ? "0 3px 3px 0" : 0,
+                marginRight: last ? 0 : 1,
+                letterSpacing: isDots ? 2 : 0.3,
+                minWidth: 0,
+                overflow: "hidden",
               });
 
               return (
@@ -587,7 +568,7 @@ function GanttView({ client }) {
                   <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
                   <td className="right tabular">{i + 1}</td>
                   <td className="right">
-                    <input className="input right" type="number" min="0" max={totalMonths - 1} value={p.start}
+                    <input className="input right" type="number" min="0" max="48" value={p.start}
                       onChange={e => setPlan(g.categoryId, { start: Math.max(0, +e.target.value || 0) })}
                       style={{ width: 50 }} />
                   </td>
@@ -599,19 +580,46 @@ function GanttView({ client }) {
                     </td>
                   ))}
                   <td className="right tabular" style={{ fontWeight: 700 }}>{total}m</td>
-                  {cells.map(cell => {
-                    if (cell.type === "empty") return <td key={cell.key} style={{ padding: 4 }} />;
-                    if (cell.type === "dots") return (
-                      <td key={cell.key} colSpan={cell.colspan} style={{ padding: 2 }}>
-                        <div style={{ ...cellStyle(cell.color), letterSpacing: 2, opacity: 0.85 }}>···</div>
-                      </td>
-                    );
-                    return (
-                      <td key={cell.key} colSpan={cell.colspan} style={{ padding: 2 }}>
-                        <div style={cellStyle(cell.color)}>{cell.label}</div>
-                      </td>
-                    );
-                  })}
+                  <td style={{ padding: "4px 8px" }}>
+                    <div style={{ display: "flex", height: 22, alignItems: "stretch" }}>
+                      {/* Start offset */}
+                      {p.start > 0 && <div style={{ flex: p.start, minWidth: 4 }} />}
+                      {segments.map((seg, si) => {
+                        const color = STAGE_COLORS[seg.stage];
+                        const label = t.gantt.stagesShort[seg.stage];
+                        const isFirst = si === 0;
+                        const isLast = si === segments.length - 1;
+                        if (seg.dur <= 3) {
+                          // Show individual labels
+                          return (
+                            <div key={si} style={barSeg(color, label, seg.dur, isFirst, isLast, false)}>
+                              {Array.from({ length: seg.dur }, (_, j) => (
+                                <span key={j} style={{ flex: 1, textAlign: "center" }}>{label}</span>
+                              ))}
+                            </div>
+                          );
+                        }
+                        // Long segment: label | ··· | label
+                        return (
+                          <div key={si} style={{ ...barSeg(color, label, seg.dur, isFirst, isLast, false), padding: 0, justifyContent: "space-between" }}>
+                            <span style={{ padding: "0 5px", flexShrink: 0 }}>{label}</span>
+                            <span style={{ letterSpacing: 2, opacity: 0.8, flexShrink: 0 }}>···</span>
+                            <span style={{ padding: "0 5px", flexShrink: 0 }}>{label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Month scale: start and end */}
+                    {total > 0 && (
+                      <div style={{ display: "flex", fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
+                        <div style={{ flex: p.start, minWidth: 0 }} />
+                        <div style={{ flex: total, display: "flex", justifyContent: "space-between", padding: "0 1px" }}>
+                          <span>M{p.start + 1}</span>
+                          <span>M{p.start + total}</span>
+                        </div>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               );
             })}
