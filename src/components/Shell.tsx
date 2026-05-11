@@ -30,6 +30,7 @@ interface ShellProps {
   onViewChange?: (id: ViewId) => void;
   onOpenCmdk?: () => void;
   onCreateTask?: () => void;
+  isCrmView?: boolean;
   onOpenSettings?: () => void;
   onCreateProject?: () => void;
   onEditProject?: (id: string) => void;
@@ -52,6 +53,7 @@ export function Shell({
   onViewChange,
   onOpenCmdk,
   onCreateTask,
+  isCrmView = false,
   onOpenSettings,
   onCreateProject,
   onEditProject,
@@ -474,7 +476,7 @@ export function Shell({
             }}
           >
             <Plus size={14} />
-            <span>Nueva tarea</span>
+            <span>{isCrmView ? 'Nueva tarea CRM' : 'Nueva tarea'}</span>
           </button>
         </header>
 

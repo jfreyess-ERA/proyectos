@@ -30,6 +30,7 @@ import { TriggersView } from '@/components/TriggersView';
 import { EmailTemplatesView } from '@/components/EmailTemplatesView';
 import { CrmCalendarView } from '@/components/CrmCalendarView';
 import { CrmImportModal } from '@/components/CrmImportModal';
+import { CreateCrmTaskModal } from '@/components/CreateCrmTaskModal';
 import { CrmReports } from '@/components/CrmReports';
 import { InviteUserModal } from '@/components/InviteUserModal';
 import { UsersContext } from '@/lib/users-context';
@@ -52,6 +53,7 @@ export default function Home() {
   const [createProspectOpen, setCreateProspectOpen] = useState(false);
   const [importProspectOpen, setImportProspectOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [createCrmTaskOpen, setCreateCrmTaskOpen] = useState(false);
 
   const [activeNav, setActiveNav]   = useState<NavId>('dashboard');
   const [activeView, setActiveView] = useState<ViewId>('board');
@@ -117,7 +119,7 @@ export default function Home() {
         if (selectedTask)     { setSelectedTask(null); return; }
       }
       if (isTyping()) return;
-      if (e.key === 'n')           { openCreateTask(); return; }
+      if (e.key === 'n')           { isCrmView ? setCreateCrmTaskOpen(true) : openCreateTask(); return; }
       if (e.key === 'b' && isProjectView) { setActiveView('board'); return; }
       if (e.key === 'e' && isProjectView) { setActiveView('stages'); return; }
       if (e.key === 'l' && isProjectView) { setActiveView('list'); return; }
@@ -285,7 +287,8 @@ export default function Home() {
         onNavChange={handleNav}
         onViewChange={setActiveView}
         onOpenCmdk={() => setCmdkOpen(true)}
-        onCreateTask={() => openCreateTask()}
+        isCrmView={isCrmView}
+        onCreateTask={() => isCrmView ? setCreateCrmTaskOpen(true) : openCreateTask()}
         onOpenSettings={() => setSettingsOpen(true)}
         onCreateProject={openCreateProject}
         onEditProject={openEditProject}
@@ -346,6 +349,13 @@ export default function Home() {
         users={users}
         onClose={() => setCreateOpen(false)}
         onCreated={() => refetch()}
+      />
+
+      <CreateCrmTaskModal
+        open={createCrmTaskOpen}
+        prospects={prospects}
+        onClose={() => setCreateCrmTaskOpen(false)}
+        onCreated={() => { crmRefetch(); setCreateCrmTaskOpen(false); }}
       />
 
       <ProjectModal
