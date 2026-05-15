@@ -785,22 +785,29 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
   const previewNewCats = builtData.newCategories;
   const previewAllCats = builtData.allCategories;
 
-  // Auto-match new client categories → ERA categories (once per new cat ID)
-  // Uses functional setEraMapping to avoid stale closure
-  const newCatIds = previewNewCats.map(c => c.id).join(",");
+  // Seed eraMapping once per category (new = auto-match, existing = stored eraId)
+  // eraMapping is the single source of truth for all ERA dropdowns in the import view
+  const allCatIds = previewAllCats.map(c => c.id).join(",");
   React.useEffect(() => {
-    if (!eraCategories.length || !previewNewCats.length) return;
+    if (!previewAllCats.length) return;
     setEraMapping(prev => {
       const updates = {};
-      previewNewCats.forEach(cat => {
-        if (prev[cat.id] !== undefined) return; // already assigned — don't overwrite
-        const matched = matchCategory(cat.label, eraCategories, c => c.label);
-        updates[cat.id] = matched || null;
+      previewAllCats.forEach(cat => {
+        if (prev[cat.id] !== undefined) return; // already set — don't overwrite
+        if (cat._isNew) {
+          // Auto-match new categories against ERA
+          updates[cat.id] = (eraCategories.length
+            ? matchCategory(cat.label, eraCategories, c => c.label)
+            : null) || null;
+        } else {
+          // Seed from stored value on existing categories
+          updates[cat.id] = cat.eraId || null;
+        }
       });
       return Object.keys(updates).length ? { ...prev, ...updates } : prev;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newCatIds, eraCategories.length]);
+  }, [allCatIds, eraCategories.length]);
 
   // ── Step 1: Upload ─────────────────────────────────────────────
   if (step === 1) {
@@ -894,56 +901,9 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
         </div>
       )}
 
-      {/* New categories + ERA mapping */}
-      {previewNewCats.length > 0 && (
-        <div style={{ border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden" }}>
-          {/* Header */}
-          <div style={{ padding: "10px 16px", background: "var(--surface-2)", borderBottom: eraCategories.length > 0 ? "1px solid var(--line)" : "none", fontSize: 13 }}>
-            <span style={{ fontWeight: 600, color: "var(--text-1)" }}>
-              Categorías nuevas del cliente ({previewNewCats.length})
-            </span>
-            {eraCategories.length === 0 && (
-              <span style={{ marginLeft: 8, color: "var(--text-3)", fontSize: 12 }}>
-                — crea categorías ERA con ⚙ para mapearlas
-              </span>
-            )}
-          </div>
-          {/* Mapping table */}
-          {eraCategories.length > 0 && (
-            <table className="t" style={{ fontSize: 13 }}>
-              <thead>
-                <tr>
-                  <th>Categoría cliente</th>
-                  <th>→ Categoría ERA</th>
-                </tr>
-              </thead>
-              <tbody>
-                {previewNewCats.map(cat => (
-                  <tr key={cat.id}>
-                    <td>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: "50%", background: cat.color, flexShrink: 0 }} />
-                        <span style={{ fontWeight: 500 }}>{cat.label}</span>
-                      </span>
-                    </td>
-                    <td>
-                      <select
-                        className="select"
-                        value={eraMapping[cat.id] || ""}
-                        onChange={e => setEraMapping(prev => ({ ...prev, [cat.id]: e.target.value || null }))}
-                        style={{ minWidth: 200 }}
-                      >
-                        <option value="">— Sin mapear —</option>
-                        {eraCategories.map(e => (
-                          <option key={e.id} value={e.id}>{e.label}</option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+      {previewNewCats.length > 0 && eraCategories.length === 0 && (
+        <div style={{ padding: "8px 14px", borderRadius: 8, background: "var(--surface-2)", border: "1px solid var(--line)", fontSize: 12, color: "var(--text-3)" }}>
+          Se crearán {previewNewCats.length} categoría{previewNewCats.length !== 1 ? "s" : ""} nuevas. Crea categorías ERA con ⚙ para mapearlas.
         </div>
       )}
 
@@ -969,8 +929,8 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
                 {preview.slice(0, 20).map((p, i) => {
                   const cat = previewAllCats.find(c => c.id === p.categoryId);
                   const isNew = cat?._isNew;
-                  // ERA: for new cats use eraMapping, for existing use cat.eraId
-                  const eraId = isNew ? eraMapping[cat?.id] : cat?.eraId;
+                  // Always read from eraMapping — it's the single source of truth
+                  const eraId = cat ? (eraMapping[cat.id] ?? null) : null;
                   const eraCat = eraCategories.find(e => e.id === eraId);
                   return (
                     <tr key={i}>
