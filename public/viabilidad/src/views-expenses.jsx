@@ -940,7 +940,8 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
             <table className="t" style={{ fontSize: 12 }}>
               <thead>
                 <tr>
-                  <th>Categoría</th>
+                  <th>Categoría cliente</th>
+                  {eraCategories.length > 0 && <th>Categoría ERA</th>}
                   <th>Subcategoría</th>
                   <th>Proveedor</th>
                   <th className="right">Monto</th>
@@ -953,18 +954,32 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
                 {preview.slice(0, 20).map((p, i) => {
                   const cat = previewAllCats.find(c => c.id === p.categoryId);
                   const isNew = cat?._isNew;
+                  // ERA: for new cats use eraMapping, for existing use cat.eraId
+                  const eraId = isNew ? eraMapping[cat?.id] : cat?.eraId;
+                  const eraCat = eraCategories.find(e => e.id === eraId);
                   return (
                     <tr key={i}>
                       <td>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                           <CategorySwatch color={cat?.color || "#ccc"} label={cat?.label || catLabel(cat)} />
                           {isNew && (
-                            <span style={{ fontSize: 10, fontWeight: 700, background: "oklch(0.82 0.10 265)", color: "oklch(0.38 0.14 265)", borderRadius: 4, padding: "1px 4px", verticalAlign: "middle" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, background: "oklch(0.82 0.10 265)", color: "oklch(0.38 0.14 265)", borderRadius: 4, padding: "1px 4px" }}>
                               nuevo
                             </span>
                           )}
                         </span>
                       </td>
+                      {eraCategories.length > 0 && (
+                        <td>
+                          {eraCat
+                            ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: eraCat.color, flexShrink: 0 }} />
+                                <span style={{ color: "var(--text-2)" }}>{eraCat.label}</span>
+                              </span>
+                            : <span style={{ color: "var(--text-3)" }}>—</span>
+                          }
+                        </td>
+                      )}
                       <td>{p.subcategory || "—"}</td>
                       <td>{p.supplier || "—"}</td>
                       <td className="right tabular">{fmtMoney(p.amount, client.currency)}</td>
@@ -975,7 +990,7 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
                   );
                 })}
                 {preview.length > 20 && (
-                  <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--text-3)", padding: "8px 0" }}>
+                  <tr><td colSpan={eraCategories.length > 0 ? 8 : 7} style={{ textAlign: "center", color: "var(--text-3)", padding: "8px 0" }}>
                     +{preview.length - 20} filas más…
                   </td></tr>
                 )}
