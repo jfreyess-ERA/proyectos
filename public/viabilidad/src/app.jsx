@@ -6,6 +6,9 @@ function App() {
   const { t } = useI18n();
   const store = useStore();
   const [section, setSection] = React.useState("data");
+  const [showEraMgr, setShowEraMgr] = React.useState(false);
+  const eraCategories = store.state.eraCategories || [];
+  const saveStatus = store.state.saveStatus || 'idle';
 
   // ── Auth guard ────────────────────────────────────────────────
   React.useEffect(() => {
@@ -61,8 +64,16 @@ function App() {
   if (!active) {
     return (
       <div className="app">
-        <Topbar />
+        <Topbar>
+          <button className="btn ghost sm" onClick={() => setShowEraMgr(true)}>⚙ Categorías ERA</button>
+        </Topbar>
         <ClientsView onOpen={(id) => { store.setActiveClient(id); setSection("data"); }} />
+        <SaveIndicator status={saveStatus} />
+        <EraCategoriesModal open={showEraMgr} onClose={() => setShowEraMgr(false)}
+          eraCategories={eraCategories}
+          onAdd={cat => store.addEraCategory(cat)}
+          onUpdate={(id, p) => store.updateEraCategory(id, p)}
+          onDelete={id => store.deleteEraCategory(id)} />
       </div>
     );
   }
@@ -80,14 +91,10 @@ function App() {
   return (
     <div className="app">
       <Topbar>
+        <button className="btn ghost sm" onClick={() => setShowEraMgr(true)}>⚙ Categorías ERA</button>
         <button className="btn ghost sm" onClick={goToClients}>← {t.nav.clients}</button>
         {active.prospectId && (
-          <a
-            href="/"
-            className="btn ghost sm"
-            style={{ marginLeft: 4 }}
-            title="Volver al Sistema de Gestión"
-          >
+          <a href="/" className="btn ghost sm" style={{ marginLeft: 4 }} title="Volver al Sistema de Gestión">
             ← Sistema de Gestión
           </a>
         )}
@@ -106,6 +113,12 @@ function App() {
         {section === "dashboard"  && <DashboardView client={active} />}
         {section === "scenarios"  && <ScenariosView client={active} />}
       </main>
+      <SaveIndicator status={saveStatus} />
+      <EraCategoriesModal open={showEraMgr} onClose={() => setShowEraMgr(false)}
+        eraCategories={eraCategories}
+        onAdd={cat => store.addEraCategory(cat)}
+        onUpdate={(id, p) => store.updateEraCategory(id, p)}
+        onDelete={id => store.deleteEraCategory(id)} />
     </div>
   );
 }

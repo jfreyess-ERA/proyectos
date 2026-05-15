@@ -141,7 +141,27 @@ function CategorySwatch({ color, label }) {
   );
 }
 
+function SaveIndicator({ status }) {
+  if (status === 'idle') return null;
+  const saved = status === 'saved';
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+      display: 'flex', alignItems: 'center', gap: 7,
+      padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500,
+      background: saved ? 'oklch(0.36 0.14 145)' : 'var(--surface)',
+      color: saved ? '#fff' : 'var(--text-2)',
+      border: '1px solid ' + (saved ? 'transparent' : 'var(--line)'),
+      boxShadow: '0 4px 16px rgba(0,0,0,.12)',
+      transition: 'background .3s, color .3s',
+      pointerEvents: 'none',
+    }}>
+      {saved ? '✓ Guardado' : '· · · Guardando'}
+    </div>
+  );
+}
+
 Object.assign(window, {
   Topbar, Crumbs, Field, Stat, Pill, Tier, Bar, FeasDots,
-  Modal, Tabs, CurrencySelect, Empty, CategorySwatch,
+  Modal, Tabs, CurrencySelect, Empty, CategorySwatch, SaveIndicator,
 });

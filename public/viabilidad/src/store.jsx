@@ -337,7 +337,9 @@ function StoreProvider({ children }) {
   const [eraCategories, setEraCategories] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [saveStatus, setSaveStatus] = React.useState('idle'); // 'idle'|'saving'|'saved'
   const pendingSaves = React.useRef({});
+  const saveResetTimer = React.useRef(null);
 
   // ── Load all from Supabase ──────────────────────────────────────
   const loadAll = React.useCallback(async () => {
@@ -380,7 +382,8 @@ function StoreProvider({ children }) {
   React.useEffect(() => { loadAll(); }, [loadAll]);
 
   // ── Debounced save for a single client ─────────────────────────
-  function schedSave(clientId, getClient) {
+  function schedSave(clientId) {
+    setSaveStatus('saving');
     if (pendingSaves.current[clientId]) clearTimeout(pendingSaves.current[clientId]);
     pendingSaves.current[clientId] = setTimeout(async () => {
       setClients(prev => {
@@ -388,8 +391,11 @@ function StoreProvider({ children }) {
         if (!c) return prev;
         const row = clientToRow(c);
         const expRows = c.expenses.map(e => expenseToRow(e, clientId));
-        // Fire-and-forget
-        sb.from("viability_analyses").update(row).eq("id", clientId).then(() => {});
+        sb.from("viability_analyses").update(row).eq("id", clientId).then(() => {
+          setSaveStatus('saved');
+          if (saveResetTimer.current) clearTimeout(saveResetTimer.current);
+          saveResetTimer.current = setTimeout(() => setSaveStatus('idle'), 2500);
+        });
         sb.from("viability_expenses").delete().eq("analysis_id", clientId).then(() => {
           if (expRows.length > 0) sb.from("viability_expenses").insert(expRows).then(() => {});
         });
@@ -400,7 +406,7 @@ function StoreProvider({ children }) {
 
   // ── API ────────────────────────────────────────────────────────
   const api = React.useMemo(() => ({
-    state: { clients, activeClientId, eraCategories },
+    state: { clients, activeClientId, eraCategories, saveStatus },
     loading,
     error,
     reload: loadAll,
@@ -500,7 +506,7 @@ function StoreProvider({ children }) {
         setActiveClientId(null);
       }
     },
-  }), [clients, activeClientId, eraCategories, loading, error, loadAll]);
+  }), [clients, activeClientId, eraCategories, saveStatus, loading, error, loadAll]);
 
   return React.createElement(StoreContext.Provider, { value: api }, children);
 }

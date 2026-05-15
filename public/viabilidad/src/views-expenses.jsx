@@ -3,36 +3,62 @@
    ============================================================ */
 
 function ExpensesView({ client }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
   const [mode, setMode] = React.useState("table");
   const [showAddCat, setShowAddCat] = React.useState(false);
-  const [showEraMgr, setShowEraMgr] = React.useState(false);
+  const [importToast, setImportToast] = React.useState(null); // { rows, cats }
 
   const expenses = client.expenses;
   const total = totalSpend(client);
 
   const update = (idx, patch) => {
-    const next = expenses.map((e, i) => i === idx ? { ...e, ...patch } : e);
-    store.setExpenses(client.id, next);
+    store.setExpenses(client.id, expenses.map((e, i) => i === idx ? { ...e, ...patch } : e));
   };
-  const remove = (idx) => {
-    store.setExpenses(client.id, expenses.filter((_, i) => i !== idx));
-  };
+  const remove = (idx) => store.setExpenses(client.id, expenses.filter((_, i) => i !== idx));
   const duplicate = (idx) => {
     const copy = { ...expenses[idx], id: uid("e") };
-    const next = [...expenses.slice(0, idx + 1), copy, ...expenses.slice(idx + 1)];
-    store.setExpenses(client.id, next);
+    store.setExpenses(client.id, [...expenses.slice(0, idx + 1), copy, ...expenses.slice(idx + 1)]);
   };
   const addRow = (categoryId) => {
     store.setExpenses(client.id, [...expenses, blankExpense(categoryId || client.categories[0]?.id)]);
   };
-
   const catLabel = (cat) => {
     if (!cat) return "—";
     return t.categories[cat.key] || cat.label || cat.key;
   };
+
+  // Empty state — no expenses and no categories yet
+  if (expenses.length === 0 && client.categories.length === 0 && mode === "table") {
+    return (
+      <div className="stack lg">
+        <div className="row between">
+          <div>
+            <div className="eyebrow">{t.nav.expenses}</div>
+            <h2 className="h2">{t.expenses.title}</h2>
+          </div>
+        </div>
+        <div className="card" style={{ padding: "48px 32px", textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>📂</div>
+          <h3 className="h3" style={{ marginBottom: 8 }}>Sin gastos todavía</h3>
+          <p className="lede" style={{ maxWidth: 400, margin: "0 auto 24px" }}>
+            Empieza importando un archivo Excel con los gastos del cliente, o crea las categorías manualmente y añade filas una a una.
+          </p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            <button className="btn primary" onClick={() => setMode("excel")}>📊 Importar Excel</button>
+            <button className="btn" onClick={() => setShowAddCat(true)}>+ Crear categoría</button>
+            <button className="btn ghost" onClick={() => setMode("manual")}>Añadir fila manual</button>
+          </div>
+        </div>
+        <AddCategoryModal open={showAddCat} onClose={() => setShowAddCat(false)}
+          onCreate={(name) => {
+            store.addCategory(client.id, { id: uid("cat"), key: name.toLowerCase().replace(/\s+/g, "_"), label: name, color: AUTO_CAT_COLORS[0] });
+            setShowAddCat(false); setMode("table");
+          }} />
+      </div>
+    );
+  }
 
   return (
     <div className="stack lg">
@@ -40,44 +66,45 @@ function ExpensesView({ client }) {
         <div>
           <div className="eyebrow">{t.nav.expenses}</div>
           <h2 className="h2">{t.expenses.title}</h2>
-          <p className="lede" style={{ marginTop: 4 }}>{t.expenses.lede}</p>
         </div>
         <div className="btn-row">
-          <button className="btn" onClick={() => setShowEraMgr(true)}>⚙ Categorías ERA</button>
           <button className="btn" onClick={() => setShowAddCat(true)}>+ {t.actions.addCategory}</button>
           <button className="btn primary" onClick={() => addRow()}>+ {t.actions.addRow}</button>
         </div>
       </div>
+
+      {/* Post-import success toast */}
+      {importToast && (
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", borderRadius:10, background:"oklch(0.96 0.06 145)", border:"1px solid oklch(0.82 0.12 145)", fontSize:13 }}>
+          <span style={{ color:"oklch(0.35 0.14 145)", fontWeight:600 }}>
+            ✓ {importToast.rows} fila{importToast.rows!==1?"s":""} importada{importToast.rows!==1?"s":""}
+            {importToast.cats > 0 && ` · ${importToast.cats} categoría${importToast.cats!==1?"s":""} nueva${importToast.cats!==1?"s":""} creada${importToast.cats!==1?"s":""}`}
+          </span>
+          <button onClick={() => setImportToast(null)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:"oklch(0.50 0.14 145)" }}>×</button>
+        </div>
+      )}
 
       <div className="grid cols-2">
         <Stat label={t.expenses.total} value={fmtMoney(total, client.currency, { compact: true })} sub={`${expenses.length} ${t.expenses.rowCount}`} variant="dark" />
         <Stat label={t.dashboard.categoriesAnalyzed} value={new Set(expenses.map(e => e.categoryId)).size} sub={`/ ${client.categories.length} ${t.clients.categories}`} />
       </div>
 
-      <Tabs
-        active={mode}
-        onChange={setMode}
-        tabs={[
-          { id: "table",      label: t.expenses.modes.table },
-          { id: "categories", label: "Categorías" },
-          { id: "manual",     label: t.expenses.modes.manual },
-          { id: "paste",      label: t.expenses.modes.paste },
-          { id: "excel",      label: "Excel" },
-        ]}
-      />
+      <Tabs active={mode} onChange={setMode} tabs={[
+        { id: "table",      label: t.expenses.modes.table, count: expenses.length || null },
+        { id: "categories", label: "Categorías" },
+        { id: "manual",     label: t.expenses.modes.manual },
+        { id: "paste",      label: t.expenses.modes.paste },
+        { id: "excel",      label: "Excel" },
+      ]} />
 
       {mode === "table" && (
-        <ExpenseTable client={client} expenses={expenses} update={update} remove={remove} duplicate={duplicate} catLabel={catLabel} />
+        <ExpenseTable client={client} expenses={expenses} eraCategories={eraCategories}
+          update={update} remove={remove} duplicate={duplicate} catLabel={catLabel} />
       )}
       {mode === "categories" && (
-        <CategoriesTab
-          client={client}
-          catLabel={catLabel}
-          eraCategories={eraCategories}
+        <CategoriesTab client={client} catLabel={catLabel} eraCategories={eraCategories}
           onSetMapping={(catId, eraId) => store.setCategoryMapping(client.id, catId, eraId)}
-          onDeleteCat={(catId) => {
-            store.updateClient(client.id, { categories: client.categories.filter(c => c.id !== catId) });
-          }}
+          onDeleteCat={(catId) => store.updateClient(client.id, { categories: client.categories.filter(c => c.id !== catId) })}
         />
       )}
       {mode === "manual" && (
@@ -86,110 +113,168 @@ function ExpensesView({ client }) {
       {mode === "paste" && (
         <PasteImport client={client} catLabel={catLabel} onImport={(rows) => {
           store.setExpenses(client.id, [...expenses, ...rows]);
+          setImportToast({ rows: rows.length, cats: 0 });
           setMode("table");
         }} />
       )}
       {mode === "excel" && (
-        <ExcelImport
-          client={client}
-          catLabel={catLabel}
-          eraCategories={eraCategories}
+        <ExcelImport client={client} catLabel={catLabel} eraCategories={eraCategories}
           onImport={(rows, newCats) => {
-            (newCats || []).forEach(cat => {
-              const { _isNew, ...catData } = cat;
-              store.addCategory(client.id, catData);
-            });
+            (newCats || []).forEach(cat => { const { _isNew, ...d } = cat; store.addCategory(client.id, d); });
             store.setExpenses(client.id, [...expenses, ...rows]);
+            setImportToast({ rows: rows.length, cats: (newCats || []).length });
             setMode("table");
           }}
         />
       )}
 
-      <AddCategoryModal
-        open={showAddCat}
-        onClose={() => setShowAddCat(false)}
+      <AddCategoryModal open={showAddCat} onClose={() => setShowAddCat(false)}
         onCreate={(name) => {
           store.addCategory(client.id, { id: uid("cat"), key: name.toLowerCase().replace(/\s+/g, "_"), label: name, color: AUTO_CAT_COLORS[client.categories.length % AUTO_CAT_COLORS.length] });
           setShowAddCat(false);
-        }}
-      />
-
-      <EraCategoriesModal
-        open={showEraMgr}
-        onClose={() => setShowEraMgr(false)}
-        eraCategories={eraCategories}
-        onAdd={(cat) => store.addEraCategory(cat)}
-        onUpdate={(id, patch) => store.updateEraCategory(id, patch)}
-        onDelete={(id) => store.deleteEraCategory(id)}
-      />
+        }} />
     </div>
   );
 }
 
-function ExpenseTable({ client, expenses, update, remove, duplicate, catLabel }) {
+function ExpenseTable({ client, expenses, eraCategories = [], update, remove, duplicate, catLabel }) {
   const { t } = useI18n();
+  const [search, setSearch] = React.useState("");
+  const [sort, setSort] = React.useState({ col: null, dir: "desc" });
+
+  const toggleSort = (col) => setSort(s => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
+  const SortIcon = ({ col }) => sort.col !== col ? null : (
+    <span style={{ marginLeft: 4, opacity: 0.6 }}>{sort.dir === "desc" ? "↓" : "↑"}</span>
+  );
+
   if (expenses.length === 0) {
     return <Empty icon="◯" title={t.dashboard.empty} hint={t.expenses.lede} />;
   }
+
+  // Filter
+  const q = search.toLowerCase();
+  let rows = expenses.map((e, i) => ({ e, i }));
+  if (q) {
+    rows = rows.filter(({ e }) => {
+      const cat = client.categories.find(c => c.id === e.categoryId);
+      const era = eraCategories.find(er => er.id === cat?.eraId);
+      return (
+        (catLabel(cat) || "").toLowerCase().includes(q) ||
+        (era?.label || "").toLowerCase().includes(q) ||
+        (e.subcategory || "").toLowerCase().includes(q) ||
+        (e.supplier || "").toLowerCase().includes(q) ||
+        (e.notes || "").toLowerCase().includes(q)
+      );
+    });
+  }
+
+  // Sort
+  if (sort.col) {
+    rows.sort((a, b) => {
+      let va, vb;
+      if (sort.col === "category") { va = catLabel(client.categories.find(c=>c.id===a.e.categoryId))||""; vb = catLabel(client.categories.find(c=>c.id===b.e.categoryId))||""; }
+      else if (sort.col === "supplier") { va = a.e.supplier||""; vb = b.e.supplier||""; }
+      else if (sort.col === "amount") { va = +a.e.amount||0; vb = +b.e.amount||0; }
+      else if (sort.col === "savings") { va = +a.e.savingsPct||0; vb = +b.e.savingsPct||0; }
+      if (typeof va === "string") return sort.dir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+      return sort.dir === "asc" ? va - vb : vb - va;
+    });
+  }
+
   const total = totalSpend(client);
-  const totalSav = totalSavings(client);
+  const showEra = eraCategories.length > 0;
 
   return (
-    <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
-      <table className="t">
-        <thead>
-          <tr>
-            <th style={{ width: 32 }}></th>
-            <th>{t.expenses.cols.category}</th>
-            <th>{t.expenses.cols.subcategory}</th>
-            <th>{t.expenses.cols.supplier}</th>
-            <th className="right">{t.expenses.cols.amount}</th>
-            <th className="right">{t.expenses.cols.suppliers}</th>
-            <th style={{ width: 120 }}></th>
-          </tr>
-        </thead>
-        <tbody>
-          {expenses.map((e, i) => {
-            const cat = client.categories.find(c => c.id === e.categoryId);
-            const pot = (+e.amount || 0) * (+e.savingsPct || 0) / 100;
-            return (
-              <tr key={e.id}>
-                <td style={{ paddingLeft: 12 }}>
-                  <span style={{ width: 6, height: 24, background: cat?.color || "#ccc", display: "block", borderRadius: 2 }} />
-                </td>
-                <td>
-                  <select className="select" value={e.categoryId} onChange={ev => update(i, { categoryId: ev.target.value })}>
-                    {client.categories.map(c => (
-                      <option key={c.id} value={c.id}>{catLabel(c)}</option>
-                    ))}
-                  </select>
-                </td>
-                <td><input className="input" value={e.subcategory} onChange={ev => update(i, { subcategory: ev.target.value })} /></td>
-                <td><input className="input" value={e.supplier} onChange={ev => update(i, { supplier: ev.target.value })} /></td>
-                <td className="right">
-                  <input className="input right" type="number" value={e.amount}
-                    onChange={ev => update(i, { amount: +ev.target.value || 0 })} />
-                </td>
-                <td className="right">
-                  <input className="input right" type="number" value={e.suppliers}
-                    onChange={ev => update(i, { suppliers: +ev.target.value || 0 })} style={{ width: 60 }} />
-                </td>
-                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                  <button className="btn ghost sm" onClick={() => duplicate(i)} title="Duplicar">⎘</button>
-                  <button className="btn ghost sm danger" onClick={() => remove(i)} title="Eliminar">×</button>
-                </td>
+    <div className="stack" style={{ gap: 10 }}>
+      {/* Search bar */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input
+          className="input"
+          placeholder="🔍  Buscar por categoría, proveedor, subcategoría…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, maxWidth: 420 }}
+        />
+        {search && (
+          <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+            {rows.length} de {expenses.length} filas
+          </span>
+        )}
+        {search && <button className="btn ghost sm" onClick={() => setSearch("")}>✕ Limpiar</button>}
+      </div>
+
+      <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
+        <table className="t">
+          <thead>
+            <tr>
+              <th style={{ width: 32 }}></th>
+              {showEra && <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("era")}>ERA <SortIcon col="era" /></th>}
+              <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("category")}>{t.expenses.cols.category} <SortIcon col="category" /></th>
+              <th>{t.expenses.cols.subcategory}</th>
+              <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("supplier")}>{t.expenses.cols.supplier} <SortIcon col="supplier" /></th>
+              <th className="right" style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("amount")}>{t.expenses.cols.amount} <SortIcon col="amount" /></th>
+              <th className="right">{t.expenses.cols.suppliers}</th>
+              <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("savings")}>% Ahorro <SortIcon col="savings" /></th>
+              <th style={{ width: 80 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ e, i }) => {
+              const cat = client.categories.find(c => c.id === e.categoryId);
+              const era = eraCategories.find(er => er.id === cat?.eraId);
+              return (
+                <tr key={e.id}>
+                  <td style={{ paddingLeft: 12 }}>
+                    <span style={{ width: 6, height: 24, background: cat?.color || "#ccc", display: "block", borderRadius: 2 }} />
+                  </td>
+                  {showEra && (
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      {era
+                        ? <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:12, color:"var(--text-2)" }}>
+                            <span style={{ width:8, height:8, borderRadius:"50%", background:era.color, flexShrink:0 }} />
+                            {era.label}
+                          </span>
+                        : <span style={{ color:"var(--text-3)", fontSize:11 }}>—</span>
+                      }
+                    </td>
+                  )}
+                  <td>
+                    <select className="select" value={e.categoryId} onChange={ev => update(i, { categoryId: ev.target.value })}>
+                      {client.categories.map(c => <option key={c.id} value={c.id}>{catLabel(c)}</option>)}
+                    </select>
+                  </td>
+                  <td><input className="input" value={e.subcategory} onChange={ev => update(i, { subcategory: ev.target.value })} /></td>
+                  <td><input className="input" value={e.supplier} onChange={ev => update(i, { supplier: ev.target.value })} /></td>
+                  <td className="right">
+                    <input className="input right" type="number" value={e.amount} onChange={ev => update(i, { amount: +ev.target.value || 0 })} />
+                  </td>
+                  <td className="right">
+                    <input className="input right" type="number" value={e.suppliers} onChange={ev => update(i, { suppliers: +ev.target.value || 0 })} style={{ width: 60 }} />
+                  </td>
+                  <td style={{ textAlign:"right", fontSize:12, color: e.savingsPct > 0 ? "var(--text-1)" : "var(--text-3)" }}>
+                    {e.savingsPct > 0 ? e.savingsPct.toFixed(1) + "%" : "—"}
+                  </td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    <button className="btn ghost sm" onClick={() => duplicate(i)} title="Duplicar">⎘</button>
+                    <button className="btn ghost sm danger" onClick={() => remove(i)} title="Eliminar">×</button>
+                  </td>
+                </tr>
+              );
+            })}
+            {!search && (
+              <tr className="totals">
+                <td colSpan={showEra ? 2 : 1}></td>
+                <td colSpan={2}>{t.expenses.total}</td>
+                <td></td>
+                <td className="right">{fmtMoney(total, client.currency)}</td>
+                <td className="right">{expenses.reduce((s, e) => s + (+e.suppliers || 0), 0)}</td>
+                <td></td>
+                <td></td>
               </tr>
-            );
-          })}
-          <tr className="totals">
-            <td></td>
-            <td colSpan={3}>{t.expenses.total}</td>
-            <td className="right">{fmtMoney(total, client.currency)}</td>
-            <td className="right">{expenses.reduce((s, e) => s + (+e.suppliers || 0), 0)}</td>
-            <td></td>
-          </tr>
-        </tbody>
-      </table>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -809,26 +894,46 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allCatIds, eraCategories.length]);
 
+  // ── Step indicator ─────────────────────────────────────────────
+  const StepBar = ({ current }) => (
+    <div style={{ display:"flex", alignItems:"center", gap:0, marginBottom:20 }}>
+      {[["1","Subir archivo"],["2","Mapear columnas"],["3","Vista previa"]].map(([n, label], idx) => {
+        const s = idx + 1;
+        const done = s < current, active = s === current;
+        return (
+          <React.Fragment key={n}>
+            <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+              <span style={{
+                width:24, height:24, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:11, fontWeight:700,
+                background: done ? "oklch(0.36 0.14 145)" : active ? "var(--accent)" : "var(--line)",
+                color: (done||active) ? "#fff" : "var(--text-3)",
+              }}>{done ? "✓" : n}</span>
+              <span style={{ fontSize:12, fontWeight: active ? 600 : 400, color: active ? "var(--text-1)" : "var(--text-3)" }}>{label}</span>
+            </div>
+            {idx < 2 && <div style={{ flex:1, height:1, background:"var(--line)", margin:"0 10px", minWidth:24 }} />}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+
   // ── Step 1: Upload ─────────────────────────────────────────────
   if (step === 1) {
     return (
       <div className="card" style={{ maxWidth: 520 }}>
-        <h3 className="h3">Importar desde Excel</h3>
-        <p className="lede" style={{ marginBottom: 16 }}>
-          Sube un archivo <strong>.xlsx</strong> o <strong>.xls</strong>. Se tomará la primera hoja del libro.
-          Luego podrás elegir qué columna corresponde a cada campo.
-        </p>
+        <StepBar current={1} />
         <label style={{
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          gap: 10, padding: "32px 24px", border: "2px dashed var(--line)", borderRadius: 10,
-          cursor: "pointer", background: "var(--surface-2)", transition: "background .15s",
+          gap: 10, padding: "40px 24px", border: "2px dashed var(--line)", borderRadius: 10,
+          cursor: "pointer", background: "var(--surface-2)", transition: "border-color .15s",
         }}
           onDragOver={e => e.preventDefault()}
           onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile({ target: { files: [f] } }); }}
         >
-          <span style={{ fontSize: 36 }}>📊</span>
+          <span style={{ fontSize: 40 }}>📊</span>
           <span style={{ fontWeight: 600, color: "var(--text-1)" }}>Haz clic o arrastra tu archivo aquí</span>
-          <span style={{ fontSize: 12, color: "var(--text-3)" }}>.xlsx / .xls / .csv</span>
+          <span style={{ fontSize: 12, color: "var(--text-3)" }}>.xlsx · .xls · .csv</span>
           <input type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={handleFile} />
         </label>
         {error && <p style={{ color: "var(--danger)", fontSize: 13, marginTop: 10 }}>{error}</p>}
@@ -838,15 +943,17 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
 
   // ── Step 2 + 3: Map + Preview ──────────────────────────────────
   const seriesCount = Object.values(mapping).filter(f => f === "monthly").length;
+  const hasPreview = preview.length > 0;
 
   return (
     <div className="stack lg">
+      <StepBar current={hasPreview ? 3 : 2} />
       {/* Header */}
       <div className="row between" style={{ alignItems: "flex-start" }}>
         <div>
           <h3 className="h3">Mapear campos · <span style={{ fontWeight: 400, color: "var(--text-3)" }}>{fileName}</span></h3>
           <p className="lede" style={{ marginBottom: 0 }}>
-            {rows.length} filas detectadas. Asigna cada columna del Excel al campo correspondiente.
+            {rows.length} filas · {Object.values(mapping).filter(f=>f!=="skip").length} columnas mapeadas
           </p>
         </div>
         <button className="btn ghost" onClick={() => { setStep(1); setHeaders([]); setRows([]); setFileName(""); }}>
