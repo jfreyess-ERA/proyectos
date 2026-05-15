@@ -347,17 +347,15 @@ function StoreProvider({ children }) {
       const timeout = new Promise((_, rej) =>
         setTimeout(() => rej(new Error("Tiempo de espera agotado (15s)")), 15000)
       );
-      const [{ data: analyses, error: aErr }, { data: expenses, error: eErr }, { data: eraCats, error: ecErr }] = await Promise.race([
+      const [{ data: analyses, error: aErr }, { data: expenses, error: eErr }] = await Promise.race([
         Promise.all([
           sb.from("viability_analyses").select("*").order("updated_at", { ascending: false }),
           sb.from("viability_expenses").select("*"),
-          sb.from("viability_era_categories").select("*").order("sort_order", { ascending: true }),
         ]),
         timeout,
       ]);
       if (aErr) throw aErr;
       if (eErr) throw eErr;
-      if (ecErr && ecErr.code !== "42P01") throw ecErr; // ignore "table not found" until SQL runs
 
       const byAnalysis = {};
       for (const e of expenses || []) {
@@ -365,7 +363,13 @@ function StoreProvider({ children }) {
         byAnalysis[e.analysis_id].push(e);
       }
       setClients((analyses || []).map(a => rowToClient(a, byAnalysis[a.id] || [])));
-      setEraCategories(eraCats || []);
+
+      // ERA categories — load separately so a missing table doesn't crash the app
+      try {
+        const { data: eraCats, error: ecErr } = await sb
+          .from("viability_era_categories").select("*").order("sort_order", { ascending: true });
+        if (!ecErr) setEraCategories(eraCats || []);
+      } catch (_) { /* tabla aún no creada */ }
     } catch (e) {
       setError(e.message || "Error de conexión");
     } finally {
