@@ -971,13 +971,19 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
                       </td>
                       {eraCategories.length > 0 && (
                         <td>
-                          {eraCat
-                            ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: eraCat.color, flexShrink: 0 }} />
-                                <span style={{ color: "var(--text-2)" }}>{eraCat.label}</span>
-                              </span>
-                            : <span style={{ color: "var(--text-3)" }}>—</span>
-                          }
+                          <select
+                            className="select"
+                            value={eraId || ""}
+                            onChange={e => {
+                              if (cat) setEraMapping(prev => ({ ...prev, [cat.id]: e.target.value || null }));
+                            }}
+                            style={{ minWidth: 140, fontSize: 12 }}
+                          >
+                            <option value="">— Sin mapear —</option>
+                            {eraCategories.map(e => (
+                              <option key={e.id} value={e.id}>{e.label}</option>
+                            ))}
+                          </select>
                         </td>
                       )}
                       <td>{p.subcategory || "—"}</td>
