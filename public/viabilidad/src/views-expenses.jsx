@@ -772,20 +772,35 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
     return { expenses, newCategories, allCategories };
   }
 
-  const { expenses: preview, newCategories: previewNewCats, allCategories: previewAllCats } =
-    step >= 2 ? buildExpenses() : { expenses: [], newCategories: [], allCategories: client.categories };
+  // Memoize built data so it only recomputes when rows/mapping change,
+  // NOT when eraMapping changes (avoids fighting the user's selections)
+  const builtData = React.useMemo(
+    () => step >= 2 && rows.length > 0
+      ? buildExpenses()
+      : { expenses: [], newCategories: [], allCategories: client.categories },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows, JSON.stringify(mapping), client.id, client.categories.length]
+  );
+  const preview        = builtData.expenses;
+  const previewNewCats = builtData.newCategories;
+  const previewAllCats = builtData.allCategories;
 
   // Auto-match new client categories → ERA categories (once per new cat ID)
+  // Uses functional setEraMapping to avoid stale closure
+  const newCatIds = previewNewCats.map(c => c.id).join(",");
   React.useEffect(() => {
     if (!eraCategories.length || !previewNewCats.length) return;
-    const updates = {};
-    previewNewCats.forEach(cat => {
-      if (eraMapping[cat.id] !== undefined) return; // already assigned
-      const matched = matchCategory(cat.label, eraCategories, c => c.label);
-      updates[cat.id] = matched || null;
+    setEraMapping(prev => {
+      const updates = {};
+      previewNewCats.forEach(cat => {
+        if (prev[cat.id] !== undefined) return; // already assigned — don't overwrite
+        const matched = matchCategory(cat.label, eraCategories, c => c.label);
+        updates[cat.id] = matched || null;
+      });
+      return Object.keys(updates).length ? { ...prev, ...updates } : prev;
     });
-    if (Object.keys(updates).length) setEraMapping(prev => ({ ...prev, ...updates }));
-  }, [previewNewCats.map(c => c.id).join(","), eraCategories.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newCatIds, eraCategories.length]);
 
   // ── Step 1: Upload ─────────────────────────────────────────────
   if (step === 1) {
