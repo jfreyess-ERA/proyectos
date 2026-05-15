@@ -334,6 +334,7 @@ const StoreContext = React.createContext(null);
 function StoreProvider({ children }) {
   const [clients, setClients] = React.useState([]);
   const [activeClientId, setActiveClientId] = React.useState(null);
+  const [eraCategories, setEraCategories] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const pendingSaves = React.useRef({});
@@ -346,15 +347,17 @@ function StoreProvider({ children }) {
       const timeout = new Promise((_, rej) =>
         setTimeout(() => rej(new Error("Tiempo de espera agotado (15s)")), 15000)
       );
-      const [{ data: analyses, error: aErr }, { data: expenses, error: eErr }] = await Promise.race([
+      const [{ data: analyses, error: aErr }, { data: expenses, error: eErr }, { data: eraCats, error: ecErr }] = await Promise.race([
         Promise.all([
           sb.from("viability_analyses").select("*").order("updated_at", { ascending: false }),
           sb.from("viability_expenses").select("*"),
+          sb.from("viability_era_categories").select("*").order("sort_order", { ascending: true }),
         ]),
         timeout,
       ]);
       if (aErr) throw aErr;
       if (eErr) throw eErr;
+      if (ecErr && ecErr.code !== "42P01") throw ecErr; // ignore "table not found" until SQL runs
 
       const byAnalysis = {};
       for (const e of expenses || []) {
@@ -362,6 +365,7 @@ function StoreProvider({ children }) {
         byAnalysis[e.analysis_id].push(e);
       }
       setClients((analyses || []).map(a => rowToClient(a, byAnalysis[a.id] || [])));
+      setEraCategories(eraCats || []);
     } catch (e) {
       setError(e.message || "Error de conexión");
     } finally {
@@ -392,7 +396,7 @@ function StoreProvider({ children }) {
 
   // ── API ────────────────────────────────────────────────────────
   const api = React.useMemo(() => ({
-    state: { clients, activeClientId },
+    state: { clients, activeClientId, eraCategories },
     loading,
     error,
     reload: loadAll,
@@ -439,6 +443,34 @@ function StoreProvider({ children }) {
       schedSave(clientId);
     },
 
+    setCategoryMapping: (clientId, catId, eraId) => {
+      setClients(prev => prev.map(c => {
+        if (c.id !== clientId) return c;
+        return { ...c, categories: c.categories.map(cat => cat.id === catId ? { ...cat, eraId: eraId || null } : cat), updatedAt: Date.now() };
+      }));
+      schedSave(clientId);
+    },
+
+    addEraCategory: async (cat) => {
+      const row = { key: cat.key, label: cat.label, color: cat.color, sort_order: cat.sort_order || 0 };
+      const { data, error: err } = await sb.from("viability_era_categories").insert(row).select().single();
+      if (err) throw err;
+      setEraCategories(prev => [...prev, data].sort((a, b) => a.sort_order - b.sort_order));
+      return data;
+    },
+
+    updateEraCategory: async (id, patch) => {
+      const { error: err } = await sb.from("viability_era_categories").update(patch).eq("id", id);
+      if (err) throw err;
+      setEraCategories(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+    },
+
+    deleteEraCategory: async (id) => {
+      const { error: err } = await sb.from("viability_era_categories").delete().eq("id", id);
+      if (err) throw err;
+      setEraCategories(prev => prev.filter(c => c.id !== id));
+    },
+
     setScenario: (clientId, scenario) => {
       setClients(prev => prev.map(c => c.id === clientId ? { ...c, scenario, updatedAt: Date.now() } : c));
       schedSave(clientId);
@@ -464,7 +496,7 @@ function StoreProvider({ children }) {
         setActiveClientId(null);
       }
     },
-  }), [clients, activeClientId, loading, error, loadAll]);
+  }), [clients, activeClientId, eraCategories, loading, error, loadAll]);
 
   return React.createElement(StoreContext.Provider, { value: api }, children);
 }

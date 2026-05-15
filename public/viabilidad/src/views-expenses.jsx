@@ -5,12 +5,13 @@
 function ExpensesView({ client }) {
   const { t, lang } = useI18n();
   const store = useStore();
+  const eraCategories = store.state.eraCategories || [];
   const [mode, setMode] = React.useState("table");
   const [showAddCat, setShowAddCat] = React.useState(false);
+  const [showEraMgr, setShowEraMgr] = React.useState(false);
 
   const expenses = client.expenses;
   const total = totalSpend(client);
-  const sav = totalSavings(client);
 
   const update = (idx, patch) => {
     const next = expenses.map((e, i) => i === idx ? { ...e, ...patch } : e);
@@ -42,6 +43,7 @@ function ExpensesView({ client }) {
           <p className="lede" style={{ marginTop: 4 }}>{t.expenses.lede}</p>
         </div>
         <div className="btn-row">
+          <button className="btn" onClick={() => setShowEraMgr(true)}>⚙ Categorías ERA</button>
           <button className="btn" onClick={() => setShowAddCat(true)}>+ {t.actions.addCategory}</button>
           <button className="btn primary" onClick={() => addRow()}>+ {t.actions.addRow}</button>
         </div>
@@ -56,15 +58,27 @@ function ExpensesView({ client }) {
         active={mode}
         onChange={setMode}
         tabs={[
-          { id: "table",  label: t.expenses.modes.table },
-          { id: "manual", label: t.expenses.modes.manual },
-          { id: "paste",  label: t.expenses.modes.paste },
-          { id: "excel",  label: "Excel" },
+          { id: "table",      label: t.expenses.modes.table },
+          { id: "categories", label: "Categorías" },
+          { id: "manual",     label: t.expenses.modes.manual },
+          { id: "paste",      label: t.expenses.modes.paste },
+          { id: "excel",      label: "Excel" },
         ]}
       />
 
       {mode === "table" && (
         <ExpenseTable client={client} expenses={expenses} update={update} remove={remove} duplicate={duplicate} catLabel={catLabel} />
+      )}
+      {mode === "categories" && (
+        <CategoriesTab
+          client={client}
+          catLabel={catLabel}
+          eraCategories={eraCategories}
+          onSetMapping={(catId, eraId) => store.setCategoryMapping(client.id, catId, eraId)}
+          onDeleteCat={(catId) => {
+            store.updateClient(client.id, { categories: client.categories.filter(c => c.id !== catId) });
+          }}
+        />
       )}
       {mode === "manual" && (
         <ManualEntry client={client} catLabel={catLabel} onAdd={(exp) => store.addExpense(client.id, exp)} />
@@ -76,24 +90,37 @@ function ExpensesView({ client }) {
         }} />
       )}
       {mode === "excel" && (
-        <ExcelImport client={client} catLabel={catLabel} onImport={(rows, newCats) => {
-          // First create any new categories, then append expenses
-          (newCats || []).forEach(cat => {
-            const { _isNew, ...catData } = cat;
-            store.addCategory(client.id, catData);
-          });
-          store.setExpenses(client.id, [...expenses, ...rows]);
-          setMode("table");
-        }} />
+        <ExcelImport
+          client={client}
+          catLabel={catLabel}
+          eraCategories={eraCategories}
+          onImport={(rows, newCats) => {
+            (newCats || []).forEach(cat => {
+              const { _isNew, ...catData } = cat;
+              store.addCategory(client.id, catData);
+            });
+            store.setExpenses(client.id, [...expenses, ...rows]);
+            setMode("table");
+          }}
+        />
       )}
 
       <AddCategoryModal
         open={showAddCat}
         onClose={() => setShowAddCat(false)}
         onCreate={(name) => {
-          store.addCategory(client.id, { id: uid("cat"), key: name.toLowerCase().replace(/\s+/g, "_"), label: name, color: "#6E2D4A" });
+          store.addCategory(client.id, { id: uid("cat"), key: name.toLowerCase().replace(/\s+/g, "_"), label: name, color: AUTO_CAT_COLORS[client.categories.length % AUTO_CAT_COLORS.length] });
           setShowAddCat(false);
         }}
+      />
+
+      <EraCategoriesModal
+        open={showEraMgr}
+        onClose={() => setShowEraMgr(false)}
+        eraCategories={eraCategories}
+        onAdd={(cat) => store.addEraCategory(cat)}
+        onUpdate={(id, patch) => store.updateEraCategory(id, patch)}
+        onDelete={(id) => store.deleteEraCategory(id)}
       />
     </div>
   );
@@ -327,6 +354,202 @@ function AddCategoryModal({ open, onClose, onCreate }) {
   );
 }
 
+// ── Categories Tab ────────────────────────────────────────────────
+
+function CategoriesTab({ client, catLabel, eraCategories, onSetMapping, onDeleteCat }) {
+  const cats = client.categories;
+
+  if (cats.length === 0) {
+    return (
+      <div className="card" style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-3)" }}>
+        <div style={{ fontSize: 32, marginBottom: 8 }}>🗂</div>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>Sin categorías</div>
+        <div style={{ fontSize: 13 }}>Importa un Excel o crea categorías con el botón "+ Categoría"</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
+      <table className="t">
+        <thead>
+          <tr>
+            <th style={{ width: 32 }}></th>
+            <th>Categoría cliente</th>
+            <th>Categoría ERA</th>
+            <th style={{ width: 48 }}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {cats.map(cat => {
+            const era = eraCategories.find(e => e.id === cat.eraId);
+            return (
+              <tr key={cat.id}>
+                <td style={{ paddingLeft: 12 }}>
+                  <span style={{ width: 6, height: 24, background: cat.color || "#ccc", display: "block", borderRadius: 2 }} />
+                </td>
+                <td style={{ fontWeight: 500 }}>{catLabel(cat)}</td>
+                <td>
+                  {eraCategories.length === 0 ? (
+                    <span style={{ color: "var(--text-3)", fontSize: 12 }}>Sin categorías ERA — créalas con ⚙</span>
+                  ) : (
+                    <select
+                      className="select"
+                      value={cat.eraId || ""}
+                      onChange={e => onSetMapping(cat.id, e.target.value || null)}
+                      style={{ minWidth: 200 }}
+                    >
+                      <option value="">— Sin mapear —</option>
+                      {eraCategories.map(e => (
+                        <option key={e.id} value={e.id}>{e.label}</option>
+                      ))}
+                    </select>
+                  )}
+                </td>
+                <td>
+                  <button
+                    className="btn ghost sm danger"
+                    title="Eliminar categoría"
+                    onClick={() => {
+                      if (!confirm(`¿Eliminar la categoría "${catLabel(cat)}"?`)) return;
+                      onDeleteCat(cat.id);
+                    }}
+                  >×</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── ERA Categories Modal (Maintainer) ────────────────────────────
+
+function EraCategoriesModal({ open, onClose, eraCategories, onAdd, onUpdate, onDelete }) {
+  const [form, setForm] = React.useState(null); // null = closed, {} = new, {id,...} = editing
+  const [saving, setSaving] = React.useState(false);
+  const [err, setErr] = React.useState("");
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!form.label?.trim()) { setErr("El nombre es requerido"); return; }
+    setSaving(true); setErr("");
+    try {
+      if (form.id) {
+        await onUpdate(form.id, { label: form.label.trim(), color: form.color, sort_order: form.sort_order || 0 });
+      } else {
+        const key = form.label.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").slice(0, 40);
+        await onAdd({ key, label: form.label.trim(), color: form.color || AUTO_CAT_COLORS[eraCategories.length % AUTO_CAT_COLORS.length], sort_order: eraCategories.length });
+      }
+      setForm(null);
+    } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
+  }
+
+  async function handleDelete(id, label) {
+    if (!confirm(`¿Eliminar la categoría ERA "${label}"?`)) return;
+    try { await onDelete(id); } catch (e) { setErr(e.message); }
+  }
+
+  if (!open) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50" style={{ background: "rgba(0,0,0,.35)" }} onClick={onClose} />
+      <div style={{
+        position: "fixed", zIndex: 51, top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+        width: 520, maxHeight: "80vh", display: "flex", flexDirection: "column",
+        background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14,
+        boxShadow: "var(--shadow-pop)", overflow: "hidden",
+      }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid var(--line)" }}>
+          <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-1)" }}>⚙ Categorías ERA</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--text-3)" }}>×</button>
+        </div>
+
+        {/* List */}
+        <div style={{ flex: 1, overflow: "auto", padding: "12px 20px" }}>
+          {err && <div style={{ padding: "8px 12px", borderRadius: 6, background: "var(--danger-bg)", color: "var(--danger)", fontSize: 12, marginBottom: 10 }}>{err}</div>}
+
+          {eraCategories.length === 0 && !form && (
+            <div style={{ textAlign: "center", padding: "32px 0", color: "var(--text-3)", fontSize: 13 }}>
+              Sin categorías ERA todavía. Crea la primera abajo.
+            </div>
+          )}
+
+          {eraCategories.map(cat => (
+            form?.id === cat.id ? (
+              <EraForm key={cat.id} form={form} setForm={setForm} onSave={handleSave} saving={saving} onCancel={() => setForm(null)} />
+            ) : (
+              <div key={cat.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--line-2)" }}>
+                <span style={{ width: 12, height: 12, borderRadius: "50%", background: cat.color, flexShrink: 0 }} />
+                <span style={{ flex: 1, fontWeight: 500, fontSize: 13, color: "var(--text-1)" }}>{cat.label}</span>
+                <button className="btn ghost sm" onClick={() => { setForm({ ...cat }); setErr(""); }}>Editar</button>
+                <button className="btn ghost sm danger" onClick={() => handleDelete(cat.id, cat.label)}>×</button>
+              </div>
+            )
+          ))}
+
+          {form && !form.id && (
+            <EraForm form={form} setForm={setForm} onSave={handleSave} saving={saving} onCancel={() => setForm(null)} isNew />
+          )}
+        </div>
+
+        {/* Footer */}
+        {!form && (
+          <div style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
+            <button
+              className="btn primary"
+              style={{ width: "100%" }}
+              onClick={() => { setForm({ label: "", color: AUTO_CAT_COLORS[eraCategories.length % AUTO_CAT_COLORS.length], sort_order: eraCategories.length }); setErr(""); }}
+            >
+              + Nueva categoría ERA
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function EraForm({ form, setForm, onSave, saving, onCancel, isNew }) {
+  return (
+    <form onSubmit={onSave} style={{ padding: "10px 0 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input
+          autoFocus
+          className="input"
+          style={{ flex: 1 }}
+          placeholder="Nombre de la categoría ERA"
+          value={form.label || ""}
+          onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
+        />
+        {/* Color dots */}
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", maxWidth: 160 }}>
+          {AUTO_CAT_COLORS.map(c => (
+            <button
+              key={c} type="button"
+              onClick={() => setForm(f => ({ ...f, color: c }))}
+              style={{
+                width: 18, height: 18, borderRadius: "50%", background: c, border: "none", cursor: "pointer",
+                outline: form.color === c ? `2px solid ${c}` : "none", outlineOffset: 2,
+                transform: form.color === c ? "scale(1.3)" : "scale(1)", transition: "transform .1s",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>Cancelar</button>
+        <button type="submit" className="btn primary" disabled={saving}>{saving ? "Guardando…" : isNew ? "Crear" : "Guardar"}</button>
+      </div>
+    </form>
+  );
+}
+
 // ── Excel Import ──────────────────────────────────────────────────
 
 const AUTO_CAT_COLORS = [
@@ -427,19 +650,25 @@ function matchCategory(val, categories, catLabel) {
   return bestScore > 0 ? bestId : null;
 }
 
-function ExcelImport({ client, catLabel, onImport }) {
-  const [step, setStep]       = React.useState(1); // 1=upload 2=map 3=preview
+function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
+  const [step, setStep]       = React.useState(1); // 1=upload 2=map+preview
   const [headers, setHeaders] = React.useState([]);
   const [rows, setRows]       = React.useState([]);   // raw string rows from Excel
   const [mapping, setMapping] = React.useState({});   // colIndex -> fieldId
   const [fileName, setFileName] = React.useState("");
   const [error, setError]     = React.useState("");
+  // Stable category IDs across mapping changes (reset on new file)
+  const catIdCache = React.useRef({}); // normStr(name) → catId
+  // ERA mapping: catId → eraId | null (only for new cats)
+  const [eraMapping, setEraMapping] = React.useState({});
 
   function handleFile(e) {
     const file = e.target.files[0];
     if (!file) return;
     setError("");
     setFileName(file.name);
+    catIdCache.current = {}; // reset stable IDs for new file
+    setEraMapping({});
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
@@ -493,12 +722,16 @@ function ExcelImport({ client, catLabel, onImport }) {
       if (existing) {
         catIdByNorm[norm] = existing.id;
       } else {
+        // Use cached stable ID (so ERA mapping survives mapping dropdown changes)
+        if (!catIdCache.current[norm]) {
+          catIdCache.current[norm] = uid("cat");
+        }
         let color;
         do { color = AUTO_CAT_COLORS[colorIdx % AUTO_CAT_COLORS.length]; colorIdx++; }
         while (usedColors.has(color) && colorIdx < AUTO_CAT_COLORS.length * 2);
         usedColors.add(color);
         const key = norm.replace(/\s+/g, "_").slice(0, 40) || uid("k");
-        const newCat = { id: uid("cat"), key, label: name, color, _isNew: true };
+        const newCat = { id: catIdCache.current[norm], key, label: name, color, _isNew: true };
         newCategories.push(newCat);
         catIdByNorm[norm] = newCat.id;
       }
@@ -541,6 +774,18 @@ function ExcelImport({ client, catLabel, onImport }) {
 
   const { expenses: preview, newCategories: previewNewCats, allCategories: previewAllCats } =
     step >= 2 ? buildExpenses() : { expenses: [], newCategories: [], allCategories: client.categories };
+
+  // Auto-match new client categories → ERA categories (once per new cat ID)
+  React.useEffect(() => {
+    if (!eraCategories.length || !previewNewCats.length) return;
+    const updates = {};
+    previewNewCats.forEach(cat => {
+      if (eraMapping[cat.id] !== undefined) return; // already assigned
+      const matched = matchCategory(cat.label, eraCategories, c => c.label);
+      updates[cat.id] = matched || null;
+    });
+    if (Object.keys(updates).length) setEraMapping(prev => ({ ...prev, ...updates }));
+  }, [previewNewCats.map(c => c.id).join(","), eraCategories.length]);
 
   // ── Step 1: Upload ─────────────────────────────────────────────
   if (step === 1) {
@@ -634,18 +879,56 @@ function ExcelImport({ client, catLabel, onImport }) {
         </div>
       )}
 
-      {/* New categories info */}
+      {/* New categories + ERA mapping */}
       {previewNewCats.length > 0 && (
-        <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--surface-2)", border: "1px solid var(--line)", fontSize: 13, color: "var(--text-2)" }}>
-          <span style={{ fontWeight: 600 }}>Categorías que se crearán ({previewNewCats.length}):</span>{" "}
-          <span style={{ display: "inline-flex", flexWrap: "wrap", gap: "6px 12px", marginTop: 4 }}>
-            {previewNewCats.map(c => (
-              <span key={c.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 10, height: 10, borderRadius: "50%", background: c.color, flexShrink: 0, display: "inline-block" }} />
-                <span>{c.label}</span>
+        <div style={{ border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden" }}>
+          {/* Header */}
+          <div style={{ padding: "10px 16px", background: "var(--surface-2)", borderBottom: eraCategories.length > 0 ? "1px solid var(--line)" : "none", fontSize: 13 }}>
+            <span style={{ fontWeight: 600, color: "var(--text-1)" }}>
+              Categorías nuevas del cliente ({previewNewCats.length})
+            </span>
+            {eraCategories.length === 0 && (
+              <span style={{ marginLeft: 8, color: "var(--text-3)", fontSize: 12 }}>
+                — crea categorías ERA con ⚙ para mapearlas
               </span>
-            ))}
-          </span>
+            )}
+          </div>
+          {/* Mapping table */}
+          {eraCategories.length > 0 && (
+            <table className="t" style={{ fontSize: 13 }}>
+              <thead>
+                <tr>
+                  <th>Categoría cliente</th>
+                  <th>→ Categoría ERA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {previewNewCats.map(cat => (
+                  <tr key={cat.id}>
+                    <td>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: "50%", background: cat.color, flexShrink: 0 }} />
+                        <span style={{ fontWeight: 500 }}>{cat.label}</span>
+                      </span>
+                    </td>
+                    <td>
+                      <select
+                        className="select"
+                        value={eraMapping[cat.id] || ""}
+                        onChange={e => setEraMapping(prev => ({ ...prev, [cat.id]: e.target.value || null }))}
+                        style={{ minWidth: 200 }}
+                      >
+                        <option value="">— Sin mapear —</option>
+                        {eraCategories.map(e => (
+                          <option key={e.id} value={e.id}>{e.label}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -710,14 +993,21 @@ function ExcelImport({ client, catLabel, onImport }) {
         <button
           className="btn primary"
           disabled={preview.length === 0}
-          onClick={() => onImport(preview, previewNewCats)}
+          onClick={() => {
+            // Apply ERA mapping to new categories before importing
+            const catsWithEra = previewNewCats.map(cat => ({
+              ...cat,
+              eraId: eraMapping[cat.id] || null,
+            }));
+            onImport(preview, catsWithEra);
+          }}
         >
           Importar {preview.length} fila{preview.length !== 1 ? "s" : ""}
-          {previewNewCats.length > 0 && ` + ${previewNewCats.length} cat.`}
+          {previewNewCats.length > 0 && ` · ${previewNewCats.length} cat.`}
         </button>
       </div>
     </div>
   );
 }
 
-Object.assign(window, { ExpensesView, ExpenseTable, ManualEntry, PasteImport, ExcelImport, AddCategoryModal });
+Object.assign(window, { ExpensesView, ExpenseTable, ManualEntry, PasteImport, ExcelImport, AddCategoryModal, CategoriesTab, EraCategoriesModal, EraForm });
