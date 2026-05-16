@@ -470,29 +470,26 @@ const STRINGS = {
 // Hook
 const I18nContext = React.createContext({ lang: "es", t: STRINGS.es, amountUnit: "full" });
 
+function fmtMoneyMM(amount) {
+  if (amount == null || isNaN(amount)) return "—";
+  const mm = (amount || 0) / 1000000;
+  const decimals = Math.abs(mm) < 10 ? 1 : 0;
+  return "MM$ " + mm.toLocaleString("es-CL", {
+    maximumFractionDigits: decimals,
+    minimumFractionDigits: decimals,
+  });
+}
+
 function I18nProvider({ children }) {
   const [lang, setLang] = React.useState(() => localStorage.getItem("nci.lang") || "es");
   const [amountUnit, setAmountUnitState] = React.useState(() => localStorage.getItem("nci.amountUnit") || "full");
 
   React.useEffect(() => { localStorage.setItem("nci.lang", lang); }, [lang]);
 
-  // When unit changes, override window.fmtMoney so all components pick it up on next render
-  React.useEffect(() => {
-    localStorage.setItem("nci.amountUnit", amountUnit);
-    if (amountUnit === "MM") {
-      window.fmtMoney = function fmtMoneyMM(amount) {
-        if (amount == null || isNaN(amount)) return "—";
-        const mm = (amount || 0) / 1_000_000;
-        const decimals = Math.abs(mm) < 10 ? 1 : 0;
-        return "MM$ " + mm.toLocaleString("es-CL", {
-          maximumFractionDigits: decimals,
-          minimumFractionDigits: decimals,
-        });
-      };
-    } else {
-      window.fmtMoney = fmtMoneyFull;
-    }
-  }, [amountUnit]);
+  // Update synchronously during render so children always see the correct fmtMoney
+  window.fmtMoney = amountUnit === "MM" ? fmtMoneyMM : fmtMoneyFull;
+
+  React.useEffect(() => { localStorage.setItem("nci.amountUnit", amountUnit); }, [amountUnit]);
 
   const setAmountUnit = (u) => setAmountUnitState(u);
   const t = STRINGS[lang];
