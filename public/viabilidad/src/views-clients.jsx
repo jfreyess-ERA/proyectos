@@ -90,17 +90,17 @@ function ClientsView({ onOpen }) {
                     </div>
                     <div className="stats">
                       <div>
-                        <div className="v">{fmtMoney(c.revenue, c.currency, { compact: true })}</div>
+                        <div className="v" style={{ fontSize: 13 }}>{fmtMoney(c.revenue, c.currency)}</div>
                         <div className="l">{t.clients.revenue}</div>
                       </div>
                       <div>
-                        <div className="v">{fmtMoney(spend, c.currency, { compact: true })}</div>
+                        <div className="v" style={{ fontSize: 13 }}>{fmtMoney(spend, c.currency)}</div>
                         <div className="l">{t.clients.spend}</div>
                       </div>
                       <div>
-                        <div className="v" style={{ color: "var(--positive-2)", fontSize: hasSavings ? 13 : undefined }}>
+                        <div className="v" style={{ color: "var(--positive-2)", fontSize: 12 }}>
                           {hasSavings
-                            ? `${fmtMoney(savMin, c.currency, { compact: true })} – ${fmtMoney(savMax, c.currency, { compact: true })}`
+                            ? `${fmtMoney(savMin, c.currency)} – ${fmtMoney(savMax, c.currency)}`
                             : "—"}
                         </div>
                         <div className="l">{t.clients.savings}</div>
