@@ -8,6 +8,7 @@ function ProjectionView({ client }) {
   const eraCategories = store.state.eraCategories || [];
   const [drawerCatId, setDrawerCatId] = React.useState(null);
   const [sort, setSort] = React.useState({ col: null, dir: "desc" });
+  const [feasFilter, setFeasFilter] = React.useState(new Set()); // empty = all
   const sc = { feePct: 30, feePctOnSavings: 50, feeMonths: 36, projectionYears: 5, includedCategories: null, ...(client.scenario || {}) };
   const groups = aggregateByEra(client, eraCategories);
   const total = totalSpend(client);
@@ -27,24 +28,29 @@ function ProjectionView({ client }) {
     return <Empty icon="◯" title={t.dashboard.empty} hint={t.expenses.lede} />;
   }
 
-  // Sort groups
+  // Filter + Sort groups
   const sortedGroups = React.useMemo(() => {
-    if (!sort.col) return groups;
+    let list = groups;
+    if (feasFilter.size > 0) {
+      list = list.filter(g => feasFilter.has(Math.round(g.avgFeasibility)));
+    }
+    if (!sort.col) return list;
     const dir = sort.dir === "asc" ? 1 : -1;
-    return [...groups].sort((a, b) => {
+    return [...list].sort((a, b) => {
       let va, vb;
       if      (sort.col === "name")    { va = (a.category?.label || "").toLowerCase(); vb = (b.category?.label || "").toLowerCase(); return dir * va.localeCompare(vb); }
-      else if (sort.col === "total")   { va = a.total;            vb = b.total; }
-      else if (sort.col === "minPct")  { va = a.avgMinPct;        vb = b.avgMinPct; }
-      else if (sort.col === "maxPct")  { va = a.avgMaxPct;        vb = b.avgMaxPct; }
-      else if (sort.col === "feas")    { va = a.avgFeasibility;   vb = b.avgFeasibility; }
-      else if (sort.col === "min")     { va = a.minSavings;       vb = b.minSavings; }
-      else if (sort.col === "avg")     { va = a.potentialSavings; vb = b.potentialSavings; }
-      else if (sort.col === "max")     { va = a.maxSavings;       vb = b.maxSavings; }
+      else if (sort.col === "total")   { va = a.total;               vb = b.total; }
+      else if (sort.col === "scope")   { va = a.avgScopePct;         vb = b.avgScopePct; }
+      else if (sort.col === "scopeAmt"){ va = a.optimizationAmount;  vb = b.optimizationAmount; }
+      else if (sort.col === "minPct")  { va = a.avgMinPct;           vb = b.avgMinPct; }
+      else if (sort.col === "maxPct")  { va = a.avgMaxPct;           vb = b.avgMaxPct; }
+      else if (sort.col === "feas")    { va = a.avgFeasibility;      vb = b.avgFeasibility; }
+      else if (sort.col === "min")     { va = a.minSavings;          vb = b.minSavings; }
+      else if (sort.col === "max")     { va = a.maxSavings;          vb = b.maxSavings; }
       else return 0;
       return dir * (va - vb);
     });
-  }, [groups, sort]);
+  }, [groups, sort, feasFilter]);
 
   // Totals
   const inc = groups.filter(g => isIncluded(g.categoryId));
@@ -111,25 +117,62 @@ function ProjectionView({ client }) {
 
       {/* Tabla 2: Resumen factibilidad y proyección de ahorros */}
       <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)" }} className="row between">
-          <div>
-            <div className="eyebrow">Tabla resumen</div>
-            <h3 className="h3" style={{ margin: 0 }}>Factibilidad y proyección de ahorros (anuales)</h3>
+        {/* Header + filtros */}
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)" }}>
+          <div className="row between" style={{ marginBottom: 10 }}>
+            <div>
+              <div className="eyebrow">Tabla resumen</div>
+              <h3 className="h3" style={{ margin: 0 }}>Factibilidad y proyección de ahorros (anuales)</h3>
+            </div>
+            <Pill variant="champagne">{sortedGroups.length} / {groups.length}</Pill>
           </div>
-          <Pill variant="champagne">{inc.length} / {groups.length}</Pill>
+          {/* Factibilidad filter */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, color: "var(--text-3)", fontWeight: 600 }}>Factibilidad:</span>
+            {[1, 2, 3, 4, 5].map(v => {
+              const active = feasFilter.size === 0 || feasFilter.has(v);
+              const selected = feasFilter.has(v);
+              return (
+                <button key={v}
+                  onClick={() => setFeasFilter(prev => {
+                    const next = new Set(prev);
+                    if (next.has(v)) next.delete(v); else next.add(v);
+                    return next;
+                  })}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    padding: "3px 10px", borderRadius: 99, fontSize: 12, fontWeight: 600,
+                    cursor: "pointer", border: "1px solid",
+                    borderColor: selected ? "var(--accent)" : "var(--line)",
+                    background: selected ? "var(--accent-bg)" : "var(--surface-2)",
+                    color: selected ? "var(--accent)" : "var(--text-2)",
+                  }}
+                >
+                  <FeasDots value={v} /> {v}
+                </button>
+              );
+            })}
+            {feasFilter.size > 0 && (
+              <button onClick={() => setFeasFilter(new Set())}
+                style={{ fontSize: 12, color: "var(--text-3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+                Limpiar
+              </button>
+            )}
+          </div>
         </div>
         <table className="t">
           <thead>
             <tr>
               <th></th>
               <th style={thSort} onClick={() => toggleSort("name")}>{t.projection.cuentas}<SI col="name"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("total")}>{t.projection.gasto}<SI col="total"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("minPct")}>{t.projection.min} %<SI col="minPct"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("maxPct")}>{t.projection.max} %<SI col="maxPct"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("feas")}>{t.projection.feas}<SI col="feas"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("min")}>{t.projection.min}<SI col="min"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("avg")}>{t.projection.avg}<SI col="avg"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("max")}>{t.projection.max}<SI col="max"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("total")}>Spend under review<SI col="total"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("scope")}>% alcance<SI col="scope"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("scopeAmt")}>$MM alcance<SI col="scopeAmt"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("feas")}>Factib.<SI col="feas"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("minPct")}>% ahorr_min<SI col="minPct"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("maxPct")}>% ahorr_max<SI col="maxPct"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("min")}>MM$ ahorr_min<SI col="min"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("max")}>MM$ ahorr_max<SI col="max"/></th>
             </tr>
           </thead>
           <tbody>
@@ -147,11 +190,12 @@ function ProjectionView({ client }) {
                   </td>
                   <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
                   <td className="right tabular" style={{ fontWeight: 700 }}>{fmtMoney(g.total, client.currency)}</td>
+                  <td className="right tabular">{fmtPct(g.avgScopePct)}</td>
+                  <td className="right tabular">{fmtMoney(g.optimizationAmount, client.currency)}</td>
+                  <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
                   <td className="right tabular">{fmtPct(g.avgMinPct)}</td>
                   <td className="right tabular">{fmtPct(g.avgMaxPct)}</td>
-                  <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
                   <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(g.minSavings, client.currency)}</td>
-                  <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(g.potentialSavings, client.currency)}</td>
                   <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(g.maxSavings, client.currency)}</td>
                 </tr>
               );
@@ -160,12 +204,13 @@ function ProjectionView({ client }) {
               <td></td>
               <td>{t.expenses.total}</td>
               <td className="right">{fmtMoney(total, client.currency)}</td>
+              <td className="right">{fmtPct(sortedGroups.length > 0 ? sortedGroups.reduce((s,g) => s + g.optimizationAmount, 0) / (sortedGroups.reduce((s,g) => s + g.total, 0) || 1) * 100 : 0)}</td>
+              <td className="right">{fmtMoney(sortedGroups.reduce((s,g) => s + g.optimizationAmount, 0), client.currency)}</td>
               <td className="right">—</td>
-              <td className="right">—</td>
-              <td className="right">—</td>
-              <td className="right">{fmtMoney(sumMin, client.currency)}</td>
-              <td className="right" style={{ color: "var(--positive-2)" }}>{fmtMoney(sumAvg, client.currency)}</td>
-              <td className="right" style={{ color: "var(--positive-2)" }}>{fmtMoney(sumMax, client.currency)}</td>
+              <td className="right">{fmtPct(sortedGroups.length > 0 ? sortedGroups.reduce((s,g) => s + g.avgMinPct * g.total, 0) / (sortedGroups.reduce((s,g) => s + g.total, 0) || 1) : 0)}</td>
+              <td className="right">{fmtPct(sortedGroups.length > 0 ? sortedGroups.reduce((s,g) => s + g.avgMaxPct * g.total, 0) / (sortedGroups.reduce((s,g) => s + g.total, 0) || 1) : 0)}</td>
+              <td className="right">{fmtMoney(sortedGroups.reduce((s,g) => s + g.minSavings, 0), client.currency)}</td>
+              <td className="right" style={{ color: "var(--positive-2)" }}>{fmtMoney(sortedGroups.reduce((s,g) => s + g.maxSavings, 0), client.currency)}</td>
             </tr>
           </tbody>
         </table>
