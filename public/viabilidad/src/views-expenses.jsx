@@ -418,6 +418,7 @@ function ExpensesView({ client, readonly = false }) {
 
 function ExpenseTable({ client, expenses, eraCategories = [], update, remove, duplicate, catLabel, onOpen, onBulkRemove, onBulkChangeCategory, filters = {}, showFilters = false, onToggleFilters, onChangeFilters, activeIdx, readonly = false }) {
   const { t } = useI18n();
+  const store = useStore();
   const [search, setSearch] = React.useState("");
   const [sort, setSort] = React.useState({ col: null, dir: "desc" });
   const [selected, setSelected] = React.useState(new Set());
@@ -624,7 +625,7 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
                 </th>
               )}
               <th style={{ width: 8 }}></th>
-              {showEra && <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("era")}>ERA <SortIcon col="era" /></th>}
+              {showEra && <th>ERA</th>}
               <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("category")}>{t.expenses.cols.category} <SortIcon col="category" /></th>
               <th>{t.expenses.cols.subcategory}</th>
               <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("supplier")}>{t.expenses.cols.supplier} <SortIcon col="supplier" /></th>
@@ -677,20 +678,37 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
                     </div>
                   </td>
                   {showEra && (
-                    <td onClick={openDrawer} style={{ whiteSpace: "nowrap", ...clickableStyle }}>
-                      {era
-                        ? <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:12, color:"var(--text-2)" }}>
-                            <span style={{ width:8, height:8, borderRadius:"50%", background:era.color, flexShrink:0 }} />
-                            {era.label}
-                          </span>
-                        : <span style={{ color:"var(--text-3)", fontSize:11 }}>—</span>
-                      }
+                    <td onClick={ev => ev.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
+                      <select
+                        className="select"
+                        value={cat?.eraId || ""}
+                        onChange={ev => store.setCategoryMapping(client.id, cat?.id, ev.target.value || null)}
+                        style={{ minWidth: 140, fontSize: 12 }}
+                        disabled={readonly || !cat}
+                      >
+                        <option value="">— Sin ERA —</option>
+                        {eraCategories.map(er => (
+                          <option key={er.id} value={er.id}>{er.label}</option>
+                        ))}
+                      </select>
                     </td>
                   )}
-                  <td>
-                    <select className="select" value={e.categoryId} onChange={ev => update(i, { categoryId: ev.target.value })} disabled={readonly}>
-                      {client.categories.map(c => <option key={c.id} value={c.id}>{catLabel(c)}</option>)}
-                    </select>
+                  <td onClick={ev => ev.stopPropagation()}>
+                    <input
+                      className="input"
+                      value={cat?.label || cat?.key || ""}
+                      onChange={ev => {
+                        if (!cat) return;
+                        store.updateClient(client.id, {
+                          categories: client.categories.map(c =>
+                            c.id === cat.id ? { ...c, label: ev.target.value } : c
+                          )
+                        });
+                      }}
+                      disabled={readonly || !cat}
+                      style={{ minWidth: 130 }}
+                      placeholder="Categoría"
+                    />
                   </td>
                   <td><input className="input" value={e.subcategory} onChange={ev => update(i, { subcategory: ev.target.value })} disabled={readonly} /></td>
                   <td><input className="input" value={e.supplier} onChange={ev => update(i, { supplier: ev.target.value })} disabled={readonly} /></td>
