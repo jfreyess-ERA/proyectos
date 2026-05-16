@@ -228,7 +228,7 @@ function App() {
     { id: "expenses",   label: t.nav.expenses, count: active.expenses.length },
     { id: "evolution",  label: t.nav.evolution },
     { id: "projection", label: t.nav.projection },
-    { id: "dashboard",  label: t.nav.dashboard },
+    { id: "dashboard",  label: `${t.nav.dashboard} · ${t.nav.gantt}` },
     { id: "scenarios",  label: t.nav.scenarios },
   ];
 
