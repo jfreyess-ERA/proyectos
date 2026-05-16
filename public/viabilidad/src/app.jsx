@@ -2,11 +2,128 @@
    App shell + router
    ============================================================ */
 
+function EraAdminView() {
+  const store = useStore();
+  const eraCategories = store.state.eraCategories || [];
+  const [label, setLabel] = React.useState("");
+  const [color, setColor] = React.useState("#4A90D9");
+  const [editId, setEditId] = React.useState(null);
+  const [editLabel, setEditLabel] = React.useState("");
+  const [editColor, setEditColor] = React.useState("");
+
+  const add = () => {
+    if (!label.trim()) return;
+    const key = label.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").slice(0, 40);
+    store.addEraCategory({ key, label: label.trim(), color, sort_order: eraCategories.length });
+    setLabel(""); setColor("#4A90D9");
+  };
+
+  const startEdit = (era) => { setEditId(era.id); setEditLabel(era.label); setEditColor(era.color); };
+  const saveEdit = () => {
+    if (!editLabel.trim()) return;
+    store.updateEraCategory(editId, { label: editLabel.trim(), color: editColor });
+    setEditId(null);
+  };
+
+  return (
+    <div className="stack lg" style={{ maxWidth: 700 }}>
+      <div>
+        <div className="eyebrow">Administración</div>
+        <h2 className="h2">Categorías ERA</h2>
+        <p style={{ fontSize: 14, color: "var(--text-3)", marginTop: 4 }}>
+          Lista global de categorías ERA. Se usan en todos los clientes para agrupar gastos en proyecciones, dashboards y perfilado.
+        </p>
+      </div>
+
+      {/* Add new */}
+      <div className="card">
+        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>Nueva categoría ERA</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <input className="input" placeholder="Nombre (ej: Energía, Logística…)" value={label}
+            onChange={e => setLabel(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") add(); }}
+            style={{ flex: 1, minWidth: 200 }} autoFocus />
+          <input type="color" value={color} onChange={e => setColor(e.target.value)}
+            title="Color"
+            style={{ width: 40, height: 36, border: "1px solid var(--line)", borderRadius: 6, cursor: "pointer", padding: 2 }} />
+          <button className="btn primary" onClick={add} disabled={!label.trim()}>+ Agregar</button>
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
+        {eraCategories.length === 0 ? (
+          <div style={{ padding: "40px 24px", textAlign: "center", color: "var(--text-3)" }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🏷</div>
+            <div style={{ fontWeight: 600 }}>Sin categorías ERA</div>
+            <div style={{ fontSize: 13, marginTop: 4 }}>Agrega la primera arriba</div>
+          </div>
+        ) : (
+          <table className="t">
+            <thead>
+              <tr>
+                <th style={{ width: 8 }}></th>
+                <th>Nombre</th>
+                <th style={{ width: 80 }}>Color</th>
+                <th style={{ width: 100 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {eraCategories.map(era => (
+                <tr key={era.id}>
+                  <td style={{ paddingLeft: 12 }}>
+                    <span style={{ width: 6, height: 24, background: era.color, display: "block", borderRadius: 2 }} />
+                  </td>
+                  <td>
+                    {editId === era.id ? (
+                      <input className="input" value={editLabel} onChange={e => setEditLabel(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditId(null); }}
+                        autoFocus style={{ width: "100%", maxWidth: 300 }} />
+                    ) : (
+                      <span style={{ fontWeight: 500 }}>{era.label}</span>
+                    )}
+                  </td>
+                  <td>
+                    {editId === era.id ? (
+                      <input type="color" value={editColor} onChange={e => setEditColor(e.target.value)}
+                        style={{ width: 36, height: 30, border: "1px solid var(--line)", borderRadius: 4, cursor: "pointer", padding: 2 }} />
+                    ) : (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-3)" }}>
+                        <span style={{ width: 14, height: 14, borderRadius: "50%", background: era.color, flexShrink: 0, border: "1px solid var(--line)" }} />
+                        {era.color}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    {editId === era.id ? (
+                      <>
+                        <button className="btn sm" onClick={saveEdit} disabled={!editLabel.trim()}>Guardar</button>
+                        <button className="btn ghost sm" style={{ marginLeft: 4 }} onClick={() => setEditId(null)}>Cancelar</button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="btn ghost sm" onClick={() => startEdit(era)}>✏ Editar</button>
+                        <button className="btn ghost sm danger" style={{ marginLeft: 4 }}
+                          onClick={() => { if (confirm(`¿Eliminar "${era.label}"?`)) store.deleteEraCategory(era.id); }}
+                        >×</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const { t } = useI18n();
   const store = useStore();
   const [section, setSection] = React.useState("data");
-  const [showEraMgr, setShowEraMgr] = React.useState(false);
+  const [globalTab, setGlobalTab] = React.useState("clients");
   const [readonly, setReadonly] = React.useState(false);
   const eraCategories = store.state.eraCategories || [];
   const saveStatus = store.state.saveStatus || 'idle';
@@ -86,16 +203,22 @@ function App() {
   if (!active) {
     return (
       <div className="app">
-        <Topbar>
-          <button className="btn ghost sm" onClick={() => setShowEraMgr(true)}>⚙ Categorías ERA</button>
-        </Topbar>
-        <ClientsView onOpen={(id) => { store.setActiveClient(id); setSection("data"); }} />
+        <Topbar />
+        <main>
+          <Tabs
+            tabs={[
+              { id: "clients", label: t.nav.clients },
+              { id: "admin",   label: "⚙ Administración" },
+            ]}
+            active={globalTab}
+            onChange={setGlobalTab}
+          />
+          {globalTab === "clients" && (
+            <ClientsView onOpen={(id) => { store.setActiveClient(id); setSection("data"); }} />
+          )}
+          {globalTab === "admin" && <EraAdminView />}
+        </main>
         <SaveIndicator status={saveStatus} />
-        <EraCategoriesModal open={showEraMgr} onClose={() => setShowEraMgr(false)}
-          eraCategories={eraCategories}
-          onAdd={cat => store.addEraCategory(cat)}
-          onUpdate={(id, p) => store.updateEraCategory(id, p)}
-          onDelete={id => store.deleteEraCategory(id)} />
       </div>
     );
   }
@@ -114,9 +237,6 @@ function App() {
   return (
     <div className="app">
       <Topbar>
-        {!readonly && (
-          <button className="btn ghost sm" onClick={() => setShowEraMgr(true)}>⚙ Categorías ERA</button>
-        )}
         <button className="btn ghost sm" onClick={goToClients}>← {t.nav.clients}</button>
         {active.prospectId && !readonly && (
           <a href="/" className="btn ghost sm" style={{ marginLeft: 4 }} title="Volver al Sistema de Gestión">
@@ -164,11 +284,6 @@ function App() {
         {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}
       </main>
       <SaveIndicator status={saveStatus} />
-      <EraCategoriesModal open={showEraMgr} onClose={() => setShowEraMgr(false)}
-        eraCategories={eraCategories}
-        onAdd={cat => store.addEraCategory(cat)}
-        onUpdate={(id, p) => store.updateEraCategory(id, p)}
-        onDelete={id => store.deleteEraCategory(id)} />
     </div>
   );
 }

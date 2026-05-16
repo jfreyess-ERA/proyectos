@@ -1102,18 +1102,7 @@ function AddCategoryModal({ open, onClose, onCreate }) {
 
 function CategoriesTab({ client, catLabel, eraCategories, onSetMapping, onDeleteCat, onUpdateCat, readonly = false }) {
   const cats = client.categories;
-  const store = useStore();
   const [expandedNotes, setExpandedNotes] = React.useState(new Set());
-  const [showAddEra, setShowAddEra] = React.useState(false);
-  const [newEraLabel, setNewEraLabel] = React.useState("");
-  const [newEraColor, setNewEraColor] = React.useState("#4A90D9");
-
-  const addEra = () => {
-    if (!newEraLabel.trim()) return;
-    store.addEraCategory({ label: newEraLabel.trim(), color: newEraColor });
-    setNewEraLabel("");
-    setShowAddEra(false);
-  };
 
   const toggleNotes = (id) => setExpandedNotes(prev => {
     const next = new Set(prev);
@@ -1142,41 +1131,11 @@ function CategoriesTab({ client, catLabel, eraCategories, onSetMapping, onDelete
 
   return (
     <div className="stack lg">
-      {/* ── ERA Categories management ── */}
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="row between" style={{ marginBottom: 12 }}>
-          <h3 className="h3" style={{ margin: 0 }}>Categorías ERA · lista global</h3>
-          <button className="btn ghost sm" onClick={() => setShowAddEra(true)} disabled={readonly}>+ Nueva ERA</button>
+      {eraCategories.length === 0 && (
+        <div style={{ padding: "10px 16px", borderRadius: 8, background: "oklch(0.97 0.03 80)", border: "1px solid oklch(0.88 0.07 80)", fontSize: 13, color: "oklch(0.45 0.10 80)" }}>
+          ⚠ Sin categorías ERA configuradas. Ve a <strong>Administración</strong> (pantalla de clientes) para crearlas.
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {eraCategories.map(era => (
-            <div key={era.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 8px",
-              background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 6 }}>
-              <span style={{ width: 10, height: 10, borderRadius: "50%", background: era.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 500 }}>{era.label}</span>
-              {!readonly && (
-                <button onClick={() => store.deleteEraCategory(era.id)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", fontSize: 14, lineHeight: 1, padding: "0 0 0 2px" }}
-                  title="Eliminar">×</button>
-              )}
-            </div>
-          ))}
-          {eraCategories.length === 0 && <span style={{ fontSize: 13, color: "var(--text-3)" }}>Sin categorías ERA. Agrega la primera.</span>}
-        </div>
-        {showAddEra && (
-          <div className="row" style={{ gap: 8, marginTop: 12, alignItems: "center" }}>
-            <input className="input" placeholder="Nombre ERA" value={newEraLabel}
-              onChange={e => setNewEraLabel(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") addEra(); }}
-              style={{ flex: 1, maxWidth: 220 }} />
-            <input type="color" value={newEraColor} onChange={e => setNewEraColor(e.target.value)}
-              style={{ width: 40, height: 34, border: "1px solid var(--line)", borderRadius: 4, cursor: "pointer", padding: 2 }} />
-            <button className="btn sm" onClick={addEra} disabled={!newEraLabel.trim()}>Agregar</button>
-            <button className="btn ghost sm" onClick={() => setShowAddEra(false)}>Cancelar</button>
-          </div>
-        )}
-      </div>
-
+      )}
       <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
       <table className="t">
         <thead>
@@ -1202,7 +1161,7 @@ function CategoriesTab({ client, catLabel, eraCategories, onSetMapping, onDelete
                   <td style={{ fontWeight: 500 }}>{catLabel(cat)}</td>
                   <td>
                     {eraCategories.length === 0 ? (
-                      <span style={{ color: "var(--text-3)", fontSize: 12 }}>Sin categorías ERA — agrega una arriba</span>
+                      <span style={{ color: "var(--text-3)", fontSize: 12 }}>Sin categorías ERA — créalas en Administración</span>
                     ) : (
                       <select
                         className="select"
