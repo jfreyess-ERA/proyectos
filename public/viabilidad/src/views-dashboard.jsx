@@ -45,13 +45,13 @@ function DashboardView({ client }) {
 
       {/* Hero stats */}
       <div className="grid cols-4">
-        <Stat label={t.dashboard.currentSpend} value={fmtMoney(total, client.currency, { compact: true })}
+        <Stat label={t.dashboard.currentSpend} value={fmtMoney(total, client.currency)}
               sub={ofRevenue != null ? `${fmtPct(ofRevenue)} ${t.dashboard.ofRevenue}` : null} variant="dark" />
-        <Stat label={t.dashboard.potentialSavings} value={fmtRange(sumMin, sumMax, client.currency, { compact: true })}
+        <Stat label={t.dashboard.potentialSavings} value={fmtRange(sumMin, sumMax, client.currency)}
               sub={`${fmtPct(savPctMin)} – ${fmtPct(savPctMax)}`} variant="accent" />
         <Stat label={t.dashboard.categoriesAnalyzed} value={groups.length}
               sub={`${client.expenses.length} ${t.expenses.rowCount}`} />
-        <Stat label="3 años" value={fmtRange(sumMin * 3, sumMax * 3, client.currency, { compact: true })}
+        <Stat label="3 años" value={fmtRange(sumMin * 3, sumMax * 3, client.currency)}
               sub={t.dashboard.potentialSavings.toLowerCase()} />
       </div>
 
@@ -67,7 +67,7 @@ function DashboardView({ client }) {
               <div key={g.categoryId} style={{ cursor: "pointer" }} onClick={() => setDrawerCatId(g.categoryId)}>
                 <div className="row between" style={{ marginBottom: 4 }}>
                   <CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} />
-                  <span className="tabular" style={{ fontWeight: 700 }}>{fmtMoney(g.total, client.currency, { compact: true })}</span>
+                  <span className="tabular" style={{ fontWeight: 700 }}>{fmtMoney(g.total, client.currency)}</span>
                 </div>
                 <Bar value={g.total} max={maxVol} />
               </div>
@@ -79,7 +79,7 @@ function DashboardView({ client }) {
         <div className="card">
           <div className="row between" style={{ marginBottom: 16 }}>
             <h3 className="h3" style={{ margin: 0 }}>{t.dashboard.topSavings}</h3>
-            <span className="pill positive">+ {fmtRange(sumMin, sumMax, client.currency, { compact: true })}</span>
+            <span className="pill positive">+ {fmtRange(sumMin, sumMax, client.currency)}</span>
           </div>
           <div className="stack sm">
             {topSavings.map(g => (
@@ -87,7 +87,7 @@ function DashboardView({ client }) {
                 <div className="row between" style={{ marginBottom: 4 }}>
                   <CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} />
                   <span className="tabular" style={{ fontWeight: 700, color: "var(--positive-2)" }}>
-                    +{fmtRange(g.minSavings || 0, g.maxSavings || 0, client.currency, { compact: true })}
+                    +{fmtRange(g.minSavings || 0, g.maxSavings || 0, client.currency)}
                   </span>
                 </div>
                 <Bar value={g.maxSavings || 0} max={maxSav} variant="positive" />
@@ -270,7 +270,7 @@ function ScenariosView({ client }) {
                   <td className="right tabular">{fmtMoney(g.total, client.currency)}</td>
                   <td className="right tabular">{fmtPct(g.avgSavingsPct)}</td>
                   <td className="right tabular" style={{ color: inc ? "var(--positive-2)" : "var(--text-3)", fontWeight: 700 }}>
-                    {fmtRange(g.minSavings || 0, g.maxSavings || 0, client.currency, { compact: true })}
+                    {fmtRange(g.minSavings || 0, g.maxSavings || 0, client.currency)}
                   </td>
                 </tr>
               );
@@ -301,7 +301,7 @@ function ScenariosView({ client }) {
                      onChange={e => store.updateClient(client.id, { scenario: { ...client.scenario, feeMonths: +e.target.value } })} style={{ width: 80 }} />
             </div>
           </Field>
-          <Stat label={t.scenarios.fee} value={fmtRange(feeMin, feeMax, client.currency, { compact: true })} sub={`${client.scenario.feePct}% × ${(client.scenario.feeMonths || 36)} meses`} variant="accent" />
+          <Stat label={t.scenarios.fee} value={fmtRange(feeMin, feeMax, client.currency)} sub={`${client.scenario.feePct}% × ${(client.scenario.feeMonths || 36)} meses`} variant="accent" />
         </div>
 
         {/* Per-category fee override */}
@@ -333,7 +333,7 @@ function ScenariosView({ client }) {
                     <tr key={g.categoryId} style={{ cursor: "pointer" }}
                         onClick={(ev) => { if (ev.target.tagName === "INPUT") return; setDrawerCatId(g.categoryId); }}>
                       <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
-                      <td className="right tabular">{fmtRange(g.minSavings || 0, g.maxSavings || 0, client.currency, { compact: true })}</td>
+                      <td className="right tabular">{fmtRange(g.minSavings || 0, g.maxSavings || 0, client.currency)}</td>
                       <td className="right">
                         <input className="input right" type="number" min="0" max="100" value={pct}
                                onChange={e => {
@@ -342,13 +342,13 @@ function ScenariosView({ client }) {
                                }}
                                style={{ width: 70 }} />
                       </td>
-                      <td className="right tabular" style={{ color: "var(--champagne-2)", fontWeight: 700 }}>{fmtRange(fMin, fMax, client.currency, { compact: true })}</td>
+                      <td className="right tabular" style={{ color: "var(--champagne-2)", fontWeight: 700 }}>{fmtRange(fMin, fMax, client.currency)}</td>
                     </tr>
                   );
                 })}
                 <tr className="totals">
                   <td colSpan={3}>{t.scenarios.fee} total</td>
-                  <td className="right tabular">{fmtRange(feeMin, feeMax, client.currency, { compact: true })}</td>
+                  <td className="right tabular">{fmtRange(feeMin, feeMax, client.currency)}</td>
                 </tr>
               </tbody>
             </table>
@@ -368,13 +368,13 @@ function ScenariosView({ client }) {
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", opacity: 0.65 }}>{t.scenarios.year1} · {t.scenarios.net}</div>
             <div style={{ fontSize: 26, fontWeight: 700, color: "var(--champagne)", fontVariantNumeric: "tabular-nums", marginTop: 4 }}>
-              {fmtRange(netClientMin, netClientMax, client.currency, { compact: true })}
+              {fmtRange(netClientMin, netClientMax, client.currency)}
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", opacity: 0.65 }}>{t.scenarios.year3} · {t.scenarios.net}</div>
             <div style={{ fontSize: 26, fontWeight: 700, color: "var(--champagne)", fontVariantNumeric: "tabular-nums", marginTop: 4 }}>
-              {fmtRange(netClient3yMin, netClient3yMax, client.currency, { compact: true })}
+              {fmtRange(netClient3yMin, netClient3yMax, client.currency)}
             </div>
           </div>
         </div>
