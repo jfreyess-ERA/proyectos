@@ -184,7 +184,7 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
                   <tr className="totals">
                     <td colSpan={2}>Total</td>
                     <td className="right tabular">{fmtMoney(total, client.currency)}</td>
-                    <td className="right tabular">{avgSavPct > 0 ? avgSavPct.toFixed(1) + "%" : "—"}</td>
+                    <td className="right tabular">{savMax > 0 ? `${(savMin/total*100).toFixed(1)}%–${(savMax/total*100).toFixed(1)}%` : "—"}</td>
                   </tr>
                 )}
               </tbody>
