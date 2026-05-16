@@ -473,11 +473,11 @@ const I18nContext = React.createContext({ lang: "es", t: STRINGS.es, amountUnit:
 function fmtMoneyMM(amount) {
   if (amount == null || isNaN(amount)) return "—";
   const mm = (amount || 0) / 1000000;
-  const decimals = Math.abs(mm) < 10 ? 1 : 0;
-  return "MM$ " + mm.toLocaleString("es-CL", {
-    maximumFractionDigits: decimals,
-    minimumFractionDigits: decimals,
-  });
+  // Always show 1 decimal so it looks clearly different from compact $ (which shows "$343 M")
+  return "$ " + mm.toLocaleString("es-CL", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1,
+  }) + " MM";
 }
 
 function I18nProvider({ children }) {
