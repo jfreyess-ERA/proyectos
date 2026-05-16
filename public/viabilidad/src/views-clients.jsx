@@ -273,17 +273,23 @@ function NewClientModal({ open, onClose, onCreate }) {
     if (!open) return;
     setMode("crm"); setName(""); setQuery("");
     setProspects([]); setSelected(null); setCreating(false);
+    // Load full list immediately on open
+    setSearching(true);
+    store.searchProspects("").then(results => {
+      setProspects(results);
+      setSearching(false);
+    });
   }, [open]);
 
-  // Debounced CRM search
+  // Debounced CRM search (filter as user types)
   React.useEffect(() => {
-    if (mode !== "crm" || !query.trim()) { setProspects([]); setSearching(false); return; }
+    if (mode !== "crm") return;
     setSearching(true);
     const timer = setTimeout(async () => {
       const results = await store.searchProspects(query);
       setProspects(results);
       setSearching(false);
-    }, 350);
+    }, 300);
     return () => clearTimeout(timer);
   }, [query, mode]);
 
@@ -350,9 +356,6 @@ function NewClientModal({ open, onClose, onCreate }) {
           </div>
 
           {/* Results list */}
-          {searching && (
-            <div style={{ textAlign: "center", padding: 16, color: "var(--text-3)", fontSize: 13 }}>Buscando…</div>
-          )}
           {!searching && query.trim() && prospects.length === 0 && (
             <div style={{ textAlign: "center", padding: 16, color: "var(--text-3)", fontSize: 13 }}>
               Sin resultados para "<strong>{query}</strong>"
@@ -414,10 +417,8 @@ function NewClientModal({ open, onClose, onCreate }) {
             </div>
           )}
 
-          {!query.trim() && !selected && (
-            <div style={{ textAlign: "center", padding: "28px 0", color: "var(--text-3)", fontSize: 13 }}>
-              Escribe para buscar entre los prospectos del CRM
-            </div>
+          {searching && prospects.length === 0 && (
+            <div style={{ textAlign: "center", padding: 16, color: "var(--text-3)", fontSize: 13 }}>Cargando…</div>
           )}
         </div>
       )}

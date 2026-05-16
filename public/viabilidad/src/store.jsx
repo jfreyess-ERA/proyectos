@@ -509,13 +509,13 @@ function StoreProvider({ children }) {
     },
 
     searchProspects: async (query) => {
-      if (!query || !query.trim()) return [];
-      const q = query.trim();
-      const { data } = await sb.from("prospects")
+      const q = (query || "").trim();
+      let req = sb.from("prospects")
         .select("id, company, contact_name, role, email, phone, industry, subsector, country, status, stage")
-        .or(`company.ilike.%${q}%,contact_name.ilike.%${q}%,industry.ilike.%${q}%`)
         .order("company", { ascending: true })
-        .limit(25);
+        .limit(50);
+      if (q) req = req.or(`company.ilike.%${q}%,contact_name.ilike.%${q}%,industry.ilike.%${q}%`);
+      const { data } = await req;
       return data || [];
     },
 
