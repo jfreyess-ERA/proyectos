@@ -117,8 +117,8 @@ function ClientsView({ onOpen }) {
         </>
       )}
 
-      <NewClientModal open={showNew} onClose={() => setShowNew(false)} onCreate={(name) => {
-        const id = store.addClient(name);
+      <NewClientModal open={showNew} onClose={() => setShowNew(false)} onCreate={async (name, prospectId, initialData) => {
+        const id = await store.addClient(name, prospectId, initialData);
         setShowNew(false);
         onOpen(id);
       }} />
@@ -260,23 +260,177 @@ function BenchmarkView({ clients, eraCategories }) {
 
 function NewClientModal({ open, onClose, onCreate }) {
   const { t } = useI18n();
+  const store = useStore();
+  const [mode, setMode] = React.useState("crm");   // "crm" | "new"
   const [name, setName] = React.useState("");
-  React.useEffect(() => { if (open) setName(""); }, [open]);
+  const [query, setQuery] = React.useState("");
+  const [prospects, setProspects] = React.useState([]);
+  const [searching, setSearching] = React.useState(false);
+  const [selected, setSelected] = React.useState(null);
+  const [creating, setCreating] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) return;
+    setMode("crm"); setName(""); setQuery("");
+    setProspects([]); setSelected(null); setCreating(false);
+  }, [open]);
+
+  // Debounced CRM search
+  React.useEffect(() => {
+    if (mode !== "crm" || !query.trim()) { setProspects([]); setSearching(false); return; }
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      const results = await store.searchProspects(query);
+      setProspects(results);
+      setSearching(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [query, mode]);
+
+  // Already-linked prospect ids
+  const linkedIds = new Set(store.state.clients.map(c => c.prospectId).filter(Boolean));
+
+  const canCreate = creating ? false : mode === "crm" ? !!selected : !!name.trim();
+
+  const handleCreate = async () => {
+    if (!canCreate) return;
+    setCreating(true);
+    try {
+      if (mode === "crm" && selected) {
+        await onCreate(selected.company || "", selected.id, {
+          legalName: selected.company || "",
+          sector: [selected.industry, selected.subsector].filter(Boolean).join(" · "),
+          country: selected.country || "Chile",
+          contact: {
+            name:  selected.contact_name || "",
+            role:  selected.role  || "",
+            email: selected.email || "",
+            phone: selected.phone || "",
+          },
+        });
+      } else {
+        await onCreate(name.trim(), null, {});
+      }
+    } catch(e) { setCreating(false); }
+  };
+
+  const btnStyle = (active) => ({
+    flex: 1, padding: "8px 0", borderRadius: 8, fontSize: 13, cursor: "pointer",
+    fontWeight: active ? 600 : 400,
+    border: "1px solid " + (active ? "var(--accent)" : "var(--line)"),
+    background: active ? "oklch(0.95 0.04 265)" : "transparent",
+    color: active ? "var(--accent)" : "var(--text-2)",
+  });
+
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={t.actions.newClient}
+    <Modal open={open} onClose={onClose} title="Nuevo análisis de viabilidad"
       footer={
         <>
-          <button className="btn ghost" onClick={onClose}>{t.actions.cancel}</button>
-          <button className="btn primary" disabled={!name.trim()} onClick={() => onCreate(name.trim())}>{t.actions.save}</button>
+          <button className="btn ghost" onClick={onClose} disabled={creating}>{t.actions.cancel}</button>
+          <button className="btn primary" disabled={!canCreate} onClick={handleCreate}>
+            {creating ? "Creando…" : "Crear análisis"}
+          </button>
         </>
       }
     >
-      <Field label={t.client.legalName}>
-        <input className="input" autoFocus value={name} onChange={e => setName(e.target.value)} />
-      </Field>
+      {/* Mode toggle */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+        <button style={btnStyle(mode === "crm")}  onClick={() => setMode("crm")}>📋 Importar desde CRM</button>
+        <button style={btnStyle(mode === "new")}  onClick={() => setMode("new")}>✚ Nuevo cliente</button>
+      </div>
+
+      {/* ── CRM mode ── */}
+      {mode === "crm" && (
+        <div>
+          <div style={{ position: "relative", marginBottom: 10 }}>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", opacity: 0.5 }}>🔍</span>
+            <input className="input" autoFocus placeholder="Buscar empresa o contacto…"
+              value={query} onChange={e => { setQuery(e.target.value); setSelected(null); }}
+              style={{ paddingLeft: 32 }} />
+          </div>
+
+          {/* Results list */}
+          {searching && (
+            <div style={{ textAlign: "center", padding: 16, color: "var(--text-3)", fontSize: 13 }}>Buscando…</div>
+          )}
+          {!searching && query.trim() && prospects.length === 0 && (
+            <div style={{ textAlign: "center", padding: 16, color: "var(--text-3)", fontSize: 13 }}>
+              Sin resultados para "<strong>{query}</strong>"
+            </div>
+          )}
+          {!searching && prospects.length > 0 && (
+            <div style={{ maxHeight: 260, overflowY: "auto", border: "1px solid var(--line)", borderRadius: 8, marginBottom: 12 }}>
+              {prospects.map((p, i) => {
+                const isSel  = selected?.id === p.id;
+                const hasAnalysis = linkedIds.has(p.id);
+                return (
+                  <div key={p.id} onClick={() => setSelected(p)} style={{
+                    padding: "10px 14px", cursor: "pointer",
+                    background: isSel ? "oklch(0.95 0.04 265)" : i % 2 === 0 ? "transparent" : "var(--surface-2)",
+                    borderBottom: i < prospects.length - 1 ? "1px solid var(--line)" : "none",
+                    borderLeft: "3px solid " + (isSel ? "var(--accent)" : "transparent"),
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between" }}>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{p.company}</span>
+                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                        {hasAnalysis && (
+                          <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "oklch(0.90 0.05 265)", color: "var(--accent)", fontWeight: 600 }}>
+                            Ya tiene análisis
+                          </span>
+                        )}
+                        <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--line)" }}>
+                          {p.stage || p.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-2)", marginTop: 3 }}>
+                      {[p.industry, p.country].filter(Boolean).join(" · ")}
+                      {p.contact_name ? ` · ${p.contact_name}` : ""}
+                      {p.email ? ` · ${p.email}` : ""}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Selected prospect summary */}
+          {selected && (
+            <div style={{ padding: "12px 14px", background: "oklch(0.95 0.04 265)", borderRadius: 8, border: "1px solid oklch(0.82 0.07 265)" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>✓ Seleccionado</div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{selected.company}</div>
+              {(selected.industry || selected.country) && (
+                <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 2 }}>
+                  {[selected.industry, selected.subsector, selected.country].filter(Boolean).join(" · ")}
+                </div>
+              )}
+              {selected.contact_name && (
+                <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 4 }}>
+                  {selected.contact_name}{selected.role ? ` · ${selected.role}` : ""}
+                  {selected.email ? ` · ${selected.email}` : ""}
+                  {selected.phone ? ` · ${selected.phone}` : ""}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!query.trim() && !selected && (
+            <div style={{ textAlign: "center", padding: "28px 0", color: "var(--text-3)", fontSize: 13 }}>
+              Escribe para buscar entre los prospectos del CRM
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── New client mode ── */}
+      {mode === "new" && (
+        <Field label={t.client.legalName}>
+          <input className="input" autoFocus value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && name.trim() && handleCreate()}
+            placeholder="Razón social del cliente" />
+        </Field>
+      )}
     </Modal>
   );
 }

@@ -493,9 +493,11 @@ function StoreProvider({ children }) {
 
     setActiveClient: (id) => setActiveClientId(id),
 
-    addClient: async (name, prospectId = null) => {
-      const c = blankClient(name || "Nuevo cliente");
-      c.prospectId = prospectId;
+    addClient: async (name, prospectId = null, initialData = {}) => {
+      const c = { ...blankClient(name || "Nuevo cliente"), ...initialData };
+      c.prospectId = prospectId || null;
+      // Deep-merge contact if provided
+      if (initialData.contact) c.contact = { ...blankClient().contact, ...initialData.contact };
       const row = clientToRow(c);
       delete row.id;
       const { data, error: err } = await sb.from("viability_analyses").insert(row).select().single();
@@ -504,6 +506,17 @@ function StoreProvider({ children }) {
       setClients(prev => [newClient, ...prev]);
       setActiveClientId(newClient.id);
       return newClient.id;
+    },
+
+    searchProspects: async (query) => {
+      if (!query || !query.trim()) return [];
+      const q = query.trim();
+      const { data } = await sb.from("prospects")
+        .select("id, company, contact_name, role, email, phone, industry, subsector, country, status, stage")
+        .or(`company.ilike.%${q}%,contact_name.ilike.%${q}%,industry.ilike.%${q}%`)
+        .order("company", { ascending: true })
+        .limit(25);
+      return data || [];
     },
 
     deleteClient: async (id) => {
