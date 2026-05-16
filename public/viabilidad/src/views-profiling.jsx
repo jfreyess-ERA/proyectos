@@ -77,8 +77,8 @@ function DrawerEvolution({ expenses, currency, categoryColor }) {
     return next.size >= series.length ? new Set() : next; // reset if hiding all
   });
 
-  // SVG layout
-  const W = 460, H = 130, PL = 8, PR = 8, PT = 8, PB = 18;
+  // SVG layout — wider + taller to fit in the centered modal
+  const W = 820, H = 210, PL = 76, PR = 12, PT = 14, PB = 24;
   const cW = W - PL - PR, cH = H - PT - PB;
   const allVals = display.flatMap(s => s.data);
   const maxV = Math.max(...allVals, 1);
@@ -115,12 +115,22 @@ function DrawerEvolution({ expenses, currency, categoryColor }) {
         )}
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 130, display: "block" }}>
-        {/* Grid */}
-        {[0.25, 0.5, 0.75, 1].map(f => (
-          <line key={f} x1={PL} y1={py(maxV * f)} x2={W - PR} y2={py(maxV * f)}
-            stroke="var(--line)" strokeWidth="0.5" strokeDasharray="2 3" />
-        ))}
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 210, display: "block" }}>
+        {/* Y-axis gridlines + labels */}
+        {[0.25, 0.5, 0.75, 1].map(f => {
+          const v = maxV * f;
+          const yy = py(v);
+          return (
+            <g key={f}>
+              <line x1={PL} y1={yy} x2={W - PR} y2={yy}
+                stroke="var(--line)" strokeWidth="0.5" strokeDasharray="2 3" />
+              <text x={PL - 6} y={yy + 3} fontSize="9" fill="var(--text-3)"
+                textAnchor="end" fontFamily="Trebuchet MS">
+                {fmtMoney(v, currency, { compact: true })}
+              </text>
+            </g>
+          );
+        })}
         {/* Series */}
         {display.map(s => {
           const pts = s.data.map((v, i) => `${px(i)},${py(v)}`).join(" ");
@@ -236,12 +246,14 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
 
   return (
     <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,.25)" }} />
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,.4)" }} />
       <div style={{
-        position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 301,
-        width: "min(520px, calc(100vw - 48px))",
-        background: "var(--surface)", borderLeft: "1px solid var(--line)",
-        boxShadow: "-8px 0 40px rgba(0,0,0,.18)",
+        position: "fixed", zIndex: 301,
+        top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+        width: "min(960px, calc(100vw - 32px))",
+        maxHeight: "90vh",
+        background: "var(--surface)", borderRadius: 12,
+        boxShadow: "0 24px 80px rgba(0,0,0,.28)",
         display: "flex", flexDirection: "column", overflow: "hidden",
       }}>
         {/* Header */}
@@ -277,71 +289,77 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
           {/* KPIs */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
             {[
-              { label: "Gasto total", value: fmtMoney(total, client.currency, { compact: true }), accent: false },
-              { label: "Ahorro potencial", value: savMax > 0 ? `${fmtMoney(savMin, client.currency, { compact: true })} – ${fmtMoney(savMax, client.currency, { compact: true })}` : "—", accent: true },
+              { label: "Gasto total", value: fmtMoney(total, client.currency), accent: false },
+              { label: "Ahorro potencial", value: savMax > 0 ? `${fmtMoney(savMin, client.currency)} – ${fmtMoney(savMax, client.currency)}` : "—", accent: true },
               { label: "Factibilidad media", value: avgFeas > 0 ? avgFeas.toFixed(1) + " / 5" : "—", accent: false },
             ].map(({ label, value, accent }) => (
-              <div key={label} style={{ padding: "10px 12px", background: "var(--surface-2)", borderRadius: 8, border: "1px solid var(--line)" }}>
-                <div style={{ fontSize: 10, color: "var(--text-3)", marginBottom: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: accent ? "var(--positive-2)" : "var(--text-1)" }}>{value}</div>
+              <div key={label} style={{ padding: "12px 16px", background: "var(--surface-2)", borderRadius: 8, border: "1px solid var(--line)" }}>
+                <div style={{ fontSize: 10, color: "var(--text-3)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: accent ? "var(--positive-2)" : "var(--text-1)" }}>{value}</div>
               </div>
             ))}
           </div>
 
-          {/* Suppliers breakdown */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 8 }}>
-            {expenses.length} línea{expenses.length !== 1 ? "s" : ""} · {suppliers.length} proveedor{suppliers.length !== 1 ? "es" : ""}
-          </div>
-          <div className="card flat" style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
-            <table className="t" style={{ fontSize: 12 }}>
-              <thead>
-                <tr>
-                  <th>Proveedor</th>
-                  <th>Subcategoría</th>
-                  <th className="right">Monto</th>
-                  <th className="right">% Ahorro</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.map((e, i) => (
-                  <tr key={e.id || i}>
-                    <td style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.supplier || "—"}</td>
-                    <td style={{ color: "var(--text-2)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.subcategory || "—"}</td>
-                    <td className="right tabular">{fmtMoney(+e.amount || 0, client.currency)}</td>
-                    <td className="right tabular" style={{ color: +e.savingsPct > 0 ? "var(--positive-2)" : "var(--text-3)" }}>
-                      {+e.savingsPct > 0 ? (+e.savingsPct).toFixed(1) + "%" : "—"}
-                    </td>
-                  </tr>
-                ))}
-                {expenses.length > 1 && (
-                  <tr className="totals">
-                    <td colSpan={2}>Total</td>
-                    <td className="right tabular">{fmtMoney(total, client.currency)}</td>
-                    <td className="right tabular">{savMax > 0 ? `${(savMin/total*100).toFixed(1)}%–${(savMax/total*100).toFixed(1)}%` : "—"}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Monthly evolution chart */}
-          <DrawerEvolution
-            expenses={expenses}
-            currency={client.currency}
-            categoryColor={(isEraMode ? era?.color : cat?.color) || "var(--accent)"}
-          />
-
-          {/* Notes — client category mode only */}
-          {!isEraMode && cat?.notes && (
-            <div style={{ padding: "10px 14px", background: "var(--surface-2)", borderRadius: 8, border: "1px solid var(--line)", fontSize: 12, color: "var(--text-2)", lineHeight: 1.5 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-3)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>Notas</div>
-              {cat.notes}
+          {/* Two-column: table left, chart right */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 24, alignItems: "start" }}>
+            {/* Suppliers breakdown */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 8 }}>
+                {expenses.length} línea{expenses.length !== 1 ? "s" : ""} · {suppliers.length} proveedor{suppliers.length !== 1 ? "es" : ""}
+              </div>
+              <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
+                <table className="t" style={{ fontSize: 12 }}>
+                  <thead>
+                    <tr>
+                      <th>Proveedor</th>
+                      <th>Subcategoría</th>
+                      <th className="right">Monto</th>
+                      <th className="right">% Ahorro</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expenses.map((e, i) => (
+                      <tr key={e.id || i}>
+                        <td style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.supplier || "—"}</td>
+                        <td style={{ color: "var(--text-2)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.subcategory || "—"}</td>
+                        <td className="right tabular">{fmtMoney(+e.amount || 0, client.currency)}</td>
+                        <td className="right tabular" style={{ color: +e.savingsPct > 0 ? "var(--positive-2)" : "var(--text-3)" }}>
+                          {+e.savingsPct > 0 ? (+e.savingsPct).toFixed(1) + "%" : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                    {expenses.length > 1 && (
+                      <tr className="totals">
+                        <td colSpan={2}>Total</td>
+                        <td className="right tabular">{fmtMoney(total, client.currency)}</td>
+                        <td className="right tabular">{savMax > 0 ? `${(savMin/total*100).toFixed(1)}%–${(savMax/total*100).toFixed(1)}%` : "—"}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {/* Notes */}
+              {!isEraMode && cat?.notes && (
+                <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--surface-2)", borderRadius: 8, border: "1px solid var(--line)", fontSize: 12, color: "var(--text-2)", lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-3)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>Notas</div>
+                  {cat.notes}
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Monthly evolution chart */}
+            <div>
+              <DrawerEvolution
+                expenses={expenses}
+                currency={client.currency}
+                categoryColor={(isEraMode ? era?.color : cat?.color) || "var(--accent)"}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </>
