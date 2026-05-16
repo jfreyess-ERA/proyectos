@@ -76,7 +76,7 @@ function blankExpense(categoryId = "energy") {
     savingsMinPct: 0,
     savingsMaxPct: 0,
     scopePct: 100,
-    feasibility: 3,
+    feasibility: 0,
     months: 6,
     contractUntil: "",
     notes: "",
@@ -282,6 +282,53 @@ function aggregateByCategory(client) {
   }).sort((a, b) => b.total - a.total);
 }
 
+function aggregateByEra(client, eraCategories = []) {
+  if (!client) return [];
+  const map = new Map();
+  for (const e of client.expenses) {
+    const cat = client.categories.find(c => c.id === e.categoryId);
+    const eraId = cat?.eraId || "__unassigned__";
+    const cur = map.get(eraId) || {
+      categoryId: eraId, eraId, total: 0, suppliers: 0, lines: 0,
+      weightedScope: 0, weightedSavings: 0, weightedMin: 0, weightedMax: 0, weightedFeas: 0, maxMonths: 0,
+    };
+    const amt = +e.amount || 0;
+    cur.total += amt;
+    cur.suppliers += +e.suppliers || 0;
+    cur.lines += 1;
+    const scope = (e.scopePct == null ? 100 : +e.scopePct) / 100;
+    const optAmt = amt * scope;
+    cur.weightedScope += optAmt;
+    cur.weightedSavings += optAmt * (+e.savingsPct || 0) / 100;
+    cur.weightedMin += optAmt * (+e.savingsMinPct || +e.savingsPct || 0) / 100;
+    cur.weightedMax += optAmt * (+e.savingsMaxPct || +e.savingsPct || 0) / 100;
+    cur.weightedFeas += amt * (+e.feasibility || 3);
+    cur.maxMonths = Math.max(cur.maxMonths, +e.months || 0);
+    map.set(eraId, cur);
+  }
+  return Array.from(map.values()).map(g => {
+    const era = eraCategories.find(ec => ec.id === g.eraId);
+    const cat = era
+      ? { id: era.id, color: era.color, label: era.label, key: era.label }
+      : { id: "__unassigned__", color: "#bbb", label: "Sin categoría ERA", key: "sin-era" };
+    return {
+      ...g,
+      category: cat,
+      era,
+      avgSavingsPct: g.total > 0 ? ((g.weightedMin + g.weightedMax) / 2 / g.total) * 100 : 0,
+      avgMinPct:     g.total > 0 ? (g.weightedMin / g.total) * 100 : 0,
+      avgMaxPct:     g.total > 0 ? (g.weightedMax / g.total) * 100 : 0,
+      avgFeasibility: g.total > 0 ? g.weightedFeas / g.total : 3,
+      potentialSavings: (g.weightedMin + g.weightedMax) / 2,
+      minSavings:    g.weightedMin,
+      maxSavings:    g.weightedMax,
+      optimizationAmount: g.weightedScope,
+      avgScopePct:   g.total > 0 ? (g.weightedScope / g.total) * 100 : 100,
+      months:        g.maxMonths || 6,
+    };
+  }).sort((a, b) => b.total - a.total);
+}
+
 function totalSpend(client) {
   if (!client) return 0;
   return client.expenses.reduce((s, e) => s + (+e.amount || 0), 0);
@@ -315,6 +362,27 @@ function monthlyByCategory(client) {
     map.set(e.categoryId, cur);
   }
   return Array.from(map.values()).map(g => ({ ...g, category: client.categories.find(c => c.id === g.categoryId), total: g.months.reduce((a, b) => a + b, 0) })).sort((a, b) => b.total - a.total);
+}
+
+function monthlyByEra(client, eraCategories = []) {
+  if (!client) return [];
+  const n = periodCount(client);
+  const map = new Map();
+  for (const e of client.expenses) {
+    const cat = client.categories.find(c => c.id === e.categoryId);
+    const eraId = cat?.eraId || "__unassigned__";
+    const months = getMonthly(e, n);
+    const cur = map.get(eraId) || { categoryId: eraId, eraId, months: Array(n).fill(0) };
+    for (let m = 0; m < n; m++) cur.months[m] += months[m] || 0;
+    map.set(eraId, cur);
+  }
+  return Array.from(map.values()).map(g => {
+    const era = eraCategories.find(ec => ec.id === g.eraId);
+    const cat = era
+      ? { id: era.id, color: era.color, label: era.label, key: era.label }
+      : { id: "__unassigned__", color: "#bbb", label: "Sin categoría ERA", key: "sin-era" };
+    return { ...g, category: cat, era, total: g.months.reduce((a, b) => a + b, 0) };
+  }).sort((a, b) => b.total - a.total);
 }
 
 function monthlyTotals(client) {
@@ -516,7 +584,7 @@ function useStore() { return React.useContext(StoreContext); }
 Object.assign(window, {
   DEFAULT_CATEGORIES, blankClient, blankExpense, seedClient,
   genMonthly, getMonthly, StoreContext, StoreProvider, useStore,
-  aggregateByCategory, totalSpend, totalSavings, tierFor, uid,
-  monthlyByCategory, monthlyTotals, MONTH_LABELS_ES, MONTH_LABELS_EN,
+  aggregateByCategory, aggregateByEra, totalSpend, totalSavings, tierFor, uid,
+  monthlyByCategory, monthlyByEra, monthlyTotals, MONTH_LABELS_ES, MONTH_LABELS_EN,
   periodCount, periodLabels,
 });

@@ -4,9 +4,11 @@
 
 function EvolutionView({ client }) {
   const { t, lang } = useI18n();
+  const store = useStore();
+  const eraCategories = store.state.eraCategories || [];
   const n = periodCount(client);
   const months = periodLabels(n, lang);
-  const groups = monthlyByCategory(client);
+  const groups = monthlyByEra(client, eraCategories);
   const totals = monthlyTotals(client);
   const total = totals.reduce((a, b) => a + b, 0);
 
@@ -36,7 +38,7 @@ function EvolutionView({ client }) {
   const lowIdx = totals.indexOf(low);
   const trend = totals[0] > 0 ? ((totals[totals.length - 1] - totals[0]) / totals[0]) * 100 : 0;
 
-  const catLabel = (cat) => cat ? (t.categories[cat.key] || cat.key) : "—";
+  const catLabel = (cat) => cat ? (cat.label || cat.key) : "—";
 
   return (
     <div className="stack lg">

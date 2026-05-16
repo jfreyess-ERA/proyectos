@@ -7,6 +7,7 @@ function App() {
   const store = useStore();
   const [section, setSection] = React.useState("data");
   const [showEraMgr, setShowEraMgr] = React.useState(false);
+  const [readonly, setReadonly] = React.useState(false);
   const eraCategories = store.state.eraCategories || [];
   const saveStatus = store.state.saveStatus || 'idle';
 
@@ -47,6 +48,27 @@ function App() {
     window.history.replaceState({}, "", url.toString());
   }, [store.loading]);
 
+  // ── Handle ?view= URL param (read-only share link) ───────────
+  React.useEffect(() => {
+    if (store.loading) return;
+    const params = new URLSearchParams(window.location.search);
+    const viewId = params.get("view");
+    const isReadonly = params.get("readonly") === "1";
+    if (viewId) {
+      const found = store.state.clients.find(c => c.id === viewId);
+      if (found) {
+        store.setActiveClient(found.id);
+        setSection("data");
+        if (isReadonly) setReadonly(true);
+      }
+      // Clean URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete("view");
+      url.searchParams.delete("readonly");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [store.loading]);
+
   if (store.loading) {
     return React.createElement("div", { className: "boot" }, "Cargando análisis…");
   }
@@ -85,33 +107,61 @@ function App() {
     { id: "projection", label: t.nav.projection },
     { id: "gantt",      label: t.nav.gantt },
     { id: "dashboard",  label: t.nav.dashboard },
+    { id: "profiling",  label: t.nav.profiling },
     { id: "scenarios",  label: t.nav.scenarios },
   ];
 
   return (
     <div className="app">
       <Topbar>
-        <button className="btn ghost sm" onClick={() => setShowEraMgr(true)}>⚙ Categorías ERA</button>
+        {!readonly && (
+          <button className="btn ghost sm" onClick={() => setShowEraMgr(true)}>⚙ Categorías ERA</button>
+        )}
         <button className="btn ghost sm" onClick={goToClients}>← {t.nav.clients}</button>
-        {active.prospectId && (
+        {active.prospectId && !readonly && (
           <a href="/" className="btn ghost sm" style={{ marginLeft: 4 }} title="Volver al Sistema de Gestión">
             ← Sistema de Gestión
           </a>
         )}
+        <button
+          className="btn ghost sm"
+          title="Copiar enlace de solo lectura"
+          onClick={() => {
+            const url = new URL(window.location.href);
+            url.searchParams.set("view", active.id);
+            url.searchParams.set("readonly", "1");
+            navigator.clipboard.writeText(url.toString()).then(() => {
+              alert("Enlace copiado al portapapeles");
+            });
+          }}
+        >
+          🔗 Compartir
+        </button>
       </Topbar>
       <Crumbs items={[
         { label: t.nav.clients, onClick: goToClients },
         { label: active.legalName || "—" },
       ]} />
+      {readonly && (
+        <div style={{
+          background: "oklch(0.95 0.05 265)", border: "1px solid oklch(0.80 0.10 265)",
+          color: "oklch(0.40 0.14 265)", fontSize: 13, fontWeight: 500,
+          padding: "8px 20px", display: "flex", alignItems: "center", justifyContent: "space-between"
+        }}>
+          <span>👁 Modo solo lectura — los cambios no se guardan</span>
+          <button className="btn ghost sm" onClick={() => setReadonly(false)}>Salir</button>
+        </div>
+      )}
       <main>
         <Tabs tabs={tabs} active={section} onChange={setSection} />
-        {section === "data"       && <ClientDataView client={active} />}
-        {section === "expenses"   && <ExpensesView client={active} />}
-        {section === "evolution"  && <EvolutionView client={active} />}
-        {section === "projection" && <ProjectionView client={active} />}
-        {section === "gantt"      && <GanttView client={active} />}
-        {section === "dashboard"  && <DashboardView client={active} />}
-        {section === "scenarios"  && <ScenariosView client={active} />}
+        {section === "data"       && <ClientDataView client={active} readonly={readonly} />}
+        {section === "expenses"   && <ExpensesView client={active} readonly={readonly} />}
+        {section === "evolution"  && <EvolutionView client={active} readonly={readonly} />}
+        {section === "projection" && <ProjectionView client={active} readonly={readonly} />}
+        {section === "gantt"      && <GanttView client={active} readonly={readonly} />}
+        {section === "dashboard"  && <DashboardView client={active} readonly={readonly} />}
+        {section === "profiling"  && <ProfilingView client={active} readonly={readonly} />}
+        {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}
       </main>
       <SaveIndicator status={saveStatus} />
       <EraCategoriesModal open={showEraMgr} onClose={() => setShowEraMgr(false)}

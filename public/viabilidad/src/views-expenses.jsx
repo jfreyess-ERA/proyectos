@@ -2,13 +2,207 @@
    Views: expenses (manual / paste / table)
    ============================================================ */
 
-function ExpensesView({ client }) {
+// ── Export to Excel ───────────────────────────────────────────────
+function downloadTemplate() {
+  const templateRows = [
+    {
+      "Categoría": "Energía",
+      "Subcategoría": "Electricidad",
+      "Proveedor": "Iberdrola",
+      "Monto": 120000,
+      "N° proveedores": 3,
+      "% Ahorro estimado": 12,
+      "% Ahorro mínimo": 8,
+      "% Ahorro máximo": 18,
+      "% Alcance": 100,
+      "Factibilidad": 4,
+      "Meses implementación": 6,
+      "Notas": "Ejemplo",
+    },
+  ];
+  const ws = XLSX.utils.json_to_sheet(templateRows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Gastos");
+  XLSX.writeFile(wb, "plantilla_gastos.xlsx");
+}
+
+function getCompleteness(expense) {
+  let score = 0;
+  if (expense.supplier && expense.supplier.trim()) score += 20;
+  if (+expense.amount > 0) score += 20;
+  if (+expense.savingsPct > 0) score += 20;
+  if (+expense.feasibility > 0) score += 20;
+  if (expense.subcategory && expense.subcategory.trim()) score += 20;
+  return score;
+}
+
+function validateExpense(expense) {
+  const warnings = [];
+  if (+expense.amount <= 0) warnings.push("Sin monto");
+  if (+expense.savingsPct > 100) warnings.push("% ahorro > 100");
+  if (+expense.feasibility > 5) warnings.push("Factibilidad > 5");
+  return warnings;
+}
+
+const PIPELINE_STATES = [
+  { id: "", label: "— Sin analizar —" },
+  { id: "analysis", label: "En análisis" },
+  { id: "proposal", label: "Propuesta enviada" },
+  { id: "closed_won", label: "Cerrado ganado" },
+  { id: "closed_lost", label: "Cerrado perdido" },
+];
+
+function exportToExcel(client, catLabel, eraCategories) {
+  const rows = client.expenses.map(e => {
+    const cat = client.categories.find(c => c.id === e.categoryId);
+    const era = eraCategories.find(er => er.id === cat?.eraId);
+    const row = {
+      "Categoría ERA":      era?.label || "",
+      "Categoría cliente":  catLabel(cat),
+      "Subcategoría":       e.subcategory || "",
+      "Proveedor":          e.supplier || "",
+      "Monto":              +e.amount || 0,
+      "N° proveedores":     +e.suppliers || 0,
+      "% Ahorro estimado":  +e.savingsPct || 0,
+      "% Ahorro mínimo":    +e.savingsMinPct || 0,
+      "% Ahorro máximo":    +e.savingsMaxPct || 0,
+      "% Alcance":          +e.scopePct || 0,
+      "Factibilidad":       +e.feasibility || 0,
+      "Meses impl.":        +e.months || 0,
+      "Vencimiento":        e.contractUntil || "",
+      "Notas":              e.notes || "",
+    };
+    if (e.monthly && e.monthly.length > 0) {
+      e.monthly.forEach((v, i) => { row[`M${i + 1}`] = v; });
+    }
+    return row;
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Gastos");
+  const name = (client.legalName || "cliente")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9\s]/gi, "").trim()
+    .replace(/\s+/g, "_").slice(0, 40);
+  XLSX.writeFile(wb, `gastos_${name}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+function RangesTab({ client, readonly = false }) {
+  const { t } = useI18n();
+  const store = useStore();
+  const eraCategories = store.state.eraCategories || [];
+
+  const update = (idx, patch) => {
+    const next = client.expenses.map((e, i) => i === idx ? { ...e, ...patch } : e);
+    store.setExpenses(client.id, next);
+  };
+
+  const catLabel = (catId) => {
+    const cat = client.categories.find(c => c.id === catId);
+    return cat ? (cat.label || cat.key) : "—";
+  };
+
+  if (client.expenses.length === 0) {
+    return <Empty icon="◯" title="Sin gastos" hint="Importa gastos primero." />;
+  }
+
+  return (
+    <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--line)", background: "var(--surface-2)" }}>
+        <h3 className="h3" style={{ margin: 0 }}>Rangos por línea de gasto · ajuste consultor</h3>
+        <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>
+          Ahorro mín/máx = Gasto × Alcance % × Ahorro %. La proyección usa estos rangos.
+        </div>
+      </div>
+      <div style={{ overflow: "auto" }}>
+        <table className="t">
+          <thead>
+            <tr>
+              <th>Categoría cliente</th>
+              <th>ERA</th>
+              <th>Subcategoría / Proveedor</th>
+              <th className="right">Monto</th>
+              <th className="right">Alcance %</th>
+              <th className="right">Ahorro mín %</th>
+              <th className="right">Ahorro máx %</th>
+              <th className="right">Factibilidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {client.expenses.map((e, i) => {
+              const cat = client.categories.find(c => c.id === e.categoryId);
+              const era = eraCategories.find(ec => ec.id === cat?.eraId);
+              const scope = e.scopePct == null ? 100 : +e.scopePct;
+              return (
+                <tr key={e.id || i}>
+                  <td style={{ fontSize: 12 }}>{catLabel(e.categoryId)}</td>
+                  <td style={{ fontSize: 11, whiteSpace: "nowrap" }}>
+                    {era ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: era.color, flexShrink: 0 }} />
+                        {era.label}
+                      </span>
+                    ) : <span style={{ color: "var(--text-3)" }}>—</span>}
+                  </td>
+                  <td style={{ fontSize: 12, color: "var(--text-2)" }}>{e.subcategory || e.supplier || "—"}</td>
+                  <td className="right tabular">{fmtMoney(+e.amount || 0, client.currency)}</td>
+                  <td className="right">
+                    <input className="input right" type="number" min="0" max="100" value={scope}
+                      onChange={ev => update(i, { scopePct: +ev.target.value || 0 })}
+                      style={{ width: 70 }} disabled={readonly} />
+                  </td>
+                  <td className="right">
+                    <input className="input right" type="number" min="0" max="100" step="0.1"
+                      value={e.savingsMinPct || 0}
+                      onChange={ev => update(i, { savingsMinPct: +ev.target.value || 0 })}
+                      style={{ width: 70 }} disabled={readonly} />
+                  </td>
+                  <td className="right">
+                    <input className="input right" type="number" min="0" max="100" step="0.1"
+                      value={e.savingsMaxPct || 0}
+                      onChange={ev => update(i, { savingsMaxPct: +ev.target.value || 0 })}
+                      style={{ width: 70 }} disabled={readonly} />
+                  </td>
+                  <td className="right">
+                    <select className="select" value={e.feasibility || 0}
+                      onChange={ev => update(i, { feasibility: +ev.target.value })}
+                      style={{ width: 60 }} disabled={readonly}>
+                      {[0, 1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ExpensesView({ client, readonly = false }) {
   const { t } = useI18n();
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
   const [mode, setMode] = React.useState("table");
   const [showAddCat, setShowAddCat] = React.useState(false);
   const [importToast, setImportToast] = React.useState(null); // { rows, cats }
+  const [drawerIdx, setDrawerIdx] = React.useState(null);     // expense index for side drawer
+  const [filters, setFilters] = React.useState({ eraId: "", feasMin: 0, amountMin: 0, amountMax: 0 });
+  const [showFilters, setShowFilters] = React.useState(false);
+  const [undoSnapshot, setUndoSnapshot] = React.useState(null);
+
+  React.useEffect(() => {
+    const handler = (ev) => {
+      if (ev.key === "Escape") {
+        if (drawerIdx != null) { setDrawerIdx(null); return; }
+        if (showFilters) { setShowFilters(false); return; }
+        if (showAddCat) { setShowAddCat(false); return; }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [drawerIdx, showFilters, showAddCat]);
 
   const expenses = client.expenses;
   const total = totalSpend(client);
@@ -23,6 +217,12 @@ function ExpensesView({ client }) {
   };
   const addRow = (categoryId) => {
     store.setExpenses(client.id, [...expenses, blankExpense(categoryId || client.categories[0]?.id)]);
+  };
+  const bulkRemove = (ids) => {
+    store.setExpenses(client.id, expenses.filter(e => !ids.has(e.id)));
+  };
+  const bulkChangeCategory = (ids, categoryId) => {
+    store.setExpenses(client.id, expenses.map(e => ids.has(e.id) ? { ...e, categoryId } : e));
   };
   const catLabel = (cat) => {
     if (!cat) return "—";
@@ -41,21 +241,27 @@ function ExpensesView({ client }) {
         </div>
         <div className="card" style={{ padding: "48px 32px", textAlign: "center" }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>📂</div>
-          <h3 className="h3" style={{ marginBottom: 8 }}>Sin gastos todavía</h3>
-          <p className="lede" style={{ maxWidth: 400, margin: "0 auto 24px" }}>
-            Empieza importando un archivo Excel con los gastos del cliente, o crea las categorías manualmente y añade filas una a una.
-          </p>
-          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            <button className="btn primary" onClick={() => setMode("excel")}>📊 Importar Excel</button>
-            <button className="btn" onClick={() => setShowAddCat(true)}>+ Crear categoría</button>
-            <button className="btn ghost" onClick={() => setMode("manual")}>Añadir fila manual</button>
-          </div>
+          <h3 className="h3" style={{ marginBottom: 8 }}>Sin gastos</h3>
+          {!readonly && (
+            <>
+              <p className="lede" style={{ maxWidth: 400, margin: "0 auto 24px" }}>
+                Empieza importando un archivo Excel con los gastos del cliente, o crea las categorías manualmente y añade filas una a una.
+              </p>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                <button className="btn primary" onClick={() => setMode("excel")}>📊 Importar Excel</button>
+                <button className="btn" onClick={() => setShowAddCat(true)}>+ Crear categoría</button>
+                <button className="btn ghost" onClick={() => setMode("manual")}>Añadir fila manual</button>
+              </div>
+            </>
+          )}
         </div>
-        <AddCategoryModal open={showAddCat} onClose={() => setShowAddCat(false)}
-          onCreate={(name) => {
-            store.addCategory(client.id, { id: uid("cat"), key: name.toLowerCase().replace(/\s+/g, "_"), label: name, color: AUTO_CAT_COLORS[0] });
-            setShowAddCat(false); setMode("table");
-          }} />
+        {!readonly && (
+          <AddCategoryModal open={showAddCat} onClose={() => setShowAddCat(false)}
+            onCreate={(name) => {
+              store.addCategory(client.id, { id: uid("cat"), key: name.toLowerCase().replace(/\s+/g, "_"), label: name, color: AUTO_CAT_COLORS[0] });
+              setShowAddCat(false); setMode("table");
+            }} />
+        )}
       </div>
     );
   }
@@ -68,8 +274,28 @@ function ExpensesView({ client }) {
           <h2 className="h2">{t.expenses.title}</h2>
         </div>
         <div className="btn-row">
-          <button className="btn" onClick={() => setShowAddCat(true)}>+ {t.actions.addCategory}</button>
-          <button className="btn primary" onClick={() => addRow()}>+ {t.actions.addRow}</button>
+          {expenses.length > 0 && (
+            <button className="btn ghost sm" onClick={() => exportToExcel(client, catLabel, eraCategories)} title="Exportar a Excel">↓ Excel</button>
+          )}
+          {!readonly && (
+            <button className="btn ghost sm" onClick={() => downloadTemplate()} title="Descargar plantilla Excel">⬇ Plantilla</button>
+          )}
+          {mode === "table" && (
+            <button className="btn ghost sm" onClick={() => setShowFilters(s => !s)} title="Filtros avanzados">
+              ⚡ Filtros
+              {(filters.eraId || filters.feasMin > 0 || filters.amountMin > 0 || filters.amountMax > 0) && (
+                <span style={{ marginLeft: 5, background: "var(--accent)", color: "#fff", borderRadius: 99, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
+                  {[filters.eraId, filters.feasMin > 0, filters.amountMin > 0, filters.amountMax > 0].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+          )}
+          {!readonly && (
+            <button className="btn" onClick={() => setShowAddCat(true)}>+ {t.actions.addCategory}</button>
+          )}
+          {!readonly && (
+            <button className="btn primary" onClick={() => addRow()}>+ {t.actions.addRow}</button>
+          )}
         </div>
       </div>
 
@@ -80,7 +306,19 @@ function ExpensesView({ client }) {
             ✓ {importToast.rows} fila{importToast.rows!==1?"s":""} importada{importToast.rows!==1?"s":""}
             {importToast.cats > 0 && ` · ${importToast.cats} categoría${importToast.cats!==1?"s":""} nueva${importToast.cats!==1?"s":""} creada${importToast.cats!==1?"s":""}`}
           </span>
-          <button onClick={() => setImportToast(null)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:"oklch(0.50 0.14 145)" }}>×</button>
+          <div style={{ display:"flex", gap:8 }}>
+            {undoSnapshot && (
+              <button className="btn ghost sm" style={{ color:"oklch(0.35 0.14 145)", borderColor:"oklch(0.72 0.12 145)" }}
+                onClick={() => {
+                  store.setExpenses(client.id, undoSnapshot);
+                  setUndoSnapshot(null);
+                  setImportToast(null);
+                }}>
+                ↩ Deshacer
+              </button>
+            )}
+            <button onClick={() => setImportToast(null)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:"oklch(0.50 0.14 145)" }}>×</button>
+          </div>
         </div>
       )}
 
@@ -91,21 +329,45 @@ function ExpensesView({ client }) {
 
       <Tabs active={mode} onChange={setMode} tabs={[
         { id: "table",      label: t.expenses.modes.table, count: expenses.length || null },
+        { id: "charts",     label: "📊 Gráficos" },
         { id: "categories", label: "Categorías" },
-        { id: "manual",     label: t.expenses.modes.manual },
-        { id: "paste",      label: t.expenses.modes.paste },
-        { id: "excel",      label: "Excel" },
+        { id: "rangos",     label: "⊞ Rangos" },
+        ...(!readonly ? [
+          { id: "manual", label: t.expenses.modes.manual },
+          { id: "paste",  label: t.expenses.modes.paste },
+          { id: "excel",  label: "Excel" },
+        ] : []),
       ]} />
 
       {mode === "table" && (
         <ExpenseTable client={client} expenses={expenses} eraCategories={eraCategories}
-          update={update} remove={remove} duplicate={duplicate} catLabel={catLabel} />
+          update={update} remove={remove} duplicate={duplicate} catLabel={catLabel}
+          onOpen={idx => setDrawerIdx(idx)}
+          onBulkRemove={bulkRemove}
+          onBulkChangeCategory={bulkChangeCategory}
+          filters={filters}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters(s => !s)}
+          onChangeFilters={setFilters}
+          activeIdx={drawerIdx}
+          readonly={readonly}
+        />
+      )}
+      {mode === "charts" && (
+        <ChartsView client={client} eraCategories={eraCategories} catLabel={catLabel} />
       )}
       {mode === "categories" && (
         <CategoriesTab client={client} catLabel={catLabel} eraCategories={eraCategories}
           onSetMapping={(catId, eraId) => store.setCategoryMapping(client.id, catId, eraId)}
           onDeleteCat={(catId) => store.updateClient(client.id, { categories: client.categories.filter(c => c.id !== catId) })}
+          onUpdateCat={(catId, patch) => store.updateClient(client.id, {
+            categories: client.categories.map(c => c.id === catId ? { ...c, ...patch } : c)
+          })}
+          readonly={readonly}
         />
+      )}
+      {mode === "rangos" && (
+        <RangesTab client={client} readonly={readonly} />
       )}
       {mode === "manual" && (
         <ManualEntry client={client} catLabel={catLabel} onAdd={(exp) => store.addExpense(client.id, exp)} />
@@ -120,6 +382,7 @@ function ExpensesView({ client }) {
       {mode === "excel" && (
         <ExcelImport client={client} catLabel={catLabel} eraCategories={eraCategories}
           onImport={(rows, newCats) => {
+            setUndoSnapshot([...expenses]);
             (newCats || []).forEach(cat => { const { _isNew, ...d } = cat; store.addCategory(client.id, d); });
             store.setExpenses(client.id, [...expenses, ...rows]);
             setImportToast({ rows: rows.length, cats: (newCats || []).length });
@@ -133,19 +396,44 @@ function ExpensesView({ client }) {
           store.addCategory(client.id, { id: uid("cat"), key: name.toLowerCase().replace(/\s+/g, "_"), label: name, color: AUTO_CAT_COLORS[client.categories.length % AUTO_CAT_COLORS.length] });
           setShowAddCat(false);
         }} />
+
+      <ExpenseDrawer
+        open={drawerIdx != null}
+        expense={drawerIdx != null ? expenses[drawerIdx] : null}
+        client={client}
+        catLabel={catLabel}
+        eraCategories={eraCategories}
+        update={patch => update(drawerIdx, patch)}
+        remove={() => { remove(drawerIdx); setDrawerIdx(null); }}
+        duplicate={() => { duplicate(drawerIdx); setDrawerIdx(null); }}
+        onClose={() => setDrawerIdx(null)}
+        idx={drawerIdx != null ? drawerIdx : 0}
+        totalCount={expenses.length}
+        onNavigate={d => setDrawerIdx(prev => Math.max(0, Math.min(expenses.length - 1, prev + d)))}
+        readonly={readonly}
+      />
     </div>
   );
 }
 
-function ExpenseTable({ client, expenses, eraCategories = [], update, remove, duplicate, catLabel }) {
+function ExpenseTable({ client, expenses, eraCategories = [], update, remove, duplicate, catLabel, onOpen, onBulkRemove, onBulkChangeCategory, filters = {}, showFilters = false, onToggleFilters, onChangeFilters, activeIdx, readonly = false }) {
   const { t } = useI18n();
   const [search, setSearch] = React.useState("");
   const [sort, setSort] = React.useState({ col: null, dir: "desc" });
+  const [selected, setSelected] = React.useState(new Set());
+  const [bulkCatId, setBulkCatId] = React.useState("");
+  const [expandedNotes, setExpandedNotes] = React.useState(new Set());
 
   const toggleSort = (col) => setSort(s => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
   const SortIcon = ({ col }) => sort.col !== col ? null : (
     <span style={{ marginLeft: 4, opacity: 0.6 }}>{sort.dir === "desc" ? "↓" : "↑"}</span>
   );
+
+  const toggleSelect = (id) => setSelected(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   if (expenses.length === 0) {
     return <Empty icon="◯" title={t.dashboard.empty} hint={t.expenses.lede} />;
@@ -168,6 +456,19 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
     });
   }
 
+  // Advanced filters
+  if (filters.eraId) {
+    rows = rows.filter(({ e }) => {
+      const cat = client.categories.find(c => c.id === e.categoryId);
+      return cat?.eraId === filters.eraId;
+    });
+  }
+  if (filters.feasMin > 0) {
+    rows = rows.filter(({ e }) => (+e.feasibility || 0) >= filters.feasMin);
+  }
+  if (filters.amountMin > 0) rows = rows.filter(({ e }) => (+e.amount || 0) >= filters.amountMin);
+  if (filters.amountMax > 0) rows = rows.filter(({ e }) => (+e.amount || 0) <= filters.amountMax);
+
   // Sort
   if (sort.col) {
     rows.sort((a, b) => {
@@ -181,13 +482,23 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
     });
   }
 
+  const allVisibleSelected = rows.length > 0 && rows.every(({ e }) => selected.has(e.id));
+  const someSelected = selected.size > 0;
   const total = totalSpend(client);
   const showEra = eraCategories.length > 0;
 
+  // ERA coverage info
+  const eraWithMapping = expenses.filter(e => {
+    const cat = client.categories.find(c => c.id === e.categoryId);
+    return cat?.eraId;
+  }).length;
+
+  const activeFilterCount = [filters.eraId, filters.feasMin > 0, filters.amountMin > 0, filters.amountMax > 0].filter(Boolean).length;
+
   return (
     <div className="stack" style={{ gap: 10 }}>
-      {/* Search bar */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      {/* Search bar + ERA coverage */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <input
           className="input"
           placeholder="🔍  Buscar por categoría, proveedor, subcategoría…"
@@ -201,13 +512,118 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
           </span>
         )}
         {search && <button className="btn ghost sm" onClick={() => setSearch("")}>✕ Limpiar</button>}
+        {eraCategories.length > 0 && (
+          <span style={{ fontSize: 12, color: "var(--text-3)", background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 99, padding: "2px 10px", marginLeft: "auto" }}>
+            {eraWithMapping} / {expenses.length} con ERA
+          </span>
+        )}
       </div>
+
+      {/* Advanced filter panel */}
+      {showFilters && (
+        <div style={{ padding: "14px 16px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--line)", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+          {eraCategories.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 160 }}>
+              <label style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600 }}>Categoría ERA</label>
+              <select className="select" value={filters.eraId} onChange={e => onChangeFilters && onChangeFilters(f => ({ ...f, eraId: e.target.value }))} style={{ fontSize: 12 }}>
+                <option value="">Todas</option>
+                {eraCategories.map(er => <option key={er.id} value={er.id}>{er.label}</option>)}
+              </select>
+            </div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 100 }}>
+            <label style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600 }}>Factibilidad ≥</label>
+            <input className="input" type="number" min={0} max={5} value={filters.feasMin || ""} placeholder="1–5" onChange={e => onChangeFilters && onChangeFilters(f => ({ ...f, feasMin: +e.target.value || 0 }))} style={{ fontSize: 12 }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 120 }}>
+            <label style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600 }}>Monto mínimo</label>
+            <input className="input" type="number" min={0} value={filters.amountMin || ""} placeholder="0" onChange={e => onChangeFilters && onChangeFilters(f => ({ ...f, amountMin: +e.target.value || 0 }))} style={{ fontSize: 12 }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 120 }}>
+            <label style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600 }}>Monto máximo</label>
+            <input className="input" type="number" min={0} value={filters.amountMax || ""} placeholder="sin límite" onChange={e => onChangeFilters && onChangeFilters(f => ({ ...f, amountMax: +e.target.value || 0 }))} style={{ fontSize: 12 }} />
+          </div>
+          <button className="btn ghost sm" onClick={() => onChangeFilters && onChangeFilters({ eraId: "", feasMin: 0, amountMin: 0, amountMax: 0 })}>
+            Limpiar filtros
+          </button>
+          {activeFilterCount > 0 && (
+            <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+              {rows.length} de {expenses.length} filas visibles
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {someSelected && !readonly && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
+          borderRadius: 8, background: "var(--accent-bg)", border: "1px solid var(--accent)",
+          fontSize: 13,
+        }}>
+          <span style={{ color: "var(--accent)", fontWeight: 600 }}>
+            {selected.size} seleccionada{selected.size !== 1 ? "s" : ""}
+          </span>
+          <div style={{ flex: 1 }} />
+          <select
+            className="select"
+            value={bulkCatId}
+            onChange={e => setBulkCatId(e.target.value)}
+            style={{ minWidth: 180, fontSize: 12 }}
+          >
+            <option value="">Cambiar categoría…</option>
+            {client.categories.map(c => <option key={c.id} value={c.id}>{catLabel(c)}</option>)}
+          </select>
+          <button className="btn sm"
+            disabled={!bulkCatId}
+            onClick={() => {
+              if (bulkCatId) { onBulkChangeCategory(selected, bulkCatId); setBulkCatId(""); setSelected(new Set()); }
+            }}
+          >
+            Aplicar
+          </button>
+          <button className="btn sm danger"
+            onClick={() => {
+              if (!confirm(`¿Eliminar ${selected.size} fila${selected.size !== 1 ? "s" : ""}?`)) return;
+              onBulkRemove(selected);
+              setSelected(new Set());
+            }}
+          >
+            🗑 Eliminar
+          </button>
+          <button className="btn ghost sm" onClick={() => setSelected(new Set())}>✕</button>
+        </div>
+      )}
 
       <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
         <table className="t">
           <thead>
             <tr>
-              <th style={{ width: 32 }}></th>
+              {!readonly && (
+                <th style={{ width: 36, paddingLeft: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={() => {
+                      if (allVisibleSelected) {
+                        setSelected(prev => {
+                          const next = new Set(prev);
+                          rows.forEach(({ e }) => next.delete(e.id));
+                          return next;
+                        });
+                      } else {
+                        setSelected(prev => {
+                          const next = new Set(prev);
+                          rows.forEach(({ e }) => next.add(e.id));
+                          return next;
+                        });
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  />
+                </th>
+              )}
+              <th style={{ width: 8 }}></th>
               {showEra && <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("era")}>ERA <SortIcon col="era" /></th>}
               <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("category")}>{t.expenses.cols.category} <SortIcon col="category" /></th>
               <th>{t.expenses.cols.subcategory}</th>
@@ -222,13 +638,46 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
             {rows.map(({ e, i }) => {
               const cat = client.categories.find(c => c.id === e.categoryId);
               const era = eraCategories.find(er => er.id === cat?.eraId);
+              const isSelected = selected.has(e.id);
+              const isActive = activeIdx === i;
+              const warnings = validateExpense(e);
+              const completeness = getCompleteness(e);
+              const completenessColor = completeness < 40
+                ? "oklch(0.65 0.12 25)"
+                : completeness < 80
+                  ? "oklch(0.68 0.12 50)"
+                  : "oklch(0.60 0.14 145)";
+              const clickableStyle = { cursor: "pointer" };
+              const openDrawer = (ev) => {
+                // Don't open if clicking on an interactive element
+                if (ev.target.tagName === "INPUT" || ev.target.tagName === "SELECT" || ev.target.tagName === "BUTTON") return;
+                onOpen && onOpen(i);
+              };
+              let rowBg = undefined;
+              if (isActive) rowBg = "oklch(0.96 0.03 265)";
+              else if (isSelected) rowBg = "var(--accent-bg)";
               return (
-                <tr key={e.id}>
-                  <td style={{ paddingLeft: 12 }}>
-                    <span style={{ width: 6, height: 24, background: cat?.color || "#ccc", display: "block", borderRadius: 2 }} />
+                <tr key={e.id} style={{ background: rowBg, boxShadow: isActive ? "inset 3px 0 0 var(--accent)" : undefined }}>
+                  {!readonly && (
+                    <td style={{ paddingLeft: 12 }} onClick={ev => ev.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(e.id)}
+                        style={{ cursor: "pointer" }}
+                      />
+                    </td>
+                  )}
+                  <td onClick={openDrawer} style={clickableStyle}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                      <span style={{ width: 6, height: 24, background: cat?.color || "#ccc", display: "block", borderRadius: 2 }} />
+                      {warnings.length > 0 && (
+                        <span title={warnings.join(", ")} style={{ fontSize: 12, cursor: "default" }}>⚠️</span>
+                      )}
+                    </div>
                   </td>
                   {showEra && (
-                    <td style={{ whiteSpace: "nowrap" }}>
+                    <td onClick={openDrawer} style={{ whiteSpace: "nowrap", ...clickableStyle }}>
                       {era
                         ? <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:12, color:"var(--text-2)" }}>
                             <span style={{ width:8, height:8, borderRadius:"50%", background:era.color, flexShrink:0 }} />
@@ -239,31 +688,38 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
                     </td>
                   )}
                   <td>
-                    <select className="select" value={e.categoryId} onChange={ev => update(i, { categoryId: ev.target.value })}>
+                    <select className="select" value={e.categoryId} onChange={ev => update(i, { categoryId: ev.target.value })} disabled={readonly}>
                       {client.categories.map(c => <option key={c.id} value={c.id}>{catLabel(c)}</option>)}
                     </select>
                   </td>
-                  <td><input className="input" value={e.subcategory} onChange={ev => update(i, { subcategory: ev.target.value })} /></td>
-                  <td><input className="input" value={e.supplier} onChange={ev => update(i, { supplier: ev.target.value })} /></td>
+                  <td><input className="input" value={e.subcategory} onChange={ev => update(i, { subcategory: ev.target.value })} disabled={readonly} /></td>
+                  <td><input className="input" value={e.supplier} onChange={ev => update(i, { supplier: ev.target.value })} disabled={readonly} /></td>
                   <td className="right">
-                    <input className="input right" type="number" value={e.amount} onChange={ev => update(i, { amount: +ev.target.value || 0 })} />
+                    <input className="input right" type="number" value={e.amount} onChange={ev => update(i, { amount: +ev.target.value || 0 })} disabled={readonly} />
                   </td>
                   <td className="right">
-                    <input className="input right" type="number" value={e.suppliers} onChange={ev => update(i, { suppliers: +ev.target.value || 0 })} style={{ width: 60 }} />
+                    <input className="input right" type="number" value={e.suppliers} onChange={ev => update(i, { suppliers: +ev.target.value || 0 })} style={{ width: 60 }} disabled={readonly} />
                   </td>
-                  <td style={{ textAlign:"right", fontSize:12, color: e.savingsPct > 0 ? "var(--text-1)" : "var(--text-3)" }}>
+                  <td onClick={openDrawer} style={{ textAlign:"right", fontSize:12, color: e.savingsPct > 0 ? "var(--text-1)" : "var(--text-3)", ...clickableStyle }}>
                     {e.savingsPct > 0 ? e.savingsPct.toFixed(1) + "%" : "—"}
                   </td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                    <button className="btn ghost sm" onClick={() => duplicate(i)} title="Duplicar">⎘</button>
-                    <button className="btn ghost sm danger" onClick={() => remove(i)} title="Eliminar">×</button>
+                    <span
+                      title={`Completitud: ${completeness}%`}
+                      style={{ display: "inline-block", width: 28, height: 4, borderRadius: 2, background: "var(--line)", verticalAlign: "middle", marginRight: 6, position: "relative", overflow: "hidden" }}
+                    >
+                      <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: completeness + "%", background: completenessColor, borderRadius: 2 }} />
+                    </span>
+                    <button className="btn ghost sm" onClick={() => onOpen && onOpen(i)} title="Ver detalle">↗</button>
+                    {!readonly && <button className="btn ghost sm" onClick={() => duplicate(i)} title="Duplicar">⎘</button>}
+                    {!readonly && <button className="btn ghost sm danger" onClick={() => remove(i)} title="Eliminar">×</button>}
                   </td>
                 </tr>
               );
             })}
             {!search && (
               <tr className="totals">
-                <td colSpan={showEra ? 2 : 1}></td>
+                <td colSpan={readonly ? (showEra ? 2 : 1) : (showEra ? 3 : 2)}></td>
                 <td colSpan={2}>{t.expenses.total}</td>
                 <td></td>
                 <td className="right">{fmtMoney(total, client.currency)}</td>
@@ -276,6 +732,195 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
         </table>
       </div>
     </div>
+  );
+}
+
+// ── Expense Detail Drawer ─────────────────────────────────────────
+function ExpenseDrawer({ open, expense, client, catLabel, eraCategories, update, remove, duplicate, onClose, idx, totalCount, onNavigate, readonly = false }) {
+  const { t } = useI18n();
+  if (!open || !expense) return null;
+
+  const cat = client.categories.find(c => c.id === expense.categoryId);
+  const era = eraCategories.find(e => e.id === cat?.eraId);
+
+  const savingsAbs = expense.amount > 0 && expense.savingsPct > 0
+    ? expense.amount * (expense.savingsPct / 100) : 0;
+
+  const warnings = validateExpense(expense);
+
+  // Unique supplier names for autocomplete
+  const supplierOptions = [...new Set((client.expenses || []).map(e => e.supplier).filter(Boolean))];
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,.25)" }}
+      />
+      {/* Panel */}
+      <div style={{
+        position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 201,
+        width: "min(480px, calc(100vw - 48px))",
+        background: "var(--surface)", borderLeft: "1px solid var(--line)",
+        boxShadow: "-8px 0 40px rgba(0,0,0,.18)",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+      }}>
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+          padding: "16px 20px 14px", borderBottom: "1px solid var(--line)",
+          gap: 10,
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {catLabel(cat)}
+            </div>
+            {expense.supplier && (
+              <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 2 }}>{expense.supplier}</div>
+            )}
+            {era && (
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: era.color, flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: "var(--text-3)" }}>{era.label}</span>
+              </div>
+            )}
+          </div>
+          {/* Prev/Next navigation */}
+          <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+            <button className="btn ghost sm" disabled={idx <= 0} onClick={() => onNavigate && onNavigate(-1)} title="Anterior">‹</button>
+            <span style={{ fontSize: 11, color: "var(--text-3)", alignSelf: "center", minWidth: 40, textAlign: "center" }}>{idx + 1}/{totalCount}</span>
+            <button className="btn ghost sm" disabled={idx >= totalCount - 1} onClick={() => onNavigate && onNavigate(1)} title="Siguiente">›</button>
+          </div>
+          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+            {!readonly && <button className="btn ghost sm" onClick={duplicate} title="Duplicar">⎘</button>}
+            {!readonly && <button className="btn ghost sm danger" onClick={remove} title="Eliminar">×</button>}
+            <button
+              onClick={onClose}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--text-3)", lineHeight: 1, paddingLeft: 6 }}
+            >✕</button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+          {/* Validation warnings */}
+          {warnings.length > 0 && (
+            <div style={{ padding: "8px 12px", borderRadius: 8, background: "oklch(0.97 0.06 60)", border: "1px solid oklch(0.85 0.12 60)", fontSize: 12, color: "oklch(0.45 0.14 50)", marginBottom: 14, display: "flex", gap: 6 }}>
+              ⚠️ {warnings.join(" · ")}
+            </div>
+          )}
+
+          {/* Supplier datalist */}
+          <datalist id="suppliers-list">
+            {supplierOptions.map((s, i) => <option key={i} value={s} />)}
+          </datalist>
+
+          {/* Savings summary card */}
+          {expense.amount > 0 && (
+            <div style={{
+              display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10,
+              marginBottom: 20, padding: "14px 16px", borderRadius: 10,
+              background: "var(--surface-2)", border: "1px solid var(--line)",
+            }}>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 3 }}>Monto total</div>
+                <div style={{ fontWeight: 700, fontSize: 18 }}>{fmtMoney(expense.amount, client.currency)}</div>
+              </div>
+              {savingsAbs > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 3 }}>Ahorro estimado</div>
+                  <div style={{ fontWeight: 700, fontSize: 18, color: "oklch(0.42 0.14 145)" }}>
+                    {fmtMoney(savingsAbs, client.currency)}
+                    <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 5, color: "var(--text-2)" }}>
+                      ({expense.savingsPct.toFixed(1)}%)
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid cols-2" style={{ gap: 14 }}>
+            <Field label={t.expenses.cols.category} span={2}>
+              <select className="select" value={expense.categoryId} onChange={e => update({ categoryId: e.target.value })} disabled={readonly}>
+                {client.categories.map(c => <option key={c.id} value={c.id}>{catLabel(c)}</option>)}
+              </select>
+            </Field>
+
+            <Field label={t.expenses.cols.subcategory} span={2}>
+              <input className="input" value={expense.subcategory || ""} onChange={e => update({ subcategory: e.target.value })} readOnly={readonly} />
+            </Field>
+
+            <Field label={t.expenses.cols.supplier} span={2}>
+              <input className="input" list="suppliers-list" value={expense.supplier || ""} onChange={e => update({ supplier: e.target.value })} readOnly={readonly} />
+            </Field>
+
+            <Field label={`${t.expenses.cols.amount} (${client.currency})`}>
+              <input className="input right" type="number" value={expense.amount || 0} onChange={e => update({ amount: +e.target.value || 0 })} readOnly={readonly} />
+            </Field>
+
+            <Field label={t.expenses.cols.suppliers}>
+              <input className="input right" type="number" value={expense.suppliers || 0} onChange={e => update({ suppliers: +e.target.value || 0 })} readOnly={readonly} />
+            </Field>
+
+            <Field label="% Ahorro estimado">
+              <input className="input right" type="number" step="0.1" min={0} max={100} value={expense.savingsPct || 0} onChange={e => update({ savingsPct: +e.target.value || 0 })} readOnly={readonly} />
+            </Field>
+
+            <Field label="% Alcance">
+              <input className="input right" type="number" step="0.1" min={0} max={100} value={expense.scopePct || 0} onChange={e => update({ scopePct: +e.target.value || 0 })} readOnly={readonly} />
+            </Field>
+
+            <Field label="% Ahorro mínimo">
+              <input className="input right" type="number" step="0.1" value={expense.savingsMinPct || 0} onChange={e => update({ savingsMinPct: +e.target.value || 0 })} readOnly={readonly} />
+            </Field>
+
+            <Field label="% Ahorro máximo">
+              <input className="input right" type="number" step="0.1" value={expense.savingsMaxPct || 0} onChange={e => update({ savingsMaxPct: +e.target.value || 0 })} readOnly={readonly} />
+            </Field>
+
+            <Field label="Factibilidad (1–5)">
+              <input className="input right" type="number" min={0} max={5} value={expense.feasibility || 0} onChange={e => update({ feasibility: +e.target.value || 0 })} readOnly={readonly} />
+            </Field>
+
+            <Field label="Meses implementación">
+              <input className="input right" type="number" min={0} value={expense.months || 0} onChange={e => update({ months: +e.target.value || 0 })} readOnly={readonly} />
+            </Field>
+
+            <Field label={t.expenses.cols.contract} span={2}>
+              <input className="input" type="month" value={expense.contractUntil || ""} onChange={e => update({ contractUntil: e.target.value })} readOnly={readonly} />
+            </Field>
+
+            <Field label={t.expenses.cols.notes} span={2}>
+              <input className="input" value={expense.notes || ""} onChange={e => update({ notes: e.target.value })} readOnly={readonly} />
+            </Field>
+          </div>
+
+          {/* Monthly series if present */}
+          {expense.monthly && expense.monthly.length > 0 && (
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 8 }}>
+                Serie mensual · {expense.monthly.length} períodos
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {expense.monthly.map((v, idx) => (
+                  <div key={idx} style={{
+                    padding: "4px 8px", borderRadius: 6,
+                    background: "var(--surface-2)", border: "1px solid var(--line)",
+                    fontSize: 12, fontFamily: "var(--font-mono)",
+                  }}>
+                    <span style={{ color: "var(--text-3)", marginRight: 4 }}>M{idx + 1}</span>
+                    {fmtMoney(v, client.currency, { compact: true })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -441,8 +1086,35 @@ function AddCategoryModal({ open, onClose, onCreate }) {
 
 // ── Categories Tab ────────────────────────────────────────────────
 
-function CategoriesTab({ client, catLabel, eraCategories, onSetMapping, onDeleteCat }) {
+function CategoriesTab({ client, catLabel, eraCategories, onSetMapping, onDeleteCat, onUpdateCat, readonly = false }) {
   const cats = client.categories;
+  const store = useStore();
+  const [expandedNotes, setExpandedNotes] = React.useState(new Set());
+  const [showAddEra, setShowAddEra] = React.useState(false);
+  const [newEraLabel, setNewEraLabel] = React.useState("");
+  const [newEraColor, setNewEraColor] = React.useState("#4A90D9");
+
+  const addEra = () => {
+    if (!newEraLabel.trim()) return;
+    store.addEraCategory({ label: newEraLabel.trim(), color: newEraColor });
+    setNewEraLabel("");
+    setShowAddEra(false);
+  };
+
+  const toggleNotes = (id) => setExpandedNotes(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  const pipelineDot = (pipeline) => {
+    const colors = {
+      closed_won: "oklch(0.55 0.14 145)",
+      proposal: "oklch(0.52 0.16 265)",
+      analysis: "oklch(0.65 0.14 80)",
+    };
+    return colors[pipeline] || "var(--line)";
+  };
 
   if (cats.length === 0) {
     return (
@@ -455,57 +1127,273 @@ function CategoriesTab({ client, catLabel, eraCategories, onSetMapping, onDelete
   }
 
   return (
-    <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
+    <div className="stack lg">
+      {/* ── ERA Categories management ── */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="row between" style={{ marginBottom: 12 }}>
+          <h3 className="h3" style={{ margin: 0 }}>Categorías ERA · lista global</h3>
+          <button className="btn ghost sm" onClick={() => setShowAddEra(true)} disabled={readonly}>+ Nueva ERA</button>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {eraCategories.map(era => (
+            <div key={era.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 8px",
+              background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 6 }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: era.color, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 500 }}>{era.label}</span>
+              {!readonly && (
+                <button onClick={() => store.deleteEraCategory(era.id)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", fontSize: 14, lineHeight: 1, padding: "0 0 0 2px" }}
+                  title="Eliminar">×</button>
+              )}
+            </div>
+          ))}
+          {eraCategories.length === 0 && <span style={{ fontSize: 13, color: "var(--text-3)" }}>Sin categorías ERA. Agrega la primera.</span>}
+        </div>
+        {showAddEra && (
+          <div className="row" style={{ gap: 8, marginTop: 12, alignItems: "center" }}>
+            <input className="input" placeholder="Nombre ERA" value={newEraLabel}
+              onChange={e => setNewEraLabel(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") addEra(); }}
+              style={{ flex: 1, maxWidth: 220 }} />
+            <input type="color" value={newEraColor} onChange={e => setNewEraColor(e.target.value)}
+              style={{ width: 40, height: 34, border: "1px solid var(--line)", borderRadius: 4, cursor: "pointer", padding: 2 }} />
+            <button className="btn sm" onClick={addEra} disabled={!newEraLabel.trim()}>Agregar</button>
+            <button className="btn ghost sm" onClick={() => setShowAddEra(false)}>Cancelar</button>
+          </div>
+        )}
+      </div>
+
+      <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
       <table className="t">
         <thead>
           <tr>
             <th style={{ width: 32 }}></th>
             <th>Categoría cliente</th>
             <th>Categoría ERA</th>
+            <th style={{ minWidth: 160 }}>Pipeline</th>
+            <th style={{ width: 48 }}>Notas</th>
             <th style={{ width: 48 }}></th>
           </tr>
         </thead>
         <tbody>
           {cats.map(cat => {
             const era = eraCategories.find(e => e.id === cat.eraId);
+            const notesOpen = expandedNotes.has(cat.id);
             return (
-              <tr key={cat.id}>
-                <td style={{ paddingLeft: 12 }}>
-                  <span style={{ width: 6, height: 24, background: cat.color || "#ccc", display: "block", borderRadius: 2 }} />
-                </td>
-                <td style={{ fontWeight: 500 }}>{catLabel(cat)}</td>
-                <td>
-                  {eraCategories.length === 0 ? (
-                    <span style={{ color: "var(--text-3)", fontSize: 12 }}>Sin categorías ERA — créalas con ⚙</span>
-                  ) : (
-                    <select
-                      className="select"
-                      value={cat.eraId || ""}
-                      onChange={e => onSetMapping(cat.id, e.target.value || null)}
-                      style={{ minWidth: 200 }}
-                    >
-                      <option value="">— Sin mapear —</option>
-                      {eraCategories.map(e => (
-                        <option key={e.id} value={e.id}>{e.label}</option>
-                      ))}
-                    </select>
-                  )}
-                </td>
-                <td>
-                  <button
-                    className="btn ghost sm danger"
-                    title="Eliminar categoría"
-                    onClick={() => {
-                      if (!confirm(`¿Eliminar la categoría "${catLabel(cat)}"?`)) return;
-                      onDeleteCat(cat.id);
-                    }}
-                  >×</button>
-                </td>
-              </tr>
+              <React.Fragment key={cat.id}>
+                <tr>
+                  <td style={{ paddingLeft: 12 }}>
+                    <span style={{ width: 6, height: 24, background: cat.color || "#ccc", display: "block", borderRadius: 2 }} />
+                  </td>
+                  <td style={{ fontWeight: 500 }}>{catLabel(cat)}</td>
+                  <td>
+                    {eraCategories.length === 0 ? (
+                      <span style={{ color: "var(--text-3)", fontSize: 12 }}>Sin categorías ERA — agrega una arriba</span>
+                    ) : (
+                      <select
+                        className="select"
+                        value={cat.eraId || ""}
+                        onChange={e => onSetMapping(cat.id, e.target.value || null)}
+                        style={{ minWidth: 200 }}
+                        disabled={readonly}
+                      >
+                        <option value="">— Sin mapear —</option>
+                        {eraCategories.map(e => (
+                          <option key={e.id} value={e.id}>{e.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: pipelineDot(cat.pipeline), flexShrink: 0 }} />
+                      <select
+                        className="select"
+                        value={cat.pipeline || ""}
+                        onChange={e => onUpdateCat && onUpdateCat(cat.id, { pipeline: e.target.value })}
+                        style={{ fontSize: 12 }}
+                        disabled={readonly}
+                      >
+                        {PIPELINE_STATES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                      </select>
+                    </div>
+                  </td>
+                  <td style={{ textAlign: "center" }}>
+                    <button
+                      className="btn ghost sm"
+                      title={notesOpen ? "Cerrar notas" : "Editar notas"}
+                      onClick={() => toggleNotes(cat.id)}
+                      style={{ opacity: cat.notes ? 1 : 0.5 }}
+                    >📝</button>
+                  </td>
+                  <td>
+                    {!readonly && (
+                      <button
+                        className="btn ghost sm danger"
+                        title="Eliminar categoría"
+                        onClick={() => {
+                          if (!confirm(`¿Eliminar la categoría "${catLabel(cat)}"?`)) return;
+                          onDeleteCat(cat.id);
+                        }}
+                      >×</button>
+                    )}
+                  </td>
+                </tr>
+                {notesOpen && (
+                  <tr style={{ background: "var(--surface-2)" }}>
+                    <td colSpan={6} style={{ padding: "8px 12px" }}>
+                      <textarea
+                        className="textarea"
+                        value={cat.notes || ""}
+                        placeholder="Notas sobre esta categoría…"
+                        onChange={e => onUpdateCat && onUpdateCat(cat.id, { notes: e.target.value })}
+                        style={{ width: "100%", minHeight: 60, fontSize: 12, resize: "vertical" }}
+                        readOnly={readonly}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             );
           })}
         </tbody>
       </table>
+      </div>
+    </div>
+  );
+}
+
+// ── Charts View ──────────────────────────────────────────────────
+
+function ChartsView({ client, eraCategories, catLabel }) {
+  const [hoveredExp, setHoveredExp] = React.useState(null);
+  const expenses = client.expenses || [];
+
+  if (expenses.length === 0) {
+    return <Empty icon="📊" title="Sin datos para graficar" hint="Importa o añade gastos primero." />;
+  }
+
+  const totalSpendAmt = expenses.reduce((s, e) => s + (+e.amount || 0), 0);
+  if (totalSpendAmt === 0) {
+    return <Empty icon="📊" title="Sin montos registrados" hint="Añade montos a los gastos para ver gráficos." />;
+  }
+
+  // ── Chart 1: Group by ERA category ────────────────────────────
+  const eraGroups = {};
+  expenses.forEach(e => {
+    const cat = client.categories.find(c => c.id === e.categoryId);
+    const era = eraCategories.find(er => er.id === cat?.eraId);
+    const key = era ? era.id : "__none__";
+    const label = era ? era.label : "Sin ERA";
+    const color = era ? era.color : "var(--line)";
+    if (!eraGroups[key]) eraGroups[key] = { label, color, spend: 0, savings: 0 };
+    eraGroups[key].spend += +e.amount || 0;
+    eraGroups[key].savings += (+e.amount || 0) * ((+e.savingsPct || 0) / 100);
+  });
+
+  const eraGroupsSorted = Object.values(eraGroups).sort((a, b) => b.spend - a.spend);
+  const maxSpend = eraGroupsSorted[0]?.spend || 1;
+
+  // ── Chart 2: Scatter — all expenses ───────────────────────────
+  const maxAmount = Math.max(...expenses.map(e => +e.amount || 0), 1);
+  const svgW = 600;
+  const svgH = 300;
+  const padL = 36, padR = 10, padT = 10, padB = 30;
+  const plotW = svgW - padL - padR;
+  const plotH = svgH - padT - padB;
+
+  const scatterPoints = expenses.map((e, i) => {
+    const cat = client.categories.find(c => c.id === e.categoryId);
+    const x = padL + (((+e.amount || 0) / maxAmount) * plotW);
+    const y = padT + ((1 - Math.min((+e.savingsPct || 0), 100) / 100) * plotH);
+    const r = 4 + ((+e.feasibility || 0) / 5) * 8;
+    const color = cat?.color || "#ccc";
+    const label = `${e.supplier || catLabel(cat)} · ${fmtMoney(+e.amount || 0, client.currency, { compact: true })} · ${(+e.savingsPct || 0).toFixed(1)}% ahorro · F${+e.feasibility || 0}`;
+    return { x, y, r, color, label, i };
+  });
+
+  return (
+    <div className="stack lg">
+      {/* Chart 1 */}
+      <div className="card">
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 16, color: "var(--text-1)" }}>Gasto y ahorro potencial por categoría ERA</div>
+        {eraGroupsSorted.length === 0 ? (
+          <div style={{ color: "var(--text-3)", fontSize: 13 }}>Sin categorías ERA mapeadas.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {eraGroupsSorted.map(g => {
+              const spendPct = (g.spend / maxSpend) * 100;
+              const savingsPct = (g.savings / maxSpend) * 100;
+              return (
+                <div key={g.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: g.color, flexShrink: 0 }} />
+                  <span style={{ width: 160, fontSize: 12, color: "var(--text-1)", fontWeight: 500, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={g.label}>{g.label}</span>
+                  <div style={{ flex: 1, position: "relative", height: 18 }}>
+                    {/* Spend bar */}
+                    <div style={{ position: "absolute", top: 3, left: 0, height: 12, width: spendPct + "%", background: g.color, opacity: 0.7, borderRadius: 2 }} />
+                    {/* Savings bar */}
+                    {g.savings > 0 && (
+                      <div style={{ position: "absolute", top: 3, left: 0, height: 12, width: savingsPct + "%", background: "oklch(0.52 0.16 145)", opacity: 0.85, borderRadius: 2 }} />
+                    )}
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--text-2)", fontFamily: "var(--font-mono)", minWidth: 80, textAlign: "right" }}>
+                    {fmtMoney(g.spend, client.currency, { compact: true })}
+                  </span>
+                  {g.savings > 0 && (
+                    <span style={{ fontSize: 11, color: "oklch(0.42 0.14 145)", fontFamily: "var(--font-mono)", minWidth: 80, textAlign: "right" }}>
+                      ↓{fmtMoney(g.savings, client.currency, { compact: true })}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{ display: "flex", gap: 16, marginTop: 4, fontSize: 11, color: "var(--text-3)" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 6, background: "oklch(0.52 0.16 265)", opacity: 0.7, borderRadius: 1, display: "inline-block" }} />Gasto total</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 6, background: "oklch(0.52 0.16 145)", borderRadius: 1, display: "inline-block" }} />Ahorro potencial</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Chart 2: Scatter */}
+      <div className="card">
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: "var(--text-1)" }}>Oportunidades — Monto vs % Ahorro</div>
+        <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 12 }}>Tamaño del punto = factibilidad (1–5)</div>
+        <div style={{ position: "relative", width: "100%" }}>
+          <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: "100%", height: svgH, display: "block" }} preserveAspectRatio="xMidYMid meet">
+            {/* Axes */}
+            <line x1={padL} y1={padT} x2={padL} y2={padT + plotH} stroke="var(--line)" strokeWidth={0.5} />
+            <line x1={padL} y1={padT + plotH} x2={padL + plotW} y2={padT + plotH} stroke="var(--line)" strokeWidth={0.5} />
+            {/* Y axis labels */}
+            {[0, 25, 50, 75, 100].map(v => {
+              const y = padT + ((1 - v / 100) * plotH);
+              return (
+                <React.Fragment key={v}>
+                  <line x1={padL - 3} y1={y} x2={padL} y2={y} stroke="var(--line)" strokeWidth={0.4} />
+                  <text x={padL - 5} y={y + 3} textAnchor="end" fontSize={6} fill="var(--text-3)">{v}%</text>
+                </React.Fragment>
+              );
+            })}
+            {/* X axis label */}
+            <text x={padL + plotW / 2} y={svgH - 2} textAnchor="middle" fontSize={6} fill="var(--text-3)">Monto →</text>
+            <text x={5} y={padT + plotH / 2} textAnchor="middle" fontSize={6} fill="var(--text-3)" transform={`rotate(-90 5 ${padT + plotH / 2})`}>% Ahorro →</text>
+            {/* Points */}
+            {scatterPoints.map(pt => (
+              <circle
+                key={pt.i}
+                cx={pt.x}
+                cy={pt.y}
+                r={pt.r}
+                fill={pt.color}
+                opacity={0.75}
+                style={{ cursor: "default" }}
+              >
+                <title>{pt.label}</title>
+              </circle>
+            ))}
+          </svg>
+        </div>
+      </div>
     </div>
   );
 }
@@ -668,8 +1556,8 @@ function autoDetectField(header) {
   if (/prov|supplier|vendor/.test(h))            return "supplier";
   if (/monto|amount|total|gasto|costo|spend/.test(h)) return "amount";
   if (/n.?prov|num.*prov|#.*prov/.test(h))       return "suppliers";
-  if (/min.*ah|ah.*min|saving.*min|min.*sav/.test(h)) return "savingsMinPct";
-  if (/max.*ah|ah.*max|saving.*max|max.*sav/.test(h)) return "savingsMaxPct";
+  if (/min.*ah|ah.*min|saving.*min|min.*sav|bajo.*ah|ah.*bajo|low.*sav|sav.*low/.test(h)) return "savingsMinPct";
+  if (/max.*ah|ah.*max|saving.*max|max.*sav|alto.*ah|ah.*alto|high.*sav|sav.*high/.test(h)) return "savingsMaxPct";
   if (/ahorro|saving|saving_pct|sav/.test(h))    return "savingsPct";
   if (/alcance|scope/.test(h))                   return "scopePct";
   if (/fact|feasib/.test(h))                     return "feasibility";
@@ -851,7 +1739,23 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
         exp.amount  = monthly.reduce((a, b) => a + b, 0);
       }
 
+      // If min/max are set but savingsPct isn't, auto-derive the average
+      if (!exp.savingsPct && (exp.savingsMinPct || exp.savingsMaxPct)) {
+        exp.savingsPct = Math.round(((+exp.savingsMinPct || 0) + (+exp.savingsMaxPct || 0)) / 2 * 10) / 10;
+      }
+
       return exp;
+    });
+
+    // Flag duplicate rows: same supplier (normalized) + categoryId — only mark the repeat, not the original
+    const seenKeys = new Set();
+    expenses.forEach((exp) => {
+      const key = `${exp.categoryId}|${normStr(exp.supplier || "")}`;
+      if (seenKeys.has(key)) {
+        exp._duplicate = true;
+      } else {
+        seenKeys.add(key);
+      }
     });
 
     return { expenses, newCategories, allCategories };
@@ -937,6 +1841,14 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
           <input type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={handleFile} />
         </label>
         {error && <p style={{ color: "var(--danger)", fontSize: 13, marginTop: 10 }}>{error}</p>}
+        <p style={{ fontSize: 12, color: "var(--text-3)", marginTop: 14, textAlign: "center" }}>
+          ¿No tienes el formato correcto?{" "}
+          <button
+            className="btn ghost sm"
+            style={{ fontSize: 12, padding: "2px 8px" }}
+            onClick={() => downloadTemplate()}
+          >Descargar plantilla</button>
+        </p>
       </div>
     );
   }
@@ -1014,6 +1926,16 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
         </div>
       )}
 
+      {(() => {
+        const dupCount = preview.filter(p => p._duplicate).length;
+        return dupCount > 0 ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 8, background: "oklch(0.97 0.06 60)", border: "1px solid oklch(0.85 0.12 60)", fontSize: 12, color: "oklch(0.45 0.14 50)" }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <span><strong>{dupCount} fila{dupCount !== 1 ? "s" : ""}</strong> con posible duplicado (mismo proveedor y categoría). Revisa antes de importar.</span>
+          </div>
+        ) : null;
+      })()}
+
       {/* Preview */}
       <div>
         <h4 className="h3" style={{ marginBottom: 10 }}>Vista previa · {preview.length} filas</h4>
@@ -1040,13 +1962,18 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
                   const eraId = cat ? (eraMapping[cat.id] ?? null) : null;
                   const eraCat = eraCategories.find(e => e.id === eraId);
                   return (
-                    <tr key={i}>
+                    <tr key={i} style={{ background: p._duplicate ? "oklch(0.98 0.04 60)" : undefined }}>
                       <td>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
                           <CategorySwatch color={cat?.color || "#ccc"} label={cat?.label || catLabel(cat)} />
                           {isNew && (
                             <span style={{ fontSize: 10, fontWeight: 700, background: "oklch(0.82 0.10 265)", color: "oklch(0.38 0.14 265)", borderRadius: 4, padding: "1px 4px" }}>
                               nuevo
+                            </span>
+                          )}
+                          {p._duplicate && (
+                            <span style={{ fontSize: 10, fontWeight: 700, background: "oklch(0.88 0.10 60)", color: "oklch(0.45 0.14 50)", borderRadius: 4, padding: "1px 4px" }} title="Posible duplicado">
+                              dup
                             </span>
                           )}
                         </span>
@@ -1113,4 +2040,4 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
   );
 }
 
-Object.assign(window, { ExpensesView, ExpenseTable, ManualEntry, PasteImport, ExcelImport, AddCategoryModal, CategoriesTab, EraCategoriesModal, EraForm });
+Object.assign(window, { ExpensesView, ExpenseTable, ExpenseDrawer, ManualEntry, PasteImport, ExcelImport, AddCategoryModal, CategoriesTab, ChartsView, EraCategoriesModal, EraForm, RangesTab });

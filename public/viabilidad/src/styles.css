@@ -383,11 +383,46 @@ table.t input:focus, table.t select:focus { background: var(--surface); border-c
 
 /* Print */
 @media print {
-  .topbar, .crumbs, .no-print { display: none !important; }
-  body { background: white; }
-  main { padding: 0; max-width: none; }
-  .card { break-inside: avoid; box-shadow: none; }
+  /* Hide chrome */
+  .topbar, .crumbs, .no-print, .tabs,
+  .modal-backdrop, button.btn, input[type="checkbox"] { display: none !important; }
+
+  /* Layout */
+  body { background: white !important; color: #000 !important; font-size: 11pt; }
+  main { padding: 0 !important; max-width: none !important; }
+  .app { display: block !important; }
+
+  /* Cards */
+  .card, .card.flat {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    background: white !important;
+  }
+
+  /* Tables */
+  .t { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  .t th, .t td { border: 1px solid #ddd !important; padding: 4px 6px !important; }
+  .t thead th { background: #f0f0f0 !important; font-weight: 700; }
+
+  /* Stats */
+  .stat { break-inside: avoid; border: 1px solid #ccc; }
+  .grid { display: grid !important; }
+
+  /* Text colors — force dark for readability */
+  * { color: #111 !important; }
+  .label, .sub, .eyebrow { color: #555 !important; }
+
+  /* Prevent orphaned headings */
+  h1, h2, h3, h4 { break-after: avoid; }
+
+  /* Page break helpers */
   .page-break { page-break-before: always; }
+  .stack.lg > * { break-inside: avoid; }
+
+  /* Bar charts — ensure fills print */
+  .bar-fill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  [style*="background:oklch"], [style*="background: oklch"] { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
 
 /* Misc */

@@ -9,8 +9,11 @@ function fmtRange(min, max, currency, opts) {
 
 function DashboardView({ client }) {
   const { t } = useI18n();
+  const store = useStore();
+  const eraCategories = store.state.eraCategories || [];
+  const [drawerCatId, setDrawerCatId] = React.useState(null);
   const total = totalSpend(client);
-  const groups = aggregateByCategory(client);
+  const groups = aggregateByEra(client, eraCategories);
   const sumMin = groups.reduce((s, g) => s + (g.minSavings || 0), 0);
   const sumMax = groups.reduce((s, g) => s + (g.maxSavings || 0), 0);
   const ofRevenue = client.revenue > 0 ? (total / client.revenue) * 100 : null;
@@ -25,7 +28,7 @@ function DashboardView({ client }) {
   const topSavings = [...groups].sort((a, b) => (b.maxSavings || 0) - (a.maxSavings || 0)).slice(0, 5);
   const maxVol = topVolume[0]?.total || 1;
   const maxSav = topSavings[0]?.maxSavings || 1;
-  const catLabel = (cat) => cat ? (t.categories[cat.key] || cat.key) : "—";
+  const catLabel = (cat) => cat ? (cat.label || cat.key) : "—";
 
   return (
     <div className="stack lg">
@@ -61,7 +64,7 @@ function DashboardView({ client }) {
           </div>
           <div className="stack sm">
             {topVolume.map(g => (
-              <div key={g.categoryId}>
+              <div key={g.categoryId} style={{ cursor: "pointer" }} onClick={() => setDrawerCatId(g.categoryId)}>
                 <div className="row between" style={{ marginBottom: 4 }}>
                   <CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} />
                   <span className="tabular" style={{ fontWeight: 700 }}>{fmtMoney(g.total, client.currency, { compact: true })}</span>
@@ -80,7 +83,7 @@ function DashboardView({ client }) {
           </div>
           <div className="stack sm">
             {topSavings.map(g => (
-              <div key={g.categoryId}>
+              <div key={g.categoryId} style={{ cursor: "pointer" }} onClick={() => setDrawerCatId(g.categoryId)}>
                 <div className="row between" style={{ marginBottom: 4 }}>
                   <CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} />
                   <span className="tabular" style={{ fontWeight: 700, color: "var(--positive-2)" }}>
@@ -120,6 +123,13 @@ function DashboardView({ client }) {
           })}
         </div>
       </div>
+      <CategoryDrawer
+        open={drawerCatId != null}
+        categoryId={drawerCatId}
+        client={client}
+        eraCategories={eraCategories}
+        onClose={() => setDrawerCatId(null)}
+      />
     </div>
   );
 }
@@ -130,7 +140,9 @@ function DashboardView({ client }) {
 function ScenariosView({ client }) {
   const { t } = useI18n();
   const store = useStore();
-  const groups = aggregateByCategory(client);
+  const eraCategories = store.state.eraCategories || [];
+  const [drawerCatId, setDrawerCatId] = React.useState(null);
+  const groups = aggregateByEra(client, eraCategories);
   const total = totalSpend(client);
 
   const included = client.scenario.includedCategories;
@@ -164,7 +176,7 @@ function ScenariosView({ client }) {
   const netClientMax = includedSavMax - feeMax;
   const netClient3yMin = (includedSavMin * 3) - feeMin;
   const netClient3yMax = (includedSavMax * 3) - feeMax;
-  const catLabel = (cat) => cat ? (t.categories[cat.key] || cat.key) : "—";
+  const catLabel = (cat) => cat ? (cat.label || cat.key) : "—";
 
   if (groups.length === 0) {
     return <Empty icon="◯" title={t.dashboard.empty} hint={t.expenses.lede} />;
@@ -248,7 +260,8 @@ function ScenariosView({ client }) {
               const inc = isIncluded(g.categoryId);
               const tk = tierFor(g, total);
               return (
-                <tr key={g.categoryId} style={{ opacity: inc ? 1 : 0.45 }}>
+                <tr key={g.categoryId} style={{ opacity: inc ? 1 : 0.45, cursor: "pointer" }}
+                    onClick={(ev) => { if (ev.target.tagName === "INPUT") return; setDrawerCatId(g.categoryId); }}>
                   <td style={{ paddingLeft: 16 }}>
                     <input type="checkbox" checked={inc} onChange={() => toggleInclude(g.categoryId)} />
                   </td>
@@ -317,7 +330,8 @@ function ScenariosView({ client }) {
                   const fMin = (g.minSavings || 0) * (pct / 100) * (months / 12);
                   const fMax = (g.maxSavings || 0) * (pct / 100) * (months / 12);
                   return (
-                    <tr key={g.categoryId}>
+                    <tr key={g.categoryId} style={{ cursor: "pointer" }}
+                        onClick={(ev) => { if (ev.target.tagName === "INPUT") return; setDrawerCatId(g.categoryId); }}>
                       <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
                       <td className="right tabular">{fmtRange(g.minSavings || 0, g.maxSavings || 0, client.currency, { compact: true })}</td>
                       <td className="right">
@@ -365,6 +379,13 @@ function ScenariosView({ client }) {
           </div>
         </div>
       </div>
+      <CategoryDrawer
+        open={drawerCatId != null}
+        categoryId={drawerCatId}
+        client={client}
+        eraCategories={eraCategories}
+        onClose={() => setDrawerCatId(null)}
+      />
     </div>
   );
 }

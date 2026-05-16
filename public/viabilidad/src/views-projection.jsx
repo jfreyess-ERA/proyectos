@@ -5,8 +5,10 @@
 function ProjectionView({ client }) {
   const { t } = useI18n();
   const store = useStore();
+  const eraCategories = store.state.eraCategories || [];
+  const [drawerCatId, setDrawerCatId] = React.useState(null);
   const sc = { feePct: 30, feePctOnSavings: 50, feeMonths: 36, projectionYears: 5, includedCategories: null, ...(client.scenario || {}) };
-  const groups = aggregateByCategory(client);
+  const groups = aggregateByEra(client, eraCategories);
   const total = totalSpend(client);
 
   const included = sc.includedCategories;
@@ -34,7 +36,7 @@ function ProjectionView({ client }) {
   const retMax = sumMax * sc.projectionYears - feeMax;
   const retAvg = sumAvg * sc.projectionYears - feeAvg;
 
-  const catLabel = (cat) => cat ? (t.categories[cat.key] || cat.key) : "—";
+  const catLabel = (cat) => cat ? (cat.label || cat.key) : "—";
 
   // Tiers
   const tiers = { A: [], B: [], C: [], D: [] };
@@ -108,7 +110,8 @@ function ProjectionView({ client }) {
             {groups.map(g => {
               const included = isIncluded(g.categoryId);
               return (
-                <tr key={g.categoryId} style={{ opacity: included ? 1 : 0.45 }}>
+                <tr key={g.categoryId} style={{ opacity: included ? 1 : 0.45, cursor: "pointer" }}
+                    onClick={(ev) => { if (ev.target.tagName === "INPUT") return; setDrawerCatId(g.categoryId); }}>
                   <td style={{ paddingLeft: 16 }}>
                     <input type="checkbox" checked={included} onChange={() => {
                       const cur = sc.includedCategories == null ? groups.map(x => x.categoryId) : sc.includedCategories;
@@ -143,7 +146,9 @@ function ProjectionView({ client }) {
       </div>
 
       {/* Edit ranges per expense line */}
-      <RangeEditor client={client} />
+      <div className="card flat" style={{ padding: "14px 20px", background: "var(--surface-2)", fontSize: 13, color: "var(--text-2)" }}>
+        💡 Los rangos por línea (alcance, ahorro mín/máx, factibilidad) se configuran en la pestaña <strong>Gastos → Rangos</strong>.
+      </div>
 
       {/* Tier cards (Quick win / Estratégica / Mantener / Descartar) */}
       <div className="grid cols-4">
@@ -173,7 +178,7 @@ function ProjectionView({ client }) {
       </div>
 
       {/* Volume × avg savings matrix */}
-      <ProfilingMatrix groups={groups} total={total} client={client} />
+      <ProfilingMatrix groups={groups} total={total} client={client} onCategoryClick={setDrawerCatId} />
 
       {/* Hero retorno */}
       <div className="card" style={{ background: "var(--ink)", color: "var(--on-ink)", borderColor: "var(--ink)", padding: 32 }}>
@@ -206,84 +211,18 @@ function ProjectionView({ client }) {
 
       {/* Resources Lámina 8 */}
       <ResourcesPanel client={client} groups={inc} retAvg={retAvg} />
+
+      <CategoryDrawer
+        open={drawerCatId != null}
+        categoryId={drawerCatId}
+        client={client}
+        eraCategories={eraCategories}
+        onClose={() => setDrawerCatId(null)}
+      />
     </div>
   );
 }
 
-function RangeEditor({ client }) {
-  const { t } = useI18n();
-  const store = useStore();
-  const update = (idx, patch) => {
-    const next = client.expenses.map((e, i) => i === idx ? { ...e, ...patch } : e);
-    store.setExpenses(client.id, next);
-  };
-  const catLabel = (catId) => {
-    const cat = client.categories.find(c => c.id === catId);
-    return cat ? (t.categories[cat.key] || cat.key) : "—";
-  };
-
-  return (
-    <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--line)", background: "var(--surface-2)" }}>
-        <h3 className="h3" style={{ margin: 0 }}>Rangos por línea de gasto · ajuste consultor</h3>
-        <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>
-          Monto a optimizar = Gasto × Alcance %. Ahorro mín/máx = Monto a optimizar × Mín/Máx %.
-        </div>
-      </div>
-      <div style={{ maxHeight: 460, overflow: "auto" }}>
-      <table className="t">
-        <thead>
-          <tr>
-            <th>{t.expenses.cols.category}</th>
-            <th>{t.expenses.cols.subcategory}</th>
-            <th className="right">{t.expenses.cols.amount}</th>
-            <th className="right">{t.projection.scope}</th>
-            <th className="right">{t.projection.optAmt}</th>
-            <th className="right">{t.projection.min} %</th>
-            <th className="right">{t.projection.max} %</th>
-            <th className="right">Ahorro mín</th>
-            <th className="right">Ahorro máx</th>
-            <th className="right">{t.projection.feas}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {client.expenses.map((e, i) => {
-            const amt = +e.amount || 0;
-            const scope = e.scopePct == null ? 100 : +e.scopePct;
-            const optAmt = amt * scope / 100;
-            const minSav = optAmt * (+e.savingsMinPct || 0) / 100;
-            const maxSav = optAmt * (+e.savingsMaxPct || 0) / 100;
-            return (
-              <tr key={e.id}>
-                <td style={{ fontSize: 12, color: "var(--text-2)" }}>{catLabel(e.categoryId)}</td>
-                <td style={{ fontSize: 12 }}>{e.subcategory}</td>
-                <td className="right tabular">{fmtMoney(amt, client.currency)}</td>
-                <td className="right">
-                  <input className="input right" type="number" min="0" max="100" value={scope} onChange={ev => update(i, { scopePct: +ev.target.value || 0 })} style={{ width: 70 }} />
-                </td>
-                <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(optAmt, client.currency)}</td>
-                <td className="right">
-                  <input className="input right" type="number" value={e.savingsMinPct} onChange={ev => update(i, { savingsMinPct: +ev.target.value || 0 })} style={{ width: 70 }} />
-                </td>
-                <td className="right">
-                  <input className="input right" type="number" value={e.savingsMaxPct} onChange={ev => update(i, { savingsMaxPct: +ev.target.value || 0 })} style={{ width: 70 }} />
-                </td>
-                <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(minSav, client.currency)}</td>
-                <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(maxSav, client.currency)}</td>
-                <td className="right">
-                  <select className="select" value={e.feasibility || 3} onChange={ev => update(i, { feasibility: +ev.target.value })} style={{ width: 60 }}>
-                    {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
-                  </select>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      </div>
-    </div>
-  );
-}
 
 function ResourcesPanel({ client, groups, retAvg }) {
   const { t } = useI18n();
@@ -432,7 +371,8 @@ function ResourcesPanel({ client, groups, retAvg }) {
 function GanttView({ client }) {
   const { t } = useI18n();
   const store = useStore();
-  const groups = aggregateByCategory(client).filter(g => {
+  const eraCategories = store.state.eraCategories || [];
+  const groups = aggregateByEra(client, eraCategories).filter(g => {
     const inc = client.scenario.includedCategories;
     return inc == null || inc.includes(g.categoryId);
   });
@@ -641,4 +581,4 @@ function GanttView({ client }) {
   );
 }
 
-Object.assign(window, { ProjectionView, GanttView, RangeEditor, ResourcesPanel });
+Object.assign(window, { ProjectionView, GanttView, ResourcesPanel });
