@@ -329,7 +329,6 @@ function ExpensesView({ client, readonly = false }) {
 
       <Tabs active={mode} onChange={setMode} tabs={[
         { id: "table",      label: t.expenses.modes.table, count: expenses.length || null },
-        { id: "charts",     label: "📊 Gráficos" },
         { id: "categories", label: "Categorías" },
         { id: "rangos",     label: "⊞ Rangos" },
         ...(!readonly ? [
@@ -352,9 +351,6 @@ function ExpensesView({ client, readonly = false }) {
           activeIdx={drawerIdx}
           readonly={readonly}
         />
-      )}
-      {mode === "charts" && (
-        <ChartsView client={client} eraCategories={eraCategories} catLabel={catLabel} />
       )}
       {mode === "categories" && (
         <CategoriesTab client={client} catLabel={catLabel} eraCategories={eraCategories}
