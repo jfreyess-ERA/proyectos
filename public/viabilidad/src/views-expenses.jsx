@@ -523,11 +523,11 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 120 }}>
             <label style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600 }}>Monto mínimo</label>
-            <input className="input" type="number" min={0} value={filters.amountMin || ""} placeholder="0" onChange={e => onChangeFilters && onChangeFilters(f => ({ ...f, amountMin: +e.target.value || 0 }))} style={{ fontSize: 12 }} />
+            <MoneyInput value={filters.amountMin || 0} onChange={v => onChangeFilters && onChangeFilters(f => ({ ...f, amountMin: v }))} placeholder="0" style={{ fontSize: 12 }} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 120 }}>
             <label style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600 }}>Monto máximo</label>
-            <input className="input" type="number" min={0} value={filters.amountMax || ""} placeholder="sin límite" onChange={e => onChangeFilters && onChangeFilters(f => ({ ...f, amountMax: +e.target.value || 0 }))} style={{ fontSize: 12 }} />
+            <MoneyInput value={filters.amountMax || 0} onChange={v => onChangeFilters && onChangeFilters(f => ({ ...f, amountMax: v }))} placeholder="sin límite" style={{ fontSize: 12 }} />
           </div>
           <button className="btn ghost sm" onClick={() => onChangeFilters && onChangeFilters({ eraId: "", feasMin: 0, amountMin: 0, amountMax: 0 })}>
             Limpiar filtros
@@ -698,7 +698,7 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
                   <td><input className="input" value={e.subcategory} onChange={ev => update(i, { subcategory: ev.target.value })} disabled={readonly} /></td>
                   <td><input className="input" value={e.supplier} onChange={ev => update(i, { supplier: ev.target.value })} disabled={readonly} /></td>
                   <td className="right">
-                    <input className="input right" type="number" value={e.amount} onChange={ev => update(i, { amount: +ev.target.value || 0 })} disabled={readonly} />
+                    <MoneyInput value={e.amount} onChange={v => update(i, { amount: v })} disabled={readonly} style={{ width: 120 }} />
                   </td>
                   <td className="right">
                     <input className="input right" type="number" value={e.suppliers} onChange={ev => update(i, { suppliers: +ev.target.value || 0 })} style={{ width: 60 }} disabled={readonly} />
@@ -861,7 +861,7 @@ function ExpenseDrawer({ open, expense, client, catLabel, eraCategories, update,
             </Field>
 
             <Field label={`${t.expenses.cols.amount} (${client.currency})`}>
-              <input className="input right" type="number" value={expense.amount || 0} onChange={e => update({ amount: +e.target.value || 0 })} readOnly={readonly} />
+              <MoneyInput value={expense.amount || 0} onChange={v => update({ amount: v })} disabled={readonly} />
             </Field>
 
             <Field label={t.expenses.cols.suppliers}>
@@ -948,7 +948,7 @@ function ManualEntry({ client, catLabel, onAdd }) {
           <input className="input" value={exp.supplier} onChange={e => set({ supplier: e.target.value })} />
         </Field>
         <Field label={`${t.expenses.cols.amount} (${client.currency})`}>
-          <input className="input right" type="number" value={exp.amount} onChange={e => set({ amount: +e.target.value || 0 })} />
+          <MoneyInput value={exp.amount} onChange={v => set({ amount: v })} />
         </Field>
         <Field label={t.expenses.cols.suppliers}>
           <input className="input right" type="number" value={exp.suppliers} onChange={e => set({ suppliers: +e.target.value || 0 })} />

@@ -161,7 +161,34 @@ function SaveIndicator({ status }) {
   );
 }
 
+// ── MoneyInput ────────────────────────────────────────────────────
+// Shows "$1.234.567" at rest; switches to plain number while editing.
+function MoneyInput({ value, onChange, disabled, style, className, placeholder }) {
+  const [editing, setEditing] = React.useState(false);
+  const [raw, setRaw] = React.useState("");
+
+  const fmt = (n) => {
+    const num = Math.round(+n || 0);
+    if (!num) return "";
+    return "$" + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  return (
+    <input
+      className={className !== undefined ? className : "input right"}
+      type={editing ? "number" : "text"}
+      value={editing ? raw : fmt(value)}
+      placeholder={placeholder}
+      onFocus={() => { setEditing(true); setRaw(value || ""); }}
+      onBlur={() => { setEditing(false); onChange(+raw || 0); }}
+      onChange={e => setRaw(e.target.value)}
+      disabled={disabled}
+      style={style}
+    />
+  );
+}
+
 Object.assign(window, {
   Topbar, Crumbs, Field, Stat, Pill, Tier, Bar, FeasDots,
-  Modal, Tabs, CurrencySelect, Empty, CategorySwatch, SaveIndicator,
+  Modal, Tabs, CurrencySelect, Empty, CategorySwatch, SaveIndicator, MoneyInput,
 });

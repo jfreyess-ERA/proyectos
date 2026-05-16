@@ -341,10 +341,10 @@ function ClientDataView({ client, readonly = false }) {
                 </select>
               </Field>
               <Field label={`${t.client.revenue} (${client.currency})`} span={2}>
-                <input className="input right" type="number" value={client.revenue ?? ""} onChange={e => update({ revenue: e.target.value === "" ? null : +e.target.value })} readOnly={readonly} />
+                <MoneyInput value={client.revenue ?? 0} onChange={v => update({ revenue: v || null })} disabled={readonly} />
               </Field>
               <Field label={`${t.client.ebitda} (${client.currency})`} span={2}>
-                <input className="input right" type="number" value={client.ebitda ?? ""} onChange={e => update({ ebitda: e.target.value === "" ? null : +e.target.value })} readOnly={readonly} />
+                <MoneyInput value={client.ebitda ?? 0} onChange={v => update({ ebitda: v || null })} disabled={readonly} />
               </Field>
             </div>
           </div>
