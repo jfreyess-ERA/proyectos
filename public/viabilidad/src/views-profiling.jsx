@@ -24,6 +24,24 @@ function MiniSparkline({ data, currency, color = "var(--accent)" }) {
   );
 }
 
+// ── Smooth Catmull-Rom spline path ─────────────────────────────
+function smoothCurvePath(pts, tension = 0.4) {
+  if (pts.length < 2) return `M ${pts[0][0]},${pts[0][1]}`;
+  let d = `M ${pts[0][0]},${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const cp1x = p1[0] + (p2[0] - p0[0]) * tension / 3;
+    const cp1y = p1[1] + (p2[1] - p0[1]) * tension / 3;
+    const cp2x = p2[0] - (p3[0] - p1[0]) * tension / 3;
+    const cp2y = p2[1] - (p3[1] - p1[1]) * tension / 3;
+    d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
+
 // ── Color palette for multi-series charts ──────────────────────
 const CHART_PALETTE = [
   "#4A90D9","#E8A838","#2ECC71","#E74C3C",
@@ -77,14 +95,17 @@ function DrawerEvolution({ expenses, currency, categoryColor }) {
     return next.size >= series.length ? new Set() : next; // reset if hiding all
   });
 
-  // SVG layout — wider + taller to fit in the centered modal
-  const W = 820, H = 210, PL = 76, PR = 12, PT = 14, PB = 24;
+  // SVG layout
+  const W = 860, H = 270, PL = 80, PR = 14, PT = 28, PB = 24;
   const cW = W - PL - PR, cH = H - PT - PB;
   const allVals = display.flatMap(s => s.data);
   const maxV = Math.max(...allVals, 1);
   const px = i => PL + (nMonths === 1 ? cW / 2 : (i / (nMonths - 1)) * cW);
   const py = v => PT + cH - (v / maxV) * cH;
   const step = Math.ceil(nMonths / 8);
+  const solo = display.length === 1;
+  // Which point indices get a value label (avoid crowding in multi-series)
+  const labelEvery = solo ? (nMonths <= 6 ? 1 : 2) : 0; // 0 = only first+last+max per series
 
   const modeButtons = [
     { id: "total", label: "Total" },
@@ -115,7 +136,7 @@ function DrawerEvolution({ expenses, currency, categoryColor }) {
         )}
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 210, display: "block" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 270, display: "block" }}>
         {/* Y-axis gridlines + labels */}
         {[0.25, 0.5, 0.75, 1].map(f => {
           const v = maxV * f;
@@ -131,23 +152,56 @@ function DrawerEvolution({ expenses, currency, categoryColor }) {
             </g>
           );
         })}
-        {/* Series */}
+
+        {/* Series: smooth curves + fill + dots + labels */}
         {display.map(s => {
-          const pts = s.data.map((v, i) => `${px(i)},${py(v)}`).join(" ");
-          const fill = `${px(0)},${py(0)} ${pts} ${px(nMonths - 1)},${py(0)}`;
-          const solo = display.length === 1;
+          const ptArr = s.data.map((v, i) => [px(i), py(v)]);
+          const linePath = smoothCurvePath(ptArr);
+          const fillPath = `${linePath} L ${px(nMonths - 1)},${py(0)} L ${px(0)},${py(0)} Z`;
+          const maxIdx = s.data.indexOf(Math.max(...s.data));
+          // Which indices get a visible label
+          const labeled = labelEvery > 0
+            ? new Set(idxs.filter(i => i % labelEvery === 0 || i === nMonths - 1))
+            : new Set([0, nMonths - 1, maxIdx]);
+
           return (
             <g key={s.key}>
-              {solo && <polygon points={fill} fill={s.color} fillOpacity="0.12" />}
-              <polyline points={pts} fill="none" stroke={s.color}
-                strokeWidth={solo ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx={px(nMonths - 1)} cy={py(s.data[nMonths - 1])} r="3" fill={s.color} />
+              {solo && <path d={fillPath} fill={s.color} fillOpacity="0.10" stroke="none" />}
+              <path d={linePath} fill="none" stroke={s.color}
+                strokeWidth={solo ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round" />
+              {/* Dots + labels */}
+              {idxs.map(i => {
+                const cx = ptArr[i][0], cy = ptArr[i][1];
+                const show = labeled.has(i);
+                const label = fmtMoney(s.data[i], currency, { compact: true });
+                const labelW = label.length * 5.5 + 6;
+                // Position label above dot; if near top, flip below
+                const above = cy > PT + 18;
+                const ly = above ? cy - 7 : cy + 16;
+                return (
+                  <g key={i}>
+                    <circle cx={cx} cy={cy} r={show ? 3.5 : 2.5} fill={s.color}
+                      stroke="var(--surface)" strokeWidth="1.5" />
+                    {show && (
+                      <>
+                        <rect x={cx - labelW / 2} y={ly - 10} width={labelW} height={12}
+                          rx="3" fill="var(--surface)" fillOpacity="0.90" />
+                        <text x={cx} y={ly} fontSize="8.5" fill={s.color} fontWeight="600"
+                          textAnchor="middle" fontFamily="Trebuchet MS">
+                          {label}
+                        </text>
+                      </>
+                    )}
+                  </g>
+                );
+              })}
             </g>
           );
         })}
+
         {/* Month labels */}
         {idxs.map(i => (i % step === 0 || i === nMonths - 1) && (
-          <text key={i} x={px(i)} y={H - 3} fontSize="8" fill="var(--text-3)"
+          <text key={i} x={px(i)} y={H - 4} fontSize="8.5" fill="var(--text-3)"
             textAnchor="middle" fontFamily="Trebuchet MS">
             {MONTH_ABBR_ES[i % 12]}
           </text>
@@ -250,8 +304,8 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
       <div style={{
         position: "fixed", zIndex: 301,
         top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-        width: "min(960px, calc(100vw - 32px))",
-        maxHeight: "90vh",
+        width: "min(1380px, calc(100vw - 24px))",
+        maxHeight: "94vh",
         background: "var(--surface)", borderRadius: 12,
         boxShadow: "0 24px 80px rgba(0,0,0,.28)",
         display: "flex", flexDirection: "column", overflow: "hidden",
@@ -305,7 +359,7 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
           </div>
 
           {/* Two-column: table left, chart right */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 24, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 420px) 1fr", gap: 28, alignItems: "start" }}>
             {/* Suppliers breakdown */}
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 8 }}>
@@ -324,10 +378,10 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
                   <tbody>
                     {expenses.map((e, i) => (
                       <tr key={e.id || i}>
-                        <td style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.supplier || "—"}</td>
-                        <td style={{ color: "var(--text-2)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.subcategory || "—"}</td>
-                        <td className="right tabular">{fmtMoney(+e.amount || 0, client.currency)}</td>
-                        <td className="right tabular" style={{ color: +e.savingsPct > 0 ? "var(--positive-2)" : "var(--text-3)" }}>
+                        <td style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.supplier || "—"}</td>
+                        <td style={{ color: "var(--text-2)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.subcategory || "—"}</td>
+                        <td className="right tabular" style={{ whiteSpace: "nowrap" }}>{fmtMoney(+e.amount || 0, client.currency)}</td>
+                        <td className="right tabular" style={{ whiteSpace: "nowrap", color: +e.savingsPct > 0 ? "var(--positive-2)" : "var(--text-3)" }}>
                           {+e.savingsPct > 0 ? (+e.savingsPct).toFixed(1) + "%" : "—"}
                         </td>
                       </tr>
