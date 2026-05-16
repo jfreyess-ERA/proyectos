@@ -1286,15 +1286,19 @@ function ChartsView({ client, eraCategories, catLabel }) {
     const key = era ? era.id : "__none__";
     const label = era ? era.label : "Sin ERA";
     const color = era ? era.color : "var(--line)";
-    if (!eraGroups[key]) eraGroups[key] = { label, color, spend: 0, savings: 0 };
+    const scope = e.scopePct == null ? 100 : (+e.scopePct || 0);
+    const minPct = +e.savingsMinPct || 0;
+    const maxPct = +e.savingsMaxPct || 0;
+    if (!eraGroups[key]) eraGroups[key] = { label, color, spend: 0, minSavings: 0, maxSavings: 0 };
     eraGroups[key].spend += +e.amount || 0;
-    eraGroups[key].savings += (+e.amount || 0) * ((+e.savingsPct || 0) / 100);
+    eraGroups[key].minSavings += (+e.amount || 0) * (scope / 100) * (minPct / 100);
+    eraGroups[key].maxSavings += (+e.amount || 0) * (scope / 100) * (maxPct / 100);
   });
 
   const eraGroupsSorted = Object.values(eraGroups).sort((a, b) => b.spend - a.spend);
   const maxSpend = eraGroupsSorted[0]?.spend || 1;
 
-  // ── Chart 2: Scatter — all expenses ───────────────────────────
+  // ── Chart 2: Scatter — all expenses (Y = mid of min/max range) ────
   const maxAmount = Math.max(...expenses.map(e => +e.amount || 0), 1);
   const svgW = 600;
   const svgH = 300;
@@ -1304,12 +1308,20 @@ function ChartsView({ client, eraCategories, catLabel }) {
 
   const scatterPoints = expenses.map((e, i) => {
     const cat = client.categories.find(c => c.id === e.categoryId);
+    const era = eraCategories.find(er => er.id === cat?.eraId);
+    const minPct = +e.savingsMinPct || 0;
+    const maxPct = +e.savingsMaxPct || 0;
+    const midPct = (minPct + maxPct) / 2;
     const x = padL + (((+e.amount || 0) / maxAmount) * plotW);
-    const y = padT + ((1 - Math.min((+e.savingsPct || 0), 100) / 100) * plotH);
+    const y = padT + ((1 - Math.min(midPct, 100) / 100) * plotH);
+    // range bar: y positions for min and max
+    const yMin = padT + ((1 - Math.min(minPct, 100) / 100) * plotH);
+    const yMax = padT + ((1 - Math.min(maxPct, 100) / 100) * plotH);
     const r = 4 + ((+e.feasibility || 0) / 5) * 8;
-    const color = cat?.color || "#ccc";
-    const label = `${e.supplier || catLabel(cat)} · ${fmtMoney(+e.amount || 0, client.currency, { compact: true })} · ${(+e.savingsPct || 0).toFixed(1)}% ahorro · F${+e.feasibility || 0}`;
-    return { x, y, r, color, label, i };
+    const color = era ? era.color : (cat?.color || "#ccc");
+    const rangeTxt = (minPct > 0 || maxPct > 0) ? `${minPct.toFixed(1)}%–${maxPct.toFixed(1)}% ahorro` : "Sin rango";
+    const label = `${e.supplier || catLabel(cat)} · ${fmtMoney(+e.amount || 0, client.currency, { compact: true })} · ${rangeTxt} · F${+e.feasibility || 0}`;
+    return { x, y, yMin, yMax, r, color, label, i, minPct, maxPct };
   });
 
   return (
@@ -1323,7 +1335,8 @@ function ChartsView({ client, eraCategories, catLabel }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {eraGroupsSorted.map(g => {
               const spendPct = (g.spend / maxSpend) * 100;
-              const savingsPct = (g.savings / maxSpend) * 100;
+              const minSavPct = (g.minSavings / maxSpend) * 100;
+              const maxSavPct = (g.maxSavings / maxSpend) * 100;
               return (
                 <div key={g.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ width: 10, height: 10, borderRadius: "50%", background: g.color, flexShrink: 0 }} />
@@ -1331,17 +1344,21 @@ function ChartsView({ client, eraCategories, catLabel }) {
                   <div style={{ flex: 1, position: "relative", height: 18 }}>
                     {/* Spend bar */}
                     <div style={{ position: "absolute", top: 3, left: 0, height: 12, width: spendPct + "%", background: g.color, opacity: 0.7, borderRadius: 2 }} />
-                    {/* Savings bar */}
-                    {g.savings > 0 && (
-                      <div style={{ position: "absolute", top: 3, left: 0, height: 12, width: savingsPct + "%", background: "oklch(0.52 0.16 145)", opacity: 0.85, borderRadius: 2 }} />
+                    {/* Max savings range bar (lighter) */}
+                    {maxSavPct > 0 && (
+                      <div style={{ position: "absolute", top: 3, left: 0, height: 12, width: maxSavPct + "%", background: "oklch(0.65 0.14 145)", opacity: 0.55, borderRadius: 2 }} />
+                    )}
+                    {/* Min savings bar (darker) */}
+                    {minSavPct > 0 && (
+                      <div style={{ position: "absolute", top: 3, left: 0, height: 12, width: minSavPct + "%", background: "oklch(0.52 0.16 145)", opacity: 0.9, borderRadius: 2 }} />
                     )}
                   </div>
                   <span style={{ fontSize: 11, color: "var(--text-2)", fontFamily: "var(--font-mono)", minWidth: 80, textAlign: "right" }}>
                     {fmtMoney(g.spend, client.currency, { compact: true })}
                   </span>
-                  {g.savings > 0 && (
-                    <span style={{ fontSize: 11, color: "oklch(0.42 0.14 145)", fontFamily: "var(--font-mono)", minWidth: 80, textAlign: "right" }}>
-                      ↓{fmtMoney(g.savings, client.currency, { compact: true })}
+                  {maxSavPct > 0 && (
+                    <span style={{ fontSize: 11, color: "oklch(0.42 0.14 145)", fontFamily: "var(--font-mono)", minWidth: 120, textAlign: "right" }}>
+                      ↓{fmtMoney(g.minSavings, client.currency, { compact: true })}–{fmtMoney(g.maxSavings, client.currency, { compact: true })}
                     </span>
                   )}
                 </div>
@@ -1349,7 +1366,8 @@ function ChartsView({ client, eraCategories, catLabel }) {
             })}
             <div style={{ display: "flex", gap: 16, marginTop: 4, fontSize: 11, color: "var(--text-3)" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 6, background: "oklch(0.52 0.16 265)", opacity: 0.7, borderRadius: 1, display: "inline-block" }} />Gasto total</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 6, background: "oklch(0.52 0.16 145)", borderRadius: 1, display: "inline-block" }} />Ahorro potencial</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 6, background: "oklch(0.52 0.16 145)", borderRadius: 1, display: "inline-block" }} />Ahorro mín (rango)</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 6, background: "oklch(0.65 0.14 145)", opacity: 0.7, borderRadius: 1, display: "inline-block" }} />Ahorro máx (rango)</span>
             </div>
           </div>
         )}
@@ -1357,8 +1375,8 @@ function ChartsView({ client, eraCategories, catLabel }) {
 
       {/* Chart 2: Scatter */}
       <div className="card">
-        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: "var(--text-1)" }}>Oportunidades — Monto vs % Ahorro</div>
-        <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 12 }}>Tamaño del punto = factibilidad (1–5)</div>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: "var(--text-1)" }}>Oportunidades — Monto vs Rango de Ahorro</div>
+        <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 12 }}>Y = punto medio del rango mín–máx · Barra vertical = rango · Tamaño = factibilidad · Color = categoría ERA</div>
         <div style={{ position: "relative", width: "100%" }}>
           <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: "100%", height: svgH, display: "block" }} preserveAspectRatio="xMidYMid meet">
             {/* Axes */}
@@ -1376,20 +1394,32 @@ function ChartsView({ client, eraCategories, catLabel }) {
             })}
             {/* X axis label */}
             <text x={padL + plotW / 2} y={svgH - 2} textAnchor="middle" fontSize={6} fill="var(--text-3)">Monto →</text>
-            <text x={5} y={padT + plotH / 2} textAnchor="middle" fontSize={6} fill="var(--text-3)" transform={`rotate(-90 5 ${padT + plotH / 2})`}>% Ahorro →</text>
-            {/* Points */}
+            <text x={5} y={padT + plotH / 2} textAnchor="middle" fontSize={6} fill="var(--text-3)" transform={`rotate(-90 5 ${padT + plotH / 2})`}>% Ahorro (rango) →</text>
+            {/* Range bars + Points */}
             {scatterPoints.map(pt => (
-              <circle
-                key={pt.i}
-                cx={pt.x}
-                cy={pt.y}
-                r={pt.r}
-                fill={pt.color}
-                opacity={0.75}
-                style={{ cursor: "default" }}
-              >
-                <title>{pt.label}</title>
-              </circle>
+              <g key={pt.i}>
+                {/* Vertical range bar (min to max) */}
+                {(pt.minPct > 0 || pt.maxPct > 0) && pt.yMin !== pt.yMax && (
+                  <line
+                    x1={pt.x} y1={pt.yMin}
+                    x2={pt.x} y2={pt.yMax}
+                    stroke={pt.color}
+                    strokeWidth={1.5}
+                    opacity={0.4}
+                  />
+                )}
+                {/* Center point at midpoint */}
+                <circle
+                  cx={pt.x}
+                  cy={pt.y}
+                  r={pt.r}
+                  fill={pt.color}
+                  opacity={0.75}
+                  style={{ cursor: "default" }}
+                >
+                  <title>{pt.label}</title>
+                </circle>
+              </g>
             ))}
           </svg>
         </div>
