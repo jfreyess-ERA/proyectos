@@ -329,7 +329,6 @@ function ExpensesView({ client, readonly = false }) {
 
       <Tabs active={mode} onChange={setMode} tabs={[
         { id: "table",      label: t.expenses.modes.table, count: expenses.length || null },
-        { id: "categories", label: "Categorías" },
         { id: "rangos",     label: "⊞ Rangos" },
         ...(!readonly ? [
           { id: "manual", label: t.expenses.modes.manual },
@@ -349,16 +348,6 @@ function ExpensesView({ client, readonly = false }) {
           onToggleFilters={() => setShowFilters(s => !s)}
           onChangeFilters={setFilters}
           activeIdx={drawerIdx}
-          readonly={readonly}
-        />
-      )}
-      {mode === "categories" && (
-        <CategoriesTab client={client} catLabel={catLabel} eraCategories={eraCategories}
-          onSetMapping={(catId, eraId) => store.setCategoryMapping(client.id, catId, eraId)}
-          onDeleteCat={(catId) => store.updateClient(client.id, { categories: client.categories.filter(c => c.id !== catId) })}
-          onUpdateCat={(catId, patch) => store.updateClient(client.id, {
-            categories: client.categories.map(c => c.id === catId ? { ...c, ...patch } : c)
-          })}
           readonly={readonly}
         />
       )}
