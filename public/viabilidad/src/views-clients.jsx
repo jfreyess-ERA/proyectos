@@ -78,8 +78,24 @@ function ClientsView({ onOpen }) {
                 const { min: savMin, max: savMax } = savingsRange(c);
                 const hasSavings = savMax > 0;
                 return (
-                  <div key={c.id} className="client-card" onClick={() => onOpen(c.id)}>
-                    <div className="row between">
+                  <div key={c.id} className="client-card" onClick={() => onOpen(c.id)}
+                    style={{ position: "relative" }}>
+                    <button
+                      className="btn ghost sm danger"
+                      title="Eliminar cliente"
+                      style={{
+                        position: "absolute", top: 8, right: 8,
+                        padding: "2px 7px", fontSize: 13, lineHeight: 1,
+                        opacity: 0.5, zIndex: 1,
+                      }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (confirm(`¿Eliminar "${c.legalName || "este cliente"}"? Esta acción no se puede deshacer.`)) {
+                          store.deleteClient(c.id);
+                        }
+                      }}
+                    >×</button>
+                    <div className="row between" style={{ paddingRight: 24 }}>
                       <div>
                         <div className="name">{c.legalName || "—"}</div>
                         <div className="meta">{c.sector || ""} {c.country ? "· " + c.country : ""}</div>
