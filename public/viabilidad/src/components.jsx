@@ -3,7 +3,7 @@
    ============================================================ */
 
 function Topbar({ children }) {
-  const { lang, setLang, t } = useI18n();
+  const { lang, setLang, t, amountUnit, setAmountUnit } = useI18n();
   return (
     <div className="topbar no-print">
       <div className="brand">
@@ -14,6 +14,10 @@ function Topbar({ children }) {
       <div className="topbar-spacer" />
       <div className="topbar-actions">
         {children}
+        <div className="lang-switch" title="Unidad de moneda">
+          <button className={amountUnit === "full" ? "on" : ""} onClick={() => setAmountUnit("full")}>$</button>
+          <button className={amountUnit === "MM" ? "on" : ""} onClick={() => setAmountUnit("MM")}>MM$</button>
+        </div>
         <div className="lang-switch">
           <button className={lang === "es" ? "on" : ""} onClick={() => setLang("es")}>ES</button>
           <button className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>EN</button>

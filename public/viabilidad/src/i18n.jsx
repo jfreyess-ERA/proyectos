@@ -468,13 +468,39 @@ const STRINGS = {
 };
 
 // Hook
-const I18nContext = React.createContext({ lang: "es", t: STRINGS.es });
+const I18nContext = React.createContext({ lang: "es", t: STRINGS.es, amountUnit: "full" });
 
 function I18nProvider({ children }) {
   const [lang, setLang] = React.useState(() => localStorage.getItem("nci.lang") || "es");
+  const [amountUnit, setAmountUnitState] = React.useState(() => localStorage.getItem("nci.amountUnit") || "full");
+
   React.useEffect(() => { localStorage.setItem("nci.lang", lang); }, [lang]);
+
+  // When unit changes, override window.fmtMoney so all components pick it up on next render
+  React.useEffect(() => {
+    localStorage.setItem("nci.amountUnit", amountUnit);
+    if (amountUnit === "MM") {
+      window.fmtMoney = function fmtMoneyMM(amount) {
+        if (amount == null || isNaN(amount)) return "—";
+        const mm = (amount || 0) / 1_000_000;
+        const decimals = Math.abs(mm) < 10 ? 1 : 0;
+        return "MM$ " + mm.toLocaleString("es-CL", {
+          maximumFractionDigits: decimals,
+          minimumFractionDigits: decimals,
+        });
+      };
+    } else {
+      window.fmtMoney = fmtMoneyFull;
+    }
+  }, [amountUnit]);
+
+  const setAmountUnit = (u) => setAmountUnitState(u);
   const t = STRINGS[lang];
-  return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>;
+  return (
+    <I18nContext.Provider value={{ lang, setLang, t, amountUnit, setAmountUnit }}>
+      {children}
+    </I18nContext.Provider>
+  );
 }
 
 function useI18n() { return React.useContext(I18nContext); }
@@ -486,7 +512,7 @@ const CURRENCIES = {
   EUR: { code: "EUR", symbol: "€", locale: "es-ES" },
 };
 
-function fmtMoney(amount, currency = "CLP", { compact = false, decimals = 0 } = {}) {
+function fmtMoneyFull(amount, currency = "CLP", { compact = false, decimals = 0 } = {}) {
   if (amount == null || isNaN(amount)) return "—";
   const c = CURRENCIES[currency] || CURRENCIES.CLP;
   const opts = {
@@ -499,6 +525,11 @@ function fmtMoney(amount, currency = "CLP", { compact = false, decimals = 0 } = 
     return new Intl.NumberFormat(c.locale, { ...opts, notation: "compact", maximumFractionDigits: 1 }).format(amount);
   }
   return new Intl.NumberFormat(c.locale, opts).format(amount);
+}
+
+// Default: full pesos. Overridden by I18nProvider when unit = "MM"
+function fmtMoney(amount, currency = "CLP", opts = {}) {
+  return fmtMoneyFull(amount, currency, opts);
 }
 
 function fmtNum(n, decimals = 0) {
