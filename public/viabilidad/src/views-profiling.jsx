@@ -24,6 +24,153 @@ function MiniSparkline({ data, currency, color = "var(--accent)" }) {
   );
 }
 
+// ── Color palette for multi-series charts ──────────────────────
+const CHART_PALETTE = [
+  "#4A90D9","#E8A838","#2ECC71","#E74C3C",
+  "#9B59B6","#1ABC9C","#F39C12","#E91E63",
+  "#00BCD4","#FF5722","#607D8B","#8BC34A",
+];
+const MONTH_ABBR_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+function DrawerEvolution({ expenses, currency, categoryColor }) {
+  const [mode, setMode] = React.useState("total"); // "total" | "lines" | "suppliers"
+  const [hiddenKeys, setHiddenKeys] = React.useState(new Set());
+
+  const withMonthly = expenses.filter(e => e.monthly && e.monthly.length > 0);
+  if (withMonthly.length === 0) return null;
+
+  const nMonths = Math.max(...withMonthly.map(e => e.monthly.length));
+  const idxs = Array.from({ length: nMonths }, (_, i) => i);
+
+  // Build series based on mode
+  let series;
+  if (mode === "total") {
+    series = [{
+      key: "total", label: "Total",
+      data: idxs.map(i => withMonthly.reduce((s, e) => s + (e.monthly[i] || 0), 0)),
+      color: categoryColor || "#4A90D9",
+    }];
+  } else if (mode === "lines") {
+    series = withMonthly.map((e, idx) => ({
+      key: e.id || String(idx),
+      label: [e.supplier, e.subcategory].filter(Boolean).join(" · ") || `Línea ${idx + 1}`,
+      data: idxs.map(i => e.monthly[i] || 0),
+      color: CHART_PALETTE[idx % CHART_PALETTE.length],
+    }));
+  } else {
+    // by supplier
+    const map = {};
+    withMonthly.forEach(e => {
+      const key = e.supplier?.trim() || "—";
+      if (!map[key]) map[key] = { key, label: key, data: Array(nMonths).fill(0), color: CHART_PALETTE[Object.keys(map).length % CHART_PALETTE.length] };
+      idxs.forEach(i => { map[key].data[i] += e.monthly[i] || 0; });
+    });
+    series = Object.values(map);
+  }
+
+  const visible = series.filter(s => !hiddenKeys.has(s.key));
+  const display = visible.length > 0 ? visible : series;
+
+  const toggleKey = (key) => setHiddenKeys(prev => {
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next.size >= series.length ? new Set() : next; // reset if hiding all
+  });
+
+  // SVG layout
+  const W = 460, H = 130, PL = 8, PR = 8, PT = 8, PB = 18;
+  const cW = W - PL - PR, cH = H - PT - PB;
+  const allVals = display.flatMap(s => s.data);
+  const maxV = Math.max(...allVals, 1);
+  const px = i => PL + (nMonths === 1 ? cW / 2 : (i / (nMonths - 1)) * cW);
+  const py = v => PT + cH - (v / maxV) * cH;
+  const step = Math.ceil(nMonths / 8);
+
+  const modeButtons = [
+    { id: "total", label: "Total" },
+    ...(withMonthly.length > 1 ? [{ id: "lines", label: "Por línea" }] : []),
+    ...(new Set(withMonthly.map(e => e.supplier?.trim() || "—")).size > 1 ? [{ id: "suppliers", label: "Por proveedor" }] : []),
+  ];
+
+  return (
+    <div style={{ marginTop: 20, borderTop: "1px solid var(--line)", paddingTop: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)" }}>
+          Evolución mensual · {nMonths} períodos
+        </div>
+        {modeButtons.length > 1 && (
+          <div style={{ display: "flex", gap: 3 }}>
+            {modeButtons.map(m => (
+              <button key={m.id} onClick={() => { setMode(m.id); setHiddenKeys(new Set()); }}
+                style={{
+                  padding: "3px 8px", borderRadius: 4, fontSize: 11, cursor: "pointer",
+                  border: "1px solid " + (mode === m.id ? "var(--accent)" : "var(--line)"),
+                  background: mode === m.id ? "var(--accent)" : "transparent",
+                  color: mode === m.id ? "#fff" : "var(--text-2)", fontWeight: 500,
+                }}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 130, display: "block" }}>
+        {/* Grid */}
+        {[0.25, 0.5, 0.75, 1].map(f => (
+          <line key={f} x1={PL} y1={py(maxV * f)} x2={W - PR} y2={py(maxV * f)}
+            stroke="var(--line)" strokeWidth="0.5" strokeDasharray="2 3" />
+        ))}
+        {/* Series */}
+        {display.map(s => {
+          const pts = s.data.map((v, i) => `${px(i)},${py(v)}`).join(" ");
+          const fill = `${px(0)},${py(0)} ${pts} ${px(nMonths - 1)},${py(0)}`;
+          const solo = display.length === 1;
+          return (
+            <g key={s.key}>
+              {solo && <polygon points={fill} fill={s.color} fillOpacity="0.12" />}
+              <polyline points={pts} fill="none" stroke={s.color}
+                strokeWidth={solo ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx={px(nMonths - 1)} cy={py(s.data[nMonths - 1])} r="3" fill={s.color} />
+            </g>
+          );
+        })}
+        {/* Month labels */}
+        {idxs.map(i => (i % step === 0 || i === nMonths - 1) && (
+          <text key={i} x={px(i)} y={H - 3} fontSize="8" fill="var(--text-3)"
+            textAnchor="middle" fontFamily="Trebuchet MS">
+            {MONTH_ABBR_ES[i % 12]}
+          </text>
+        ))}
+      </svg>
+
+      {/* Legend chips (filter) */}
+      {series.length > 1 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+          {series.map(s => {
+            const active = !hiddenKeys.has(s.key);
+            return (
+              <button key={s.key} onClick={() => toggleKey(s.key)} style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "3px 8px", borderRadius: 20, fontSize: 11, cursor: "pointer",
+                border: "1px solid " + (active ? s.color : "var(--line)"),
+                background: active ? s.color + "22" : "transparent",
+                color: active ? "var(--text-1)" : "var(--text-3)",
+                fontWeight: active ? 500 : 400, transition: "all .15s",
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: active ? s.color : "var(--line)", flexShrink: 0 }} />
+                <span style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {s.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose }) {
   const { t } = useI18n();
   if (!open || !categoryId) return null;
@@ -145,16 +292,6 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
             ))}
           </div>
 
-          {/* Monthly sparkline */}
-          {monthlyData.length > 1 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 6 }}>
-                Evolución mensual · {monthlyData.length} períodos
-              </div>
-              <MiniSparkline data={monthlyData} currency={client.currency} color={(isEraMode ? era?.color : cat?.color) || "var(--accent)"} />
-            </div>
-          )}
-
           {/* Suppliers breakdown */}
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 8 }}>
             {expenses.length} línea{expenses.length !== 1 ? "s" : ""} · {suppliers.length} proveedor{suppliers.length !== 1 ? "es" : ""}
@@ -190,6 +327,13 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
               </tbody>
             </table>
           </div>
+
+          {/* Monthly evolution chart */}
+          <DrawerEvolution
+            expenses={expenses}
+            currency={client.currency}
+            categoryColor={(isEraMode ? era?.color : cat?.color) || "var(--accent)"}
+          />
 
           {/* Notes — client category mode only */}
           {!isEraMode && cat?.notes && (
