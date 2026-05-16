@@ -470,37 +470,11 @@ const STRINGS = {
 // Hook
 const I18nContext = React.createContext({ lang: "es", t: STRINGS.es, amountUnit: "full" });
 
-function fmtMoneyMM(amount) {
-  if (amount == null || isNaN(amount)) return "—";
-  const mm = (amount || 0) / 1000000;
-  // Always show 1 decimal so it looks clearly different from compact $ (which shows "$343 M")
-  return "$ " + mm.toLocaleString("es-CL", {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: 1,
-  }) + " MM";
-}
-
-function I18nProvider({ children }) {
-  const [lang, setLang] = React.useState(() => localStorage.getItem("nci.lang") || "es");
-  const [amountUnit, setAmountUnitState] = React.useState(() => localStorage.getItem("nci.amountUnit") || "full");
-
-  React.useEffect(() => { localStorage.setItem("nci.lang", lang); }, [lang]);
-
-  // Update synchronously during render so children always see the correct fmtMoney
-  window.fmtMoney = amountUnit === "MM" ? fmtMoneyMM : fmtMoneyFull;
-
-  React.useEffect(() => { localStorage.setItem("nci.amountUnit", amountUnit); }, [amountUnit]);
-
-  const setAmountUnit = (u) => setAmountUnitState(u);
-  const t = STRINGS[lang];
-  return (
-    <I18nContext.Provider value={{ lang, setLang, t, amountUnit, setAmountUnit }}>
-      {children}
-    </I18nContext.Provider>
-  );
-}
-
-function useI18n() { return React.useContext(I18nContext); }
+// ── Amount unit ───────────────────────────────────────────────
+// _amountUnit is a module-level variable read by fmtMoney on every call.
+// I18nProvider updates it synchronously during render (before children render),
+// so all child fmtMoney() calls always see the current unit — no window override needed.
+var _amountUnit = "full";
 
 // Currency formatting
 const CURRENCIES = {
@@ -524,10 +498,43 @@ function fmtMoneyFull(amount, currency = "CLP", { compact = false, decimals = 0 
   return new Intl.NumberFormat(c.locale, opts).format(amount);
 }
 
-// Default: full pesos. Overridden by I18nProvider when unit = "MM"
+function fmtMoneyMM(amount) {
+  if (amount == null || isNaN(amount)) return "—";
+  const mm = (amount || 0) / 1000000;
+  // Always show 1 decimal: "$343,0 MM" — clearly distinct from compact "$343 M"
+  return "$ " + mm.toLocaleString("es-CL", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1,
+  }) + " MM";
+}
+
+// fmtMoney — single entry point used everywhere.
+// Reads _amountUnit on every call so the unit toggle is always respected.
 function fmtMoney(amount, currency = "CLP", opts = {}) {
+  if (_amountUnit === "MM") return fmtMoneyMM(amount);
   return fmtMoneyFull(amount, currency, opts);
 }
+
+function I18nProvider({ children }) {
+  const [lang, setLang] = React.useState(() => localStorage.getItem("nci.lang") || "es");
+  const [amountUnit, setAmountUnitState] = React.useState(() => localStorage.getItem("nci.amountUnit") || "full");
+
+  React.useEffect(() => { localStorage.setItem("nci.lang", lang); }, [lang]);
+  React.useEffect(() => { localStorage.setItem("nci.amountUnit", amountUnit); }, [amountUnit]);
+
+  // Update synchronously during render — before children render and call fmtMoney
+  _amountUnit = amountUnit;
+
+  const setAmountUnit = (u) => setAmountUnitState(u);
+  const t = STRINGS[lang];
+  return (
+    <I18nContext.Provider value={{ lang, setLang, t, amountUnit, setAmountUnit }}>
+      {children}
+    </I18nContext.Provider>
+  );
+}
+
+function useI18n() { return React.useContext(I18nContext); }
 
 function fmtNum(n, decimals = 0) {
   if (n == null || isNaN(n)) return "—";
@@ -539,4 +546,4 @@ function fmtPct(n, decimals = 1) {
   return n.toFixed(decimals) + "%";
 }
 
-Object.assign(window, { STRINGS, I18nContext, I18nProvider, useI18n, CURRENCIES, fmtMoney, fmtNum, fmtPct });
+Object.assign(window, { STRINGS, I18nContext, I18nProvider, useI18n, CURRENCIES, fmtMoney, fmtMoneyFull, fmtNum, fmtPct });
