@@ -7,9 +7,16 @@ function ProjectionView({ client }) {
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
   const [drawerCatId, setDrawerCatId] = React.useState(null);
+  const [sort, setSort] = React.useState({ col: null, dir: "desc" });
   const sc = { feePct: 30, feePctOnSavings: 50, feeMonths: 36, projectionYears: 5, includedCategories: null, ...(client.scenario || {}) };
   const groups = aggregateByEra(client, eraCategories);
   const total = totalSpend(client);
+
+  const toggleSort = (col) => setSort(s => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
+  const SI = ({ col }) => sort.col !== col ? <span style={{ opacity: 0.3, marginLeft: 3 }}>↕</span> : (
+    <span style={{ marginLeft: 3, opacity: 0.7 }}>{sort.dir === "desc" ? "↓" : "↑"}</span>
+  );
+  const thSort = { cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" };
 
   const included = sc.includedCategories;
   const isIncluded = (catId) => included == null || included.includes(catId);
@@ -19,6 +26,25 @@ function ProjectionView({ client }) {
   if (groups.length === 0) {
     return <Empty icon="◯" title={t.dashboard.empty} hint={t.expenses.lede} />;
   }
+
+  // Sort groups
+  const sortedGroups = React.useMemo(() => {
+    if (!sort.col) return groups;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...groups].sort((a, b) => {
+      let va, vb;
+      if      (sort.col === "name")    { va = (a.category?.label || "").toLowerCase(); vb = (b.category?.label || "").toLowerCase(); return dir * va.localeCompare(vb); }
+      else if (sort.col === "total")   { va = a.total;            vb = b.total; }
+      else if (sort.col === "minPct")  { va = a.avgMinPct;        vb = b.avgMinPct; }
+      else if (sort.col === "maxPct")  { va = a.avgMaxPct;        vb = b.avgMaxPct; }
+      else if (sort.col === "feas")    { va = a.avgFeasibility;   vb = b.avgFeasibility; }
+      else if (sort.col === "min")     { va = a.minSavings;       vb = b.minSavings; }
+      else if (sort.col === "avg")     { va = a.potentialSavings; vb = b.potentialSavings; }
+      else if (sort.col === "max")     { va = a.maxSavings;       vb = b.maxSavings; }
+      else return 0;
+      return dir * (va - vb);
+    });
+  }, [groups, sort]);
 
   // Totals
   const inc = groups.filter(g => isIncluded(g.categoryId));
@@ -96,18 +122,18 @@ function ProjectionView({ client }) {
           <thead>
             <tr>
               <th></th>
-              <th>{t.projection.cuentas}</th>
-              <th className="right">{t.projection.gasto}</th>
-              <th className="right">{t.projection.min} %</th>
-              <th className="right">{t.projection.max} %</th>
-              <th className="right">{t.projection.feas}</th>
-              <th className="right">{t.projection.min}</th>
-              <th className="right">{t.projection.avg}</th>
-              <th className="right">{t.projection.max}</th>
+              <th style={thSort} onClick={() => toggleSort("name")}>{t.projection.cuentas}<SI col="name"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("total")}>{t.projection.gasto}<SI col="total"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("minPct")}>{t.projection.min} %<SI col="minPct"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("maxPct")}>{t.projection.max} %<SI col="maxPct"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("feas")}>{t.projection.feas}<SI col="feas"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("min")}>{t.projection.min}<SI col="min"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("avg")}>{t.projection.avg}<SI col="avg"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("max")}>{t.projection.max}<SI col="max"/></th>
             </tr>
           </thead>
           <tbody>
-            {groups.map(g => {
+            {sortedGroups.map(g => {
               const included = isIncluded(g.categoryId);
               return (
                 <tr key={g.categoryId} style={{ opacity: included ? 1 : 0.45, cursor: "pointer" }}
