@@ -339,6 +339,18 @@ function totalSavings(client) {
   return client.expenses.reduce((s, e) => s + (+e.amount || 0) * (+e.savingsPct || 0) / 100, 0);
 }
 
+function savingsRange(client) {
+  if (!client) return { min: 0, max: 0 };
+  let min = 0, max = 0;
+  client.expenses.forEach(e => {
+    const amt = +e.amount || 0;
+    const scope = (e.scopePct == null ? 100 : +e.scopePct) / 100;
+    min += amt * scope * ((+e.savingsMinPct || 0) / 100);
+    max += amt * scope * ((+e.savingsMaxPct || 0) / 100);
+  });
+  return { min, max };
+}
+
 function tierFor(group, totalClient) {
   const share = totalClient > 0 ? group.total / totalClient : 0;
   const sav = group.avgSavingsPct;
@@ -584,7 +596,7 @@ function useStore() { return React.useContext(StoreContext); }
 Object.assign(window, {
   DEFAULT_CATEGORIES, blankClient, blankExpense, seedClient,
   genMonthly, getMonthly, StoreContext, StoreProvider, useStore,
-  aggregateByCategory, aggregateByEra, totalSpend, totalSavings, tierFor, uid,
+  aggregateByCategory, aggregateByEra, totalSpend, totalSavings, savingsRange, tierFor, uid,
   monthlyByCategory, monthlyByEra, monthlyTotals, MONTH_LABELS_ES, MONTH_LABELS_EN,
   periodCount, periodLabels,
 });

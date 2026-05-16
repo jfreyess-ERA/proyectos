@@ -46,9 +46,13 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
       })
     : client.expenses.filter(e => e.categoryId === categoryId);
   const total = expenses.reduce((s, e) => s + (+e.amount || 0), 0);
-  const avgSavPct = expenses.length > 0
-    ? expenses.reduce((s, e) => s + (+e.savingsPct || 0), 0) / expenses.length : 0;
-  const potentialSav = total * avgSavPct / 100;
+  let savMin = 0, savMax = 0;
+  expenses.forEach(e => {
+    const amt = +e.amount || 0;
+    const scope = (e.scopePct == null ? 100 : +e.scopePct) / 100;
+    savMin += amt * scope * ((+e.savingsMinPct || 0) / 100);
+    savMax += amt * scope * ((+e.savingsMaxPct || 0) / 100);
+  });
   const avgFeas = expenses.length > 0
     ? expenses.reduce((s, e) => s + (+e.feasibility || 0), 0) / expenses.length : 0;
 
@@ -131,12 +135,12 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
             {[
               { label: "Gasto total", value: fmtMoney(total, client.currency, { compact: true }), accent: false },
-              { label: "Ahorro potencial", value: potentialSav > 0 ? fmtMoney(potentialSav, client.currency, { compact: true }) : "—", accent: true },
+              { label: "Ahorro potencial", value: savMax > 0 ? `${fmtMoney(savMin, client.currency, { compact: true })} – ${fmtMoney(savMax, client.currency, { compact: true })}` : "—", accent: true },
               { label: "Factibilidad media", value: avgFeas > 0 ? avgFeas.toFixed(1) + " / 5" : "—", accent: false },
             ].map(({ label, value, accent }) => (
               <div key={label} style={{ padding: "10px 12px", background: "var(--surface-2)", borderRadius: 8, border: "1px solid var(--line)" }}>
                 <div style={{ fontSize: 10, color: "var(--text-3)", marginBottom: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
-                <div style={{ fontWeight: 700, fontSize: 15, color: accent ? "var(--positive-2)" : "var(--text-1)" }}>{value}</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: accent ? "var(--positive-2)" : "var(--text-1)" }}>{value}</div>
               </div>
             ))}
           </div>

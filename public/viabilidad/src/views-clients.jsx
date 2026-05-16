@@ -75,7 +75,8 @@ function ClientsView({ onOpen }) {
             <div className="grid cols-3">
               {filtered.map(c => {
                 const spend = totalSpend(c);
-                const sav = totalSavings(c);
+                const { min: savMin, max: savMax } = savingsRange(c);
+                const hasSavings = savMax > 0;
                 return (
                   <div key={c.id} className="client-card" onClick={() => onOpen(c.id)}>
                     <div className="row between">
@@ -97,7 +98,11 @@ function ClientsView({ onOpen }) {
                         <div className="l">{t.clients.spend}</div>
                       </div>
                       <div>
-                        <div className="v" style={{ color: "var(--positive-2)" }}>{fmtMoney(sav, c.currency, { compact: true })}</div>
+                        <div className="v" style={{ color: "var(--positive-2)", fontSize: hasSavings ? 13 : undefined }}>
+                          {hasSavings
+                            ? `${fmtMoney(savMin, c.currency, { compact: true })} – ${fmtMoney(savMax, c.currency, { compact: true })}`
+                            : "—"}
+                        </div>
                         <div className="l">{t.clients.savings}</div>
                       </div>
                     </div>
