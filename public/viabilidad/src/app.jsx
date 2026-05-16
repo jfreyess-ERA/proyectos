@@ -230,7 +230,6 @@ function App() {
     { id: "projection", label: t.nav.projection },
     { id: "gantt",      label: t.nav.gantt },
     { id: "dashboard",  label: t.nav.dashboard },
-    { id: "profiling",  label: t.nav.profiling },
     { id: "scenarios",  label: t.nav.scenarios },
   ];
 
@@ -280,7 +279,6 @@ function App() {
         {section === "projection" && <ProjectionView client={active} readonly={readonly} />}
         {section === "gantt"      && <GanttView client={active} readonly={readonly} />}
         {section === "dashboard"  && <DashboardView client={active} readonly={readonly} />}
-        {section === "profiling"  && <ProfilingView client={active} readonly={readonly} />}
         {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}
       </main>
       <SaveIndicator status={saveStatus} />
