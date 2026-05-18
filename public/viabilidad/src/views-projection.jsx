@@ -903,11 +903,11 @@ function ResourcesPanel({ client, groups, retAvg }) {
     .sort((a, b) => b.hours - a.hours)
     .map((role, i) => ({ ...role, value: +role.hours, color: ROLE_COLORS[i % ROLE_COLORS.length] }));
 
-  const TW = 340, TH = 220;
+  const TW = 200, TH = 280;
   const tiles = buildTreemap(tmItems, 2, 2, TW - 4, TH - 4);
 
   const EYE = { fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--text-3)", fontWeight: 700 };
-  const CHART_H = 230; // shared height for both charts
+  const CHART_H = 280; // shared height for both charts
 
   return (
     <div className="card">
@@ -1031,7 +1031,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
         <div>
           <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
           {tmItems.length > 0 ? (
-            <div style={{ height: CHART_H }}>
+            <div style={{ height: CHART_H, maxWidth: 230 }}>
               <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" height="100%"
                 preserveAspectRatio="none" style={{ display: "block", borderRadius: 10, overflow: "hidden" }}>
                 {tiles.map((tile, i) => {
