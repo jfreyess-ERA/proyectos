@@ -2,7 +2,7 @@
    Projection (Lámina 7) + Resources (Lámina 8) + Gantt (Lámina 9)
    ============================================================ */
 
-function ProjectionView({ client, onGoToRangos }) {
+function ProjectionView({ client, readonly = false, onGoToRangos }) {
   const { t } = useI18n();
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
