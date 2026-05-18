@@ -881,6 +881,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
 
   const eraPct = totalHH > 0 ? Math.round((eraHH / totalHH) * 100) : 0;
   const cliPct = 100 - eraPct;
+  const maxHH  = Math.max(eraHH, clientHH, 1);
 
   // ── Donut geometry ─────────────────────────────────────────────
   const cx = 110, cy = 110, Ro = 100, Ri = 52;
@@ -907,7 +908,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
   const tiles = buildTreemap(tmItems, 2, 2, TW - 4, TH - 4);
 
   const EYE = { fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--text-3)", fontWeight: 700 };
-  const CHART_H = 280; // shared height for both charts
+  const CHART_H = 260; // shared height for all charts
 
   return (
     <div className="card">
@@ -976,15 +977,13 @@ function ResourcesPanel({ client, groups, retAvg }) {
         </div>
       </div>
 
-      {/* ── BOTTOM: Charts — equal columns, equal height ─────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
+      {/* ── BOTTOM: 3-col charts — donut | treemap | bars ──────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 190px", gap: 24, alignItems: "start" }}>
 
-        {/* Donut chart */}
+        {/* 1 · Donut */}
         <div>
           <div style={{ ...EYE, marginBottom: 12 }}>Distribución de horas</div>
-
-          {/* Donut SVG — fixed height, same as treemap */}
-          <div style={{ height: CHART_H, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ height: CHART_H, width: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg viewBox="0 0 220 220" style={{ height: "100%", width: "auto", display: "block", overflow: "visible" }}>
               {totalHH === 0 ? (
                 <circle cx={cx} cy={cy} r={Ro} fill="var(--surface-2)" stroke="var(--line)" />
@@ -998,7 +997,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
                   <path d={pieSlice(eraAngle, 2 * Math.PI)} fill={CLI_BLUE} stroke="white" strokeWidth="2" />
                 </>
               )}
-              {/* Donut hole — white with total HH */}
+              {/* Donut hole */}
               <circle cx={cx} cy={cy} r={Ri + 3} fill="white" />
               <circle cx={cx} cy={cy} r={Ri} fill="white" stroke="var(--line)" strokeWidth="1" />
               <text x={cx} y={cy - 8} textAnchor="middle" fontSize="9.5" fill="var(--text-3)"
@@ -1007,31 +1006,13 @@ function ResourcesPanel({ client, groups, retAvg }) {
                 fill="var(--ink)" fontFamily="Trebuchet MS">{totalHH.toLocaleString("es-CL")}</text>
             </svg>
           </div>
-
-          {/* Legend below donut */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 20, marginTop: 14, fontSize: 12 }}>
-            <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-              <span style={{ width: 12, height: 12, background: ERA_ORANGE, borderRadius: 3, flexShrink: 0 }} />
-              <div>
-                <span style={{ fontWeight: 700 }}>ERA Group</span>
-                <span style={{ color: "var(--text-3)", marginLeft: 6 }}>{eraHH.toLocaleString("es-CL")} HH · {eraPct}%</span>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-              <span style={{ width: 12, height: 12, background: CLI_BLUE, borderRadius: 3, flexShrink: 0 }} />
-              <div>
-                <span style={{ fontWeight: 700 }}>{clientName}</span>
-                <span style={{ color: "var(--text-3)", marginLeft: 6 }}>{clientHH.toLocaleString("es-CL")} HH · {cliPct}%</span>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Treemap — same height as donut container */}
+        {/* 2 · Treemap */}
         <div>
           <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
           {tmItems.length > 0 ? (
-            <div style={{ height: CHART_H, maxWidth: 230 }}>
+            <div style={{ height: CHART_H, maxWidth: 220 }}>
               <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" height="100%"
                 preserveAspectRatio="none" style={{ display: "block", borderRadius: 10, overflow: "hidden" }}>
                 {tiles.map((tile, i) => {
@@ -1070,6 +1051,51 @@ function ResourcesPanel({ client, groups, retAvg }) {
             <div style={{ color: "var(--text-3)", fontSize: 13 }}>Sin cargos con horas definidas.</div>
           )}
         </div>
+
+        {/* 3 · Horizontal bars */}
+        <div>
+          <div style={{ ...EYE, marginBottom: 18 }}>HH estimadas</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+
+            {/* ERA bar */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>ERA Group</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: ERA_ORANGE, fontVariantNumeric: "tabular-nums" }}>
+                  {eraHH.toLocaleString("es-CL")}
+                  <span style={{ fontSize: 10, fontWeight: 400, marginLeft: 3, color: "var(--text-3)" }}>HH</span>
+                </span>
+              </div>
+              <div style={{ background: "var(--surface-2)", borderRadius: 6, height: 20, overflow: "hidden" }}>
+                <div style={{
+                  width: `${eraHH / maxHH * 100}%`, background: ERA_ORANGE,
+                  height: "100%", borderRadius: 6, transition: "width 0.4s ease"
+                }} />
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 5 }}>{eraPct}% del total</div>
+            </div>
+
+            {/* Client bar */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>{clientName}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: CLI_BLUE, fontVariantNumeric: "tabular-nums" }}>
+                  {clientHH.toLocaleString("es-CL")}
+                  <span style={{ fontSize: 10, fontWeight: 400, marginLeft: 3, color: "var(--text-3)" }}>HH</span>
+                </span>
+              </div>
+              <div style={{ background: "var(--surface-2)", borderRadius: 6, height: 20, overflow: "hidden" }}>
+                <div style={{
+                  width: `${clientHH / maxHH * 100}%`, background: CLI_BLUE,
+                  height: "100%", borderRadius: 6, transition: "width 0.4s ease"
+                }} />
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 5 }}>{cliPct}% del total</div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
 
       <div className="grid cols-2" style={{ marginTop: 24 }}>
