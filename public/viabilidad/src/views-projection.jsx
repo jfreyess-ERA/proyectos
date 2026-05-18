@@ -12,6 +12,53 @@ function ProjectionView({ client, onGoToRangos }) {
   const tableCardRef = React.useRef(null);
   const [downloading, setDownloading] = React.useState(false);
   const [showRangos, setShowRangos] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
+  // editDraft: { [categoryId]: { scopePct, feasibility, savingsMinPct, savingsMaxPct } }
+  const [editDraft, setEditDraft] = React.useState({});
+
+  const startEdit = () => {
+    // Seed draft with current aggregated values per category
+    const draft = {};
+    groups.forEach(g => {
+      draft[g.categoryId] = {
+        scopePct:     Math.round(g.avgScopePct),
+        feasibility:  Math.round(g.avgFeasibility),
+        savingsMinPct: parseFloat(g.avgMinPct.toFixed(1)),
+        savingsMaxPct: parseFloat(g.avgMaxPct.toFixed(1)),
+      };
+    });
+    setEditDraft(draft);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => { setEditing(false); setEditDraft({}); };
+
+  const saveEdit = () => {
+    // Build a lookup: clientCategoryId → eraId
+    const catToEra = {};
+    (client.categories || []).forEach(c => { catToEra[c.id] = c.eraId || "__unassigned__"; });
+    const expenses = client.expenses;
+    const next = expenses.map(e => {
+      const eraId = catToEra[e.categoryId] || "__unassigned__";
+      const d = editDraft[eraId];
+      if (!d) return e;
+      return {
+        ...e,
+        scopePct:     d.scopePct,
+        feasibility:  d.feasibility,
+        savingsMinPct: d.savingsMinPct,
+        savingsMaxPct: d.savingsMaxPct,
+        savingsPct:   parseFloat(((d.savingsMinPct + d.savingsMaxPct) / 2).toFixed(1)),
+      };
+    });
+    store.setExpenses(client.id, next);
+    setEditing(false);
+    setEditDraft({});
+  };
+
+  const patchDraft = (categoryId, patch) => {
+    setEditDraft(prev => ({ ...prev, [categoryId]: { ...prev[categoryId], ...patch } }));
+  };
 
   const downloadTableImage = () => {
     if (!tableCardRef.current || downloading) return;
@@ -398,6 +445,15 @@ function ProjectionView({ client, onGoToRangos }) {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Pill variant="champagne">{sortedGroups.length} / {groups.length}</Pill>
+              {!readonly && !editing && (
+                <button className="btn ghost sm" onClick={startEdit}>✏ Editar</button>
+              )}
+              {!readonly && editing && (
+                <>
+                  <button className="btn primary sm" onClick={saveEdit}>✓ Guardar</button>
+                  <button className="btn ghost sm" onClick={cancelEdit}>Cancelar</button>
+                </>
+              )}
               <button
                 className="btn ghost sm"
                 title="Descargar tabla como imagen"
@@ -484,11 +540,58 @@ function ProjectionView({ client, onGoToRangos }) {
                   </td>
                   <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
                   <td className="right tabular" style={{ fontWeight: 700 }}>{fmtMoney(g.total, client.currency)}</td>
-                  <td className="right tabular">{fmtPct(g.avgScopePct)}</td>
+                  {editing ? (
+                    <td className="right" style={{ padding: "4px 8px" }}>
+                      <input type="number" min="0" max="100" step="1"
+                        value={editDraft[g.categoryId]?.scopePct ?? Math.round(g.avgScopePct)}
+                        onChange={e => patchDraft(g.categoryId, { scopePct: Math.min(100, Math.max(0, +e.target.value)) })}
+                        onClick={ev => ev.stopPropagation()}
+                        className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
+                    </td>
+                  ) : (
+                    <td className="right tabular">{fmtPct(g.avgScopePct)}</td>
+                  )}
                   <td className="right tabular">{fmtMoney(g.optimizationAmount, client.currency)}</td>
-                  <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
-                  <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} /></td>
-                  <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} /></td>
+                  {editing ? (
+                    <td className="right" style={{ padding: "4px 8px" }}>
+                      <div style={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
+                        {[1,2,3,4,5].map(v => {
+                          const cur = editDraft[g.categoryId]?.feasibility ?? Math.round(g.avgFeasibility);
+                          return (
+                            <span key={v}
+                              onClick={ev => { ev.stopPropagation(); patchDraft(g.categoryId, { feasibility: v }); }}
+                              style={{ width: 14, height: 14, borderRadius: 2, cursor: "pointer", flexShrink: 0,
+                                background: v <= cur ? (cur >= 4 ? "var(--positive-2)" : cur >= 3 ? "var(--champagne)" : "#c0392b") : "var(--line)" }}
+                            />
+                          );
+                        })}
+                      </div>
+                    </td>
+                  ) : (
+                    <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
+                  )}
+                  {editing ? (
+                    <td style={{ padding: "4px 8px" }}>
+                      <input type="number" min="0" max="100" step="0.5"
+                        value={editDraft[g.categoryId]?.savingsMinPct ?? parseFloat(g.avgMinPct.toFixed(1))}
+                        onChange={e => patchDraft(g.categoryId, { savingsMinPct: Math.min(100, Math.max(0, +e.target.value)) })}
+                        onClick={ev => ev.stopPropagation()}
+                        className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
+                    </td>
+                  ) : (
+                    <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} /></td>
+                  )}
+                  {editing ? (
+                    <td style={{ padding: "4px 8px" }}>
+                      <input type="number" min="0" max="100" step="0.5"
+                        value={editDraft[g.categoryId]?.savingsMaxPct ?? parseFloat(g.avgMaxPct.toFixed(1))}
+                        onChange={e => patchDraft(g.categoryId, { savingsMaxPct: Math.min(100, Math.max(0, +e.target.value)) })}
+                        onClick={ev => ev.stopPropagation()}
+                        className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
+                    </td>
+                  ) : (
+                    <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} /></td>
+                  )}
                   <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(g.minSavings, client.currency)}</td>
                   <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(g.maxSavings, client.currency)}</td>
                 </tr>
@@ -555,54 +658,6 @@ function ProjectionView({ client, onGoToRangos }) {
         </div>
       </div>
 
-      {/* Edit ranges per expense line */}
-      <div className="card flat" style={{ padding: "14px 20px", background: "var(--surface-2)", fontSize: 13, color: "var(--text-2)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <span>💡 Los rangos por línea (alcance, ahorro mín/máx, factibilidad) se configuran en la pestaña <strong>Gastos y datos cliente → Rangos</strong>.</span>
-        <button
-          className="btn ghost sm"
-          onClick={() => setShowRangos(true)}
-          style={{ whiteSpace: "nowrap", flexShrink: 0 }}
-        >
-          ⊞ Editar rangos →
-        </button>
-      </div>
-
-      {/* Rangos slide-over drawer */}
-      {showRangos && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex" }} onClick={() => setShowRangos(false)}>
-          {/* Backdrop */}
-          <div style={{ flex: 1, background: "rgba(0,0,0,0.25)" }} />
-          {/* Panel */}
-          <div
-            style={{ width: "min(540px, 95vw)", background: "var(--bg)", boxShadow: "-4px 0 24px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", overflow: "hidden" }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Panel header */}
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-              <div>
-                <div className="eyebrow">Proyección</div>
-                <h3 className="h3" style={{ margin: 0 }}>Rangos por categoría</h3>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {onGoToRangos && (
-                  <button
-                    className="btn ghost sm"
-                    onClick={() => { setShowRangos(false); onGoToRangos(); }}
-                    title="Abrir en pestaña Gastos y datos cliente"
-                  >
-                    Ir a Gastos y datos cliente → Rangos ↗
-                  </button>
-                )}
-                <button className="btn ghost sm" onClick={() => setShowRangos(false)} style={{ fontSize: 18, padding: "2px 8px", lineHeight: 1 }}>✕</button>
-              </div>
-            </div>
-            {/* Panel body */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
-              <RangesTab client={client} readonly={false} />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Tier cards (Quick win / Estratégica / Mantener / Descartar) */}
       <div className="grid cols-4">
