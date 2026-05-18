@@ -410,7 +410,7 @@ function App() {
         {section === "expenses"   && <SpendSummary client={active} />}
         {section === "evolution"  && <EvolutionView client={active} readonly={readonly} />}
         {section === "projection" && <ProjectionView client={active} readonly={readonly} onGoToRangos={() => { setSection("expenses"); setRequestedExpensesMode("rangos"); }} />}
-        {section === "projection" && <HonorariosChart client={active} />}
+        {section === "projection" && <div style={{ marginTop: 40 }}><HonorariosChart client={active} /></div>}
         {section === "projection" && <div style={{ marginTop: 40 }}><GanttView client={active} readonly={readonly} /></div>}
         {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}
       </main>
