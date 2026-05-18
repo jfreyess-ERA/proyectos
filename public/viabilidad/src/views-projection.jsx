@@ -1307,62 +1307,76 @@ function GanttView({ client }) {
                   <td className="right tabular" style={{ fontWeight: 700 }}>{total}m</td>
                   <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
                   <td style={{ padding: "4px 8px" }}>
-                    {/* Grid: cada columna = 1 mes, igual ancho */}
-                    <div style={{ display: "grid", gridTemplateColumns: `repeat(${totalMonths}, 1fr)`, columnGap: 1, height: 22 }}>
-                      {p.start > 0 && <div style={{ gridColumn: `1 / span ${p.start}` }} />}
-                      {segments.map((seg, si) => {
-                        const offset = segments.slice(0, si).reduce((s, x) => s + x.dur, 0);
-                        const colStart = p.start + offset + 1;
-                        const color = STAGE_COLORS[seg.stage];
-                        const label = t.gantt.stagesShort[seg.stage];
-                        const isFirst = si === 0;
-                        const isLast = si === segments.length - 1;
-                        if (seg.stage !== "G" || seg.dur <= 6) {
-                          return Array.from({ length: seg.dur }, (_, j) => (
-                            <div key={`${si}-${j}`} style={{
-                              gridColumn: String(colStart + j),
-                              background: color, display: "flex", alignItems: "center",
-                              justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
-                              borderRadius: (isFirst && j === 0) ? "3px 0 0 3px" : (isLast && j === seg.dur - 1) ? "0 3px 3px 0" : 0,
-                            }}>{label}</div>
-                          ));
-                        }
-                        // Seguimiento largo (>6): 3 celdas + dots spanning medio + 3 celdas
-                        // Cada bloque ocupa exactamente 1 columna del grid = mismo ancho
-                        return [
-                          ...[0,1,2].map(j => (
-                            <div key={`${si}-s${j}`} style={{
-                              gridColumn: String(colStart + j),
-                              background: color, display: "flex", alignItems: "center",
-                              justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
-                              borderRadius: isFirst && j === 0 ? "3px 0 0 3px" : 0,
-                            }}>{label}</div>
-                          )),
-                          <div key={`${si}-dots`} style={{
-                            gridColumn: `${colStart + 3} / span ${seg.dur - 6}`,
-                            background: color, display: "flex", alignItems: "center",
-                            justifyContent: "center", color: "rgba(255,255,255,0.7)", fontSize: 10, letterSpacing: 3,
-                          }}>···</div>,
-                          ...[0,1,2].map(j => (
-                            <div key={`${si}-e${j}`} style={{
-                              gridColumn: String(colStart + seg.dur - 3 + j),
-                              background: color, display: "flex", alignItems: "center",
-                              justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
-                              borderRadius: isLast && j === 2 ? "0 3px 3px 0" : 0,
-                            }}>{label}</div>
-                          )),
-                        ];
-                      })}
-                    </div>
-                    {/* Month scale: M{start+1} … M{end} */}
-                    {total > 0 && (
-                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${totalMonths}, 1fr)`, columnGap: 1, fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
-                        <span style={{ gridColumn: String(p.start + 1) }}>M{p.start + 1}</span>
-                        {p.start + total > p.start + 1 && (
-                          <span style={{ gridColumn: String(p.start + total), textAlign: "right" }}>M{p.start + total}</span>
-                        )}
-                      </div>
-                    )}
+                    {(() => {
+                      // Si hay un Seguimiento largo, construimos un gridTemplateColumns
+                      // especial: 1fr por cada mes normal + 20px fijo para los puntos + 1fr×3 al final.
+                      // Así los 6 bloques Seg. son exactamente 1fr (=mismo ancho que el resto)
+                      // y los ··· ocupan solo 20px.
+                      const gSeg = segments.find(s => s.stage === "G" && s.dur > 6);
+                      const preG = gSeg
+                        ? p.start + segments.reduce((s, seg) => seg === gSeg ? s : s + seg.dur, 0)
+                        : 0;
+                      const gridCols = gSeg
+                        ? (preG > 0 ? `repeat(${preG}, 1fr) ` : '') + '1fr 1fr 1fr 20px 1fr 1fr 1fr'
+                        : `repeat(${totalMonths}, 1fr)`;
+                      const gCol = preG + 1; // columna grid donde empieza G (1-indexed)
+
+                      return (
+                        <>
+                          <div style={{ display: "grid", gridTemplateColumns: gridCols, columnGap: 1, height: 22 }}>
+                            {p.start > 0 && <div style={{ gridColumn: `1 / span ${p.start}` }} />}
+                            {segments.map((seg, si) => {
+                              const offset = segments.slice(0, si).reduce((s, x) => s + x.dur, 0);
+                              const colStart = p.start + offset + 1;
+                              const color = STAGE_COLORS[seg.stage];
+                              const label = t.gantt.stagesShort[seg.stage];
+                              const isFirst = si === 0;
+                              const isLast = si === segments.length - 1;
+                              if (seg !== gSeg) {
+                                return Array.from({ length: seg.dur }, (_, j) => (
+                                  <div key={`${si}-${j}`} style={{
+                                    gridColumn: String(colStart + j),
+                                    background: color, display: "flex", alignItems: "center",
+                                    justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
+                                    borderRadius: (isFirst && j === 0) ? "3px 0 0 3px" : (isLast && j === seg.dur - 1) ? "0 3px 3px 0" : 0,
+                                  }}>{label}</div>
+                                ));
+                              }
+                              // Seguimiento largo: 3×1fr + 20px + 3×1fr
+                              return [
+                                ...[0,1,2].map(j => (
+                                  <div key={`${si}-s${j}`} style={{
+                                    gridColumn: String(gCol + j),
+                                    background: color, display: "flex", alignItems: "center",
+                                    justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
+                                    borderRadius: isFirst && j === 0 ? "3px 0 0 3px" : 0,
+                                  }}>{label}</div>
+                                )),
+                                <div key={`${si}-dots`} style={{
+                                  gridColumn: String(gCol + 3),
+                                  background: color, display: "flex", alignItems: "center",
+                                  justifyContent: "center", color: "rgba(255,255,255,0.7)", fontSize: 10, letterSpacing: 3,
+                                }}>···</div>,
+                                ...[0,1,2].map(j => (
+                                  <div key={`${si}-e${j}`} style={{
+                                    gridColumn: String(gCol + 4 + j),
+                                    background: color, display: "flex", alignItems: "center",
+                                    justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
+                                    borderRadius: isLast && j === 2 ? "0 3px 3px 0" : 0,
+                                  }}>{label}</div>
+                                )),
+                              ];
+                            })}
+                          </div>
+                          {total > 0 && (
+                            <div style={{ display: "grid", gridTemplateColumns: gridCols, columnGap: 1, fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
+                              <span style={{ gridColumn: String(p.start + 1) }}>M{p.start + 1}</span>
+                              <span style={{ gridColumn: gSeg ? String(gCol + 6) : String(p.start + total), textAlign: "right" }}>M{p.start + total}</span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </td>
                 </tr>
               );
