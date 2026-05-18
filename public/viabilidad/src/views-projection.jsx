@@ -858,7 +858,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
     { id: "r3", title: "Jefe de Operaciones", hours: 24 },
     { id: "r4", title: "Analista", hours: 40 },
   ];
-  const r = { eraHHPerCat: 200, roles: defaultRoles, ...(client.resources || {}) };
+  const r = { eraHHPerCat: 200, eraAnalysts: 2, roles: defaultRoles, ...(client.resources || {}) };
   if (!r.roles || !Array.isArray(r.roles) || r.roles.length === 0) r.roles = defaultRoles;
   const setR = (patch) => store.updateClient(client.id, { resources: { ...r, ...patch } });
   const updRole = (i, patch) => {
@@ -962,7 +962,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
           </div>
         </div>
 
-        {/* Col 2: Donut */}
+        {/* Col 2: Donut + analistas */}
         <div>
           <div style={{ ...EYE, marginBottom: 12 }}>Distribución de horas</div>
           <div style={{ height: CHART_H, width: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -986,6 +986,25 @@ function ResourcesPanel({ client, groups, retAvg }) {
               <text x={cx} y={cy + 14} textAnchor="middle" fontSize="22" fontWeight="800"
                 fill="var(--ink)" fontFamily="Trebuchet MS">{totalHH.toLocaleString("es-CL")}</text>
             </svg>
+          </div>
+          {/* Analistas ERA */}
+          <div style={{ marginTop: 14, width: 220 }}>
+            <div style={{ ...EYE, marginBottom: 8 }}>Analistas ERA</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button onClick={() => setR({ eraAnalysts: Math.max(1, (r.eraAnalysts || 1) - 1) })}
+                style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 16, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>−</button>
+              <div style={{ flex: 1, textAlign: "center" }}>
+                <span style={{ fontSize: 26, fontWeight: 800, color: ERA_ORANGE, fontVariantNumeric: "tabular-nums" }}>
+                  {r.eraAnalysts || 1}
+                </span>
+                <span style={{ fontSize: 11, color: "var(--text-3)", marginLeft: 5 }}>analistas</span>
+              </div>
+              <button onClick={() => setR({ eraAnalysts: (r.eraAnalysts || 1) + 1 })}
+                style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 16, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>+</button>
+            </div>
+            <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 4, textAlign: "center" }}>
+              {Math.round(eraHH / (r.eraAnalysts || 1)).toLocaleString("es-CL")} HH / analista
+            </div>
           </div>
         </div>
 
