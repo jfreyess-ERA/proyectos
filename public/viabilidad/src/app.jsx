@@ -2,6 +2,136 @@
    App shell + router
    ============================================================ */
 
+function TierConfigSection({ store }) {
+  const tc = store.state.tierConfig || DEFAULT_TIER_CONFIG;
+  const [draft, setDraft] = React.useState(null);
+
+  // Sync draft when tierConfig changes (e.g. after load)
+  React.useEffect(() => { setDraft(null); }, [tc]);
+
+  const cur = draft || tc;
+  const fmtAmt = (n) => n >= 1e6 ? `$${(n/1e6).toFixed(0)} MM` : `$${n.toLocaleString()}`;
+
+  const handleChange = (key, val) => {
+    setDraft(prev => ({ ...(prev || tc), [key]: val }));
+  };
+
+  const saveField = (key, val) => {
+    const parsed = key === "highVolumeAmount" ? Number(val) :
+                   key === "highSavingsPct"   ? Number(val) :
+                   parseInt(val, 10);
+    if (isNaN(parsed)) return;
+    const patch = { [key]: parsed };
+    setDraft(prev => ({ ...(prev || tc), ...patch }));
+    store.updateTierConfig(patch);
+  };
+
+  const tierConditions = [
+    { tk: "A", cond: `Gasto ≥ ${fmtAmt(cur.highVolumeAmount)}  ·  ahorro ≥ ${cur.highSavingsPct}%  ·  factibilidad ≥ ${cur.quickWinFeasMin}` },
+    { tk: "B", cond: `Gasto ≥ ${fmtAmt(cur.highVolumeAmount)}  ·  sin cumplir Quick Win` },
+    { tk: "C", cond: `Gasto < ${fmtAmt(cur.highVolumeAmount)}  ·  ahorro ≥ ${cur.highSavingsPct}%  ·  factibilidad ≥ ${cur.lowVolFeasMin}` },
+    { tk: "D", cond: `Gasto < ${fmtAmt(cur.highVolumeAmount)}  ·  ahorro < ${cur.highSavingsPct}%  o  factibilidad < ${cur.lowVolFeasMin}` },
+  ];
+
+  const inputStyle = { width: "100%", padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "var(--surface)", color: "var(--text-1)" };
+  const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 4, display: "block" };
+  const hintStyle = { fontSize: 11, color: "var(--text-3)", marginTop: 3 };
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Umbrales de clasificación</div>
+      <p style={{ fontSize: 13, color: "var(--text-3)", marginTop: 0, marginBottom: 16 }}>
+        Define los valores que determinan la asignación de tiers A/B/C/D a cada categoría ERA.
+      </p>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {/* Volumen alto */}
+          <div>
+            <label style={labelStyle}>Volumen alto (nominal $)</label>
+            <input
+              type="number"
+              step="1000000"
+              value={cur.highVolumeAmount}
+              style={inputStyle}
+              onChange={e => handleChange("highVolumeAmount", e.target.value)}
+              onBlur={e => saveField("highVolumeAmount", e.target.value)}
+            />
+            <div style={hintStyle}>Gasto mínimo para considerar alto volumen (en moneda base)</div>
+          </div>
+
+          {/* Ahorro mínimo % */}
+          <div>
+            <label style={labelStyle}>Ahorro mínimo %</label>
+            <input
+              type="number"
+              step="0.5"
+              min="0"
+              max="100"
+              value={cur.highSavingsPct}
+              style={inputStyle}
+              onChange={e => handleChange("highSavingsPct", e.target.value)}
+              onBlur={e => saveField("highSavingsPct", e.target.value)}
+            />
+            <div style={hintStyle}>Porcentaje de ahorro estimado mínimo para considerar "alto ahorro"</div>
+          </div>
+
+          {/* Factibilidad Quick Win */}
+          <div>
+            <label style={labelStyle}>Factibilidad Quick Win (mín)</label>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              max="5"
+              value={cur.quickWinFeasMin}
+              style={inputStyle}
+              onChange={e => handleChange("quickWinFeasMin", e.target.value)}
+              onBlur={e => saveField("quickWinFeasMin", e.target.value)}
+            />
+            <div style={hintStyle}>Factibilidad mínima para clasificar como Tier A (Quick Win)</div>
+          </div>
+
+          {/* Factibilidad Bajo Impacto */}
+          <div>
+            <label style={labelStyle}>Factibilidad Bajo Impacto (mín)</label>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              max="5"
+              value={cur.lowVolFeasMin}
+              style={inputStyle}
+              onChange={e => handleChange("lowVolFeasMin", e.target.value)}
+              onBlur={e => saveField("lowVolFeasMin", e.target.value)}
+            />
+            <div style={hintStyle}>Factibilidad mínima para clasificar como Tier C (Bajo impacto)</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Live preview */}
+      <div className="card flat" style={{ padding: "14px 20px", background: "var(--surface-2)" }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 10 }}>
+          Vista previa de condiciones
+        </div>
+        <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 13 }}>
+          <tbody>
+            {tierConditions.map(({ tk, cond }) => (
+              <tr key={tk} style={{ borderBottom: "1px solid var(--line)" }}>
+                <td style={{ padding: "7px 12px 7px 0", whiteSpace: "nowrap" }}>
+                  <span className={"tier " + tk}>{tk}</span>
+                </td>
+                <td style={{ padding: "7px 12px", color: "var(--text-2)", lineHeight: 1.5 }}>{cond}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function EraAdminView() {
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
@@ -115,6 +245,8 @@ function EraAdminView() {
           </table>
         )}
       </div>
+
+      <TierConfigSection store={store} />
     </div>
   );
 }

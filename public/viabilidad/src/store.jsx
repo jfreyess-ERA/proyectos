@@ -27,6 +27,13 @@ function uid(prefix = "id") {
   return prefix + "_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 }
 
+const DEFAULT_TIER_CONFIG = {
+  highVolumeAmount: 100000000,  // $100 MM
+  highSavingsPct: 10,
+  quickWinFeasMin: 4,
+  lowVolFeasMin: 3,
+};
+
 // ── Blank objects ──────────────────────────────────────────────────
 function blankClient(name = "") {
   return {
@@ -351,18 +358,19 @@ function savingsRange(client) {
   return { min, max };
 }
 
-function tierFor(group, totalClient) {
-  const sharePct = totalClient > 0 ? (group.total / totalClient) * 100 : 0;
-  const sav  = group.avgSavingsPct;   // 0-100
-  const feas = group.avgFeasibility ?? 3; // 1-5
+function tierFor(group, cfg) {
+  cfg = cfg || DEFAULT_TIER_CONFIG;
+  const volume  = group.total;
+  const sav     = group.avgSavingsPct;
+  const feas    = group.avgFeasibility ?? 3;
 
-  const highSavings = sav  >= 10;
-  const highVolume  = sharePct >= 8;
+  const highVolume  = volume  >= cfg.highVolumeAmount;
+  const highSavings = sav     >= cfg.highSavingsPct;
 
-  if (highSavings && highVolume && feas >= 4) return "A"; // Quick Win
-  if (!highVolume && (!highSavings || feas < 3)) return "D"; // Descartar: bajo volumen + bajo ahorro o muy difícil
-  if (!highVolume)                            return "C"; // Bajo impacto: bajo volumen pero buen ahorro y factibilidad ≥3
-  return "B";                                             // Estratégica: alto volumen sin quick win
+  if (highSavings && highVolume && feas >= cfg.quickWinFeasMin) return "A"; // Quick Win
+  if (!highVolume && (!highSavings || feas < cfg.lowVolFeasMin)) return "D"; // Descartar
+  if (!highVolume) return "C";                  // Bajo impacto
+  return "B";                                   // Estratégica
 }
 
 const MONTH_LABELS_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -420,6 +428,7 @@ function StoreProvider({ children }) {
   const [clients, setClients] = React.useState([]);
   const [activeClientId, setActiveClientId] = React.useState(null);
   const [eraCategories, setEraCategories] = React.useState([]);
+  const [tierConfig, setTierConfig] = React.useState(DEFAULT_TIER_CONFIG);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const [saveStatus, setSaveStatus] = React.useState('idle'); // 'idle'|'saving'|'saved'
@@ -457,6 +466,19 @@ function StoreProvider({ children }) {
           .from("viability_era_categories").select("*").order("sort_order", { ascending: true });
         if (!ecErr) setEraCategories(eraCats || []);
       } catch (_) { /* tabla aún no creada */ }
+
+      // Tier config — load separately so a missing table doesn't crash the app
+      try {
+        const { data: tcData } = await sb.from("viability_tier_config").select("*").eq("id", "default").single();
+        if (tcData) {
+          setTierConfig({
+            highVolumeAmount: tcData.high_volume_amount,
+            highSavingsPct:   tcData.high_savings_pct,
+            quickWinFeasMin:  tcData.quick_win_feas_min,
+            lowVolFeasMin:    tcData.low_vol_feas_min,
+          });
+        }
+      } catch (_) { /* tabla aún no creada */ }
     } catch (e) {
       setError(e.message || "Error de conexión");
     } finally {
@@ -491,7 +513,7 @@ function StoreProvider({ children }) {
 
   // ── API ────────────────────────────────────────────────────────
   const api = React.useMemo(() => ({
-    state: { clients, activeClientId, eraCategories, saveStatus },
+    state: { clients, activeClientId, eraCategories, tierConfig, saveStatus },
     loading,
     error,
     reload: loadAll,
@@ -579,6 +601,19 @@ function StoreProvider({ children }) {
       setEraCategories(prev => prev.filter(c => c.id !== id));
     },
 
+    updateTierConfig: async (patch) => {
+      const next = { ...tierConfig, ...patch };
+      setTierConfig(next);
+      await sb.from("viability_tier_config").upsert({
+        id: "default",
+        high_volume_amount: next.highVolumeAmount,
+        high_savings_pct:   next.highSavingsPct,
+        quick_win_feas_min: next.quickWinFeasMin,
+        low_vol_feas_min:   next.lowVolFeasMin,
+        updated_at:         new Date().toISOString(),
+      });
+    },
+
     setScenario: (clientId, scenario) => {
       setClients(prev => prev.map(c => c.id === clientId ? { ...c, scenario, updatedAt: Date.now() } : c));
       schedSave(clientId);
@@ -604,7 +639,7 @@ function StoreProvider({ children }) {
         setActiveClientId(null);
       }
     },
-  }), [clients, activeClientId, eraCategories, saveStatus, loading, error, loadAll]);
+  }), [clients, activeClientId, eraCategories, tierConfig, saveStatus, loading, error, loadAll]);
 
   return React.createElement(StoreContext.Provider, { value: api }, children);
 }
@@ -612,7 +647,7 @@ function StoreProvider({ children }) {
 function useStore() { return React.useContext(StoreContext); }
 
 Object.assign(window, {
-  DEFAULT_CATEGORIES, blankClient, blankExpense, seedClient,
+  DEFAULT_CATEGORIES, DEFAULT_TIER_CONFIG, blankClient, blankExpense, seedClient,
   genMonthly, getMonthly, StoreContext, StoreProvider, useStore,
   aggregateByCategory, aggregateByEra, totalSpend, totalSavings, savingsRange, tierFor, uid,
   monthlyByCategory, monthlyByEra, monthlyTotals, MONTH_LABELS_ES, MONTH_LABELS_EN,

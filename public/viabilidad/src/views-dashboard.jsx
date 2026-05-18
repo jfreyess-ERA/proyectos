@@ -141,6 +141,7 @@ function ScenariosView({ client }) {
   const { t } = useI18n();
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
+  const tierConfig = store.state.tierConfig || DEFAULT_TIER_CONFIG;
   const [drawerCatId, setDrawerCatId] = React.useState(null);
   const groups = aggregateByEra(client, eraCategories);
   const total = totalSpend(client);
@@ -241,7 +242,7 @@ function ScenariosView({ client }) {
             <button className="btn ghost sm" onClick={() => store.updateClient(client.id, { scenario: { ...client.scenario, includedCategories: [] } })}>
               Ninguna
             </button>
-            <button className="btn ghost sm" onClick={() => store.updateClient(client.id, { scenario: { ...client.scenario, includedCategories: groups.filter(g => tierFor(g, total) === "A" || tierFor(g, total) === "B").map(g => g.categoryId) } })}>
+            <button className="btn ghost sm" onClick={() => store.updateClient(client.id, { scenario: { ...client.scenario, includedCategories: groups.filter(g => tierFor(g, tierConfig) === "A" || tierFor(g, tierConfig) === "B").map(g => g.categoryId) } })}>
               Solo A + B
             </button>
           </div>
@@ -258,7 +259,7 @@ function ScenariosView({ client }) {
           <tbody>
             {groups.map(g => {
               const inc = isIncluded(g.categoryId);
-              const tk = tierFor(g, total);
+              const tk = tierFor(g, tierConfig);
               return (
                 <tr key={g.categoryId} style={{ opacity: inc ? 1 : 0.45, cursor: "pointer" }}
                     onClick={(ev) => { if (ev.target.tagName === "INPUT") return; setDrawerCatId(g.categoryId); }}>

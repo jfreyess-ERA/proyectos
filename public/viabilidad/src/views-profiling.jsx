@@ -424,6 +424,7 @@ function ProfilingView({ client }) {
   const { t } = useI18n();
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
+  const tierConfig = store.state.tierConfig || DEFAULT_TIER_CONFIG;
   const groups = aggregateByEra(client, eraCategories);
   const total = totalSpend(client);
   const totalSav = totalSavings(client);
@@ -436,7 +437,7 @@ function ProfilingView({ client }) {
   }
 
   const tiers = { A: [], B: [], C: [], D: [] };
-  groups.forEach(g => { tiers[tierFor(g, total)].push(g); });
+  groups.forEach(g => { tiers[tierFor(g, tierConfig)].push(g); });
 
   const catLabel = (cat) => cat ? (cat.label || cat.key) : "—";
 
@@ -539,12 +540,16 @@ function ProfilingView({ client }) {
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { tk: "A", cond: "% del gasto ≥ 8%  ·  ahorro estimado ≥ 10%  ·  factibilidad ≥ 4" },
-                  { tk: "B", cond: "% del gasto ≥ 8%  ·  sin cumplir Quick Win" },
-                  { tk: "C", cond: "% del gasto < 8%  ·  ahorro ≥ 10%  ·  factibilidad ≥ 3" },
-                  { tk: "D", cond: "% del gasto < 8%  ·  ahorro < 10%  o  factibilidad < 3" },
-                ].map(({ tk, cond }) => (
+                {(() => {
+                  const tc = tierConfig;
+                  const fmtAmt = (n) => n >= 1e6 ? `$${(n/1e6).toFixed(0)} MM` : `$${n.toLocaleString()}`;
+                  return [
+                    { tk: "A", cond: `Gasto ≥ ${fmtAmt(tc.highVolumeAmount)}  ·  ahorro ≥ ${tc.highSavingsPct}%  ·  factibilidad ≥ ${tc.quickWinFeasMin}` },
+                    { tk: "B", cond: `Gasto ≥ ${fmtAmt(tc.highVolumeAmount)}  ·  sin cumplir Quick Win` },
+                    { tk: "C", cond: `Gasto < ${fmtAmt(tc.highVolumeAmount)}  ·  ahorro ≥ ${tc.highSavingsPct}%  ·  factibilidad ≥ ${tc.lowVolFeasMin}` },
+                    { tk: "D", cond: `Gasto < ${fmtAmt(tc.highVolumeAmount)}  ·  ahorro < ${tc.highSavingsPct}%  o  factibilidad < ${tc.lowVolFeasMin}` },
+                  ];
+                })().map(({ tk, cond }) => (
                   <tr key={tk} style={{ borderBottom: "1px solid var(--line)" }}>
                     <td style={{ padding: "8px 12px 8px 0", whiteSpace: "nowrap" }}>
                       <span className={"tier " + tk}>{t.profiling[`tier${tk}`]}</span>
@@ -556,7 +561,7 @@ function ProfilingView({ client }) {
             </table>
             <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-3)", lineHeight: 1.5 }}>
               La <strong>factibilidad</strong> es el promedio ponderado por monto de todos los gastos de la categoría (escala 1–5).
-              El <strong>% del gasto</strong> es la participación de la categoría sobre el total del cliente.
+              El <strong>volumen</strong> es el gasto nominal total de la categoría ERA.
             </div>
           </div>
         )}
@@ -583,7 +588,7 @@ function ProfilingView({ client }) {
           </thead>
           <tbody>
             {groups.map(g => {
-              const tk = tierFor(g, total);
+              const tk = tierFor(g, tierConfig);
               const share = total > 0 ? (g.total / total) * 100 : 0;
               return (
                 <tr key={g.categoryId} style={{ cursor: "pointer" }} onClick={() => setDrawerCatId(g.categoryId)}>
