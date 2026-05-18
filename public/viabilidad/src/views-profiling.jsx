@@ -597,7 +597,8 @@ function ProfilingMatrix({ groups, total, client, onCategoryClick }) {
 
   const x = (share) => P + (share / maxShare) * (W - P * 2);
   const y = (sav) => H - P - (sav / maxSav) * (H - P * 2);
-  const r = (vol) => Math.max(6, Math.min(28, 6 + Math.sqrt(vol / 1000) * 0.8));
+  const maxTotal = Math.max(...groups.map(g => g.total), 1);
+  const r = (spend) => Math.max(6, Math.min(32, 6 + Math.sqrt(spend / maxTotal) * 26));
 
   // Label: above if cy > H*0.55 (bubble is in lower part), below if near top
   const labelPos = (cy, radius) => cy > H * 0.55 ? "above" : "below";
@@ -606,7 +607,7 @@ function ProfilingMatrix({ groups, total, client, onCategoryClick }) {
     <div className="card">
       <div className="row between" style={{ marginBottom: 16 }}>
         <h3 className="h3" style={{ margin: 0 }}>Matriz volumen × ahorro</h3>
-        <div style={{ fontSize: 11, color: "var(--text-3)" }}>● tamaño = ahorro potencial · clic para detalle</div>
+        <div style={{ fontSize: 11, color: "var(--text-3)" }}>● tamaño = gasto total · clic para detalle</div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
         {/* Quadrant fills */}
@@ -643,7 +644,7 @@ function ProfilingMatrix({ groups, total, client, onCategoryClick }) {
         {groups.map(g => {
           const share = total > 0 ? g.total / total * 100 : 0;
           const cx = x(share), cy = y(g.avgSavingsPct);
-          const radius = r(g.potentialSavings);
+          const radius = r(g.total);
           const fullName = t.categories[g.category?.key] || g.category?.label || g.category?.key || "—";
           return (
             <circle
@@ -662,7 +663,7 @@ function ProfilingMatrix({ groups, total, client, onCategoryClick }) {
         {groups.map(g => {
           const share = total > 0 ? g.total / total * 100 : 0;
           const cx = x(share), cy = y(g.avgSavingsPct);
-          const radius = r(g.potentialSavings);
+          const radius = r(g.total);
           if (radius <= 8) return null;
           const fullName = t.categories[g.category?.key] || g.category?.label || g.category?.key || "—";
           const shortName = fullName.length > 15 ? fullName.slice(0, 13) + "…" : fullName;
