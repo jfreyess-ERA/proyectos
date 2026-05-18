@@ -1250,19 +1250,19 @@ function GanttView({ client }) {
       <div className="card flat" style={{ padding: 0, overflow: "auto" }}>
         <table className="t" style={{ tableLayout: "fixed", minWidth: 900 }}>
           <colgroup>
-            <col style={{ width: 56 }} />
             <col style={{ width: 60 }} />
             {STAGE_KEYS.map(k => <col key={"c-" + k} style={{ width: 54 }} />)}
             <col style={{ width: 60 }} />
+            <col style={{ width: 56 }} />
             <col style={{ width: 130 }} />
             <col style={{ width: "100%" }} />
           </colgroup>
           <thead>
             <tr>
-              <th rowSpan="2" className="right" style={{ verticalAlign: "bottom" }}>N°</th>
               <th rowSpan="2" className="right" style={{ verticalAlign: "bottom" }}>{t.gantt.start}</th>
               <th colSpan={STAGE_KEYS.length} style={{ textAlign: "center", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>Meses por etapa</th>
               <th rowSpan="2" className="right" style={{ verticalAlign: "bottom" }}>Total</th>
+              <th rowSpan="2" className="right" style={{ verticalAlign: "bottom" }}>N°</th>
               <th rowSpan="2" style={{ verticalAlign: "bottom" }}>{t.expenses.cols.category}</th>
               <th style={{ textAlign: "center", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>Cronograma</th>
             </tr>
@@ -1291,7 +1291,6 @@ function GanttView({ client }) {
 
               return (
                 <tr key={g.categoryId}>
-                  <td className="right tabular">{i + 1}</td>
                   <td className="right">
                     <input className="input right" type="number" min="0" max="48" value={p.start}
                       onChange={e => setPlan(g.categoryId, { start: Math.max(0, +e.target.value || 0) })}
@@ -1305,6 +1304,7 @@ function GanttView({ client }) {
                     </td>
                   ))}
                   <td className="right tabular" style={{ fontWeight: 700 }}>{total}m</td>
+                  <td className="right tabular">{i + 1}</td>
                   <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
                   <td style={{ padding: "4px 8px" }}>
                     {(() => {
@@ -1366,8 +1366,17 @@ function GanttView({ client }) {
                           </div>
                           {total > 0 && (
                             <div style={{ display: "grid", gridTemplateColumns: gridCols, columnGap: 1, fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
-                              <span style={{ gridColumn: String(p.start + 1) }}>M{p.start + 1}</span>
-                              <span style={{ gridColumn: compress ? String(gCol + 6) : String(p.start + total), textAlign: "right" }}>M{p.start + total}</span>
+                              {compress ? (
+                                <>
+                                  <span style={{ gridColumn: String(gCol) }}>M{p.start + nonGDur + 1}</span>
+                                  <span style={{ gridColumn: String(gCol + 6), textAlign: "right" }}>M{p.start + total}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span style={{ gridColumn: String(p.start + 1) }}>M{p.start + 1}</span>
+                                  {p.start + total > p.start + 1 && <span style={{ gridColumn: String(p.start + total), textAlign: "right" }}>M{p.start + total}</span>}
+                                </>
+                              )}
                             </div>
                           )}
                         </>
