@@ -42,9 +42,12 @@ function ProjectionView({ client }) {
       const colWidths = thEls.map(th => Math.ceil(th.getBoundingClientRect().width));
       const ROW_H = 36, HEAD_H = 32, TOTALS_H = 36;
 
-      // Read header section height (eyebrow + title + filter chips)
-      const headerSection = card.querySelector("div");
-      const headerH = Math.ceil(headerSection.getBoundingClientRect().height);
+      // Header height: only the title row (not the filter chips below it)
+      const titleRowEl = card.querySelector(".row.between");
+      const cardTop = card.getBoundingClientRect().top;
+      const headerH = titleRowEl
+        ? Math.ceil(titleRowEl.getBoundingClientRect().bottom - cardTop + 12)
+        : 60;
 
       // Retorno bar height
       const retornoBar = card.lastElementChild;
@@ -132,9 +135,9 @@ function ProjectionView({ client }) {
           const bold = cs(td).fontWeight >= 600;
           // For feasibility dots col, draw colored squares
           if (i === 5) {
-            // Feasibility dots
-            const dots = td.querySelectorAll("span[style]");
-            const filledCount = Array.from(dots).filter(d => !getComputedStyle(d).opacity || getComputedStyle(d).opacity >= 1).length;
+            // Feasibility dots — FeasDots uses CSS classes "feas-dot on" / "feas-dot high"
+            const allDots = td.querySelectorAll(".feas-dot");
+            const filledCount = Array.from(allDots).filter(d => d.classList.contains("on") || d.classList.contains("high")).length;
             const dotW = 10, dotH = 8, gap = 3;
             const total5W = 5 * dotW + 4 * gap;
             let dx = tx + (w - total5W) / 2;
@@ -148,7 +151,7 @@ function ProjectionView({ client }) {
             const span = td.querySelector("span");
             const pctText = span ? span.textContent.trim() : td.textContent.trim();
             const pctVal = parseFloat(pctText) || 0; // e.g. 35 for "35.0%"
-            const BAR_H = 6, GAP = 6, NUM_W = 36, PAD = 8;
+            const BAR_H = 6, GAP = 6, NUM_W = 44, PAD = 8;
             // track spans from left edge to right edge minus number - gap - right padding
             const BAR_W = Math.max(20, w - PAD - GAP - NUM_W - PAD);
             const bx = tx + PAD;
@@ -193,11 +196,10 @@ function ProjectionView({ client }) {
       ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.font = `400 10px "Trebuchet MS", Arial`;
       ctx.fillText(`ERA ${sc2.feePctOnSavings}% × ${sc2.feeMonths}m · ${client.legalName}`, 20, ty + retornoH * 0.7);
 
-      // center: main values
-      const retSpan = retornoBar.querySelector("div:nth-child(2) div:nth-child(2)");
-      const retText = retSpan ? retSpan.textContent.trim() : "";
-      const medioSpan = retornoBar.querySelector("div:nth-child(2) div:nth-child(3)");
-      const medioText = medioSpan ? medioSpan.textContent.trim() : "";
+      // center: main values — use direct children to avoid wrong nth-child matches
+      const centerDiv = retornoBar.children[1]; // 2nd direct child = center flex div
+      const retText = centerDiv?.children[0]?.textContent.trim() || "";   // big number range
+      const medioText = centerDiv?.children[1]?.textContent.trim() || ""; // "medio: ..."
       ctx.fillStyle = champagne; ctx.font = `700 18px "Trebuchet MS", Arial`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(retText, W / 2, ty + retornoH * 0.38);
