@@ -849,19 +849,6 @@ function buildTreemap(items, x, y, w, h) {
 
 const ROLE_COLORS = ["#E8A838","#1AABAB","#1B3A6B","#7D3C98","#0D5F4A","#4A90D9","#C0392B","#2ECC71"];
 
-// ── Simple person icon ─────────────────────────────────────────
-function PersonIcon({ x, y, size = 22, color = "#E8A838" }) {
-  const r = size * 0.22;
-  return (
-    <g>
-      <circle cx={x} cy={y - size * 0.25} r={r} fill={color} />
-      <path d={`M${x - size * 0.32},${y + size * 0.38} Q${x},${y} Q${x + size * 0.32},${y + size * 0.38}`}
-        fill={color} stroke="none" />
-      <ellipse cx={x} cy={y + size * 0.2} rx={size * 0.32} ry={size * 0.22} fill={color} />
-    </g>
-  );
-}
-
 function ResourcesPanel({ client, groups, retAvg }) {
   const { t } = useI18n();
   const store = useStore();
@@ -886,31 +873,29 @@ function ResourcesPanel({ client, groups, retAvg }) {
   const eraHH = n * r.eraHHPerCat;
   const totalHH = clientHH + eraHH;
 
-  // ── Pie geometry (full pie, ERA slice at top) ──────────────────
-  const VW = 290, VH = 310;
-  const cx = 145, cy = 162, R = 118, Ri = 60;
-  const eraAngle = totalHH > 0 ? (eraHH / totalHH) * 2 * Math.PI : 0;
-
-  const pieArc = (a0, a1, ro) => {
-    if (a1 - a0 >= 2 * Math.PI - 0.001)
-      return `M${cx},${cy - ro} A${ro},${ro} 0 1 1 ${cx - 0.01},${cy - ro} Z`;
-    const x0 = cx + ro * Math.sin(a0), y0 = cy - ro * Math.cos(a0);
-    const x1 = cx + ro * Math.sin(a1), y1 = cy - ro * Math.cos(a1);
-    const lg = (a1 - a0) > Math.PI ? 1 : 0;
-    return `M${cx},${cy} L${x0},${y0} A${ro},${ro} 0 ${lg} 1 ${x1},${y1} Z`;
-  };
-
-  // Mid-angle of ERA slice (for label line anchor)
-  const eraMid = eraAngle / 2;
-  const labelR = R + 14;
-  const labelX = cx + labelR * Math.sin(eraMid);
-  const labelY = cy - labelR * Math.cos(eraMid);
-  // Text anchor direction
-  const labelAnchor = eraMid < Math.PI ? (labelX > cx + 10 ? "start" : "middle") : "end";
+  // ── Colors ─────────────────────────────────────────────────────
+  const ERA_ORANGE = "#E8A838";
+  const CLI_BLUE   = "#2A5FA5";
+  const ERA_DARK   = "#0F2724";
+  const clientName = (client.name || "Cliente").split(" ").slice(0, 3).join(" ");
 
   const eraPct = totalHH > 0 ? Math.round((eraHH / totalHH) * 100) : 0;
   const cliPct = 100 - eraPct;
-  const ERA_DARK = "#0F2724", CLI_ORANGE = "#E8A838";
+
+  // ── Donut geometry ─────────────────────────────────────────────
+  const cx = 110, cy = 110, Ro = 100, Ri = 52;
+  const eraAngle = totalHH > 0 ? (eraHH / totalHH) * 2 * Math.PI : 0;
+
+  const pieSlice = (a0, a1) => {
+    const span = a1 - a0;
+    if (span >= 2 * Math.PI - 0.001)
+      return `M${cx},${cy - Ro} A${Ro},${Ro} 0 1 1 ${cx - 0.001},${cy - Ro} Z`;
+    if (span <= 0.001) return "";
+    const x0 = cx + Ro * Math.sin(a0), y0 = cy - Ro * Math.cos(a0);
+    const x1 = cx + Ro * Math.sin(a1), y1 = cy - Ro * Math.cos(a1);
+    const lg = span > Math.PI ? 1 : 0;
+    return `M${cx},${cy} L${x0},${y0} A${Ro},${Ro} 0 ${lg} 1 ${x1},${y1} Z`;
+  };
 
   // ── Treemap ────────────────────────────────────────────────────
   const tmItems = [...r.roles]
@@ -918,11 +903,10 @@ function ResourcesPanel({ client, groups, retAvg }) {
     .sort((a, b) => b.hours - a.hours)
     .map((role, i) => ({ ...role, value: +role.hours, color: ROLE_COLORS[i % ROLE_COLORS.length] }));
 
-  const TW = 340, TH = 240;
+  const TW = 340, TH = 220;
   const tiles = buildTreemap(tmItems, 2, 2, TW - 4, TH - 4);
 
-  // Person icons count (one per role, max 10)
-  const personCount = Math.min(r.roles.length, 10);
+  const EYE = { fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--text-3)", fontWeight: 700 };
 
   return (
     <div className="card">
@@ -932,136 +916,32 @@ function ResourcesPanel({ client, groups, retAvg }) {
           <h3 className="h3" style={{ margin: 0 }}>{t.resources.title}</h3>
         </div>
       </div>
-      <p className="lede" style={{ marginBottom: 16 }}>{t.resources.lede}</p>
+      <p className="lede" style={{ marginBottom: 20 }}>{t.resources.lede}</p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 32, alignItems: "start" }}>
+      {/* ── TOP: Parameter editors ─────────────────────────────── */}
+      <div className="grid cols-2" style={{ gap: 24, marginBottom: 28, alignItems: "start" }}>
 
-        {/* ── Left: Pie chart ──────────────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-          <div style={{ fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--text-3)", fontWeight: 700 }}>
-            Distribución de horas
-          </div>
-
-          <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: 230, flexShrink: 0 }}>
-            {/* ERA HH label + leader line above pie */}
-            {eraHH > 0 && totalHH > 0 && (
-              <>
-                <line x1={labelX} y1={labelY} x2={labelX + (eraMid < Math.PI / 4 ? 4 : eraMid > 7 * Math.PI / 4 ? -4 : 0)} y2={labelY - 18}
-                  stroke="#4A90D9" strokeWidth="1.5" />
-                <text x={labelX} y={labelY - 22}
-                  textAnchor={Math.abs(labelX - cx) < 14 ? "middle" : labelX > cx ? "start" : "end"}
-                  fontSize="13" fontWeight="700" fill="#4A90D9" fontFamily="Trebuchet MS">{eraHH} HH</text>
-              </>
-            )}
-
-            {/* Pie slices */}
-            {totalHH === 0 ? (
-              <circle cx={cx} cy={cy} r={R} fill="var(--surface-2)" stroke="var(--line)" />
-            ) : eraHH === 0 ? (
-              <circle cx={cx} cy={cy} r={R} fill={CLI_ORANGE} />
-            ) : clientHH === 0 ? (
-              <circle cx={cx} cy={cy} r={R} fill={ERA_DARK} />
-            ) : (
-              <>
-                {/* ERA slice (small, dark, at top) */}
-                <path d={pieArc(0, eraAngle, R)} fill={ERA_DARK} stroke="white" strokeWidth="1.5" />
-                {/* Client slice (large, orange) */}
-                <path d={pieArc(eraAngle, 2 * Math.PI, R)} fill={CLI_ORANGE} stroke="white" strokeWidth="1.5" />
-              </>
-            )}
-
-            {/* Center overlay circle with ERA logo */}
-            <circle cx={cx} cy={cy} r={Ri} fill={ERA_DARK} />
-            {/* "era" wordmark */}
-            <text x={cx - 1} y={cy - 6} textAnchor="middle" fontSize="21" fontWeight="700"
-              fill={CLI_ORANGE} fontFamily="Trebuchet MS" letterSpacing="1">era</text>
-            {/* GROUP subtext */}
-            <text x={cx + 11} y={cy + 7} textAnchor="middle" fontSize="6.5" fill={CLI_ORANGE}
-              fontFamily="Trebuchet MS" letterSpacing="3" opacity="0.85">GROUP</text>
-            {/* Client HH inside circle, below logo */}
-            <text x={cx} y={cy + 26} textAnchor="middle" fontSize="14" fontWeight="700"
-              fill="white" fontFamily="Trebuchet MS">{clientHH.toLocaleString("es-CL")} HH</text>
-
-            {/* Person icons row below pie */}
-            {Array.from({ length: personCount }).map((_, i) => {
-              const iconW = 26, totalIconW = personCount * iconW;
-              const startX = cx - totalIconW / 2 + iconW / 2;
-              return <PersonIcon key={i} x={startX + i * iconW} y={cy + R + 32} size={22} color={CLI_ORANGE} />;
-            })}
-          </svg>
-
-          {/* Legend */}
-          <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 5, width: "100%" }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ width: 13, height: 13, background: ERA_DARK, borderRadius: 3, flexShrink: 0 }} />
-              <span><strong>ERA Group</strong> · {eraHH} HH · {eraPct}%</span>
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ width: 13, height: 13, background: CLI_ORANGE, borderRadius: 3, flexShrink: 0 }} />
-              <span><strong>Cliente</strong> · {clientHH} HH · {cliPct}%</span>
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 2 }}>
-              ERA: {n} categorías × {r.eraHHPerCat} HH
-            </div>
-            <div style={{ marginTop: 6 }}>
-              <Field label={t.resources.eraHH}>
-                <input className="input right" type="number" value={r.eraHHPerCat}
-                  onChange={e => setR({ eraHHPerCat: +e.target.value || 0 })} style={{ width: 110 }} />
-              </Field>
-            </div>
+        {/* HH ERA / categoría */}
+        <div>
+          <div style={{ ...EYE, marginBottom: 10 }}>HH ERA / Categoría</div>
+          <Field label={t.resources.eraHH}>
+            <input className="input right" type="number" value={r.eraHHPerCat}
+              onChange={e => setR({ eraHHPerCat: +e.target.value || 0 })} style={{ width: 120 }} />
+          </Field>
+          <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 6 }}>
+            {n} categorías × {r.eraHHPerCat} HH = <strong>{eraHH.toLocaleString("es-CL")} HH ERA</strong> total
           </div>
         </div>
 
-        {/* ── Right: Treemap + table ────────────────────────────── */}
+        {/* Roles table */}
         <div>
-          <div style={{ fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--text-3)", fontWeight: 700, marginBottom: 10 }}>
-            Horas del cliente por cargo
-          </div>
-
-          {/* Treemap */}
-          {tmItems.length > 0 && (
-            <svg viewBox={`0 0 ${TW} ${TH}`} style={{ width: "100%", height: 200, display: "block", marginBottom: 14, borderRadius: 10, overflow: "hidden" }}>
-              {tiles.map((tile, i) => {
-                const pad = 10;
-                const showText = tile.w > 55 && tile.h > 32;
-                const titleShort = tile.title.length > 18 ? tile.title.slice(0, 17) + "…" : tile.title;
-                const fs = Math.min(12, Math.max(8, tile.h / 5));
-                return (
-                  <g key={tile.id || i}>
-                    <rect x={tile.x + 1.5} y={tile.y + 1.5} width={tile.w - 3} height={tile.h - 3}
-                      fill={tile.color} rx="5" />
-                    {showText && (
-                      <>
-                        <text x={tile.x + pad} y={tile.y + tile.h - pad - fs + 1}
-                          fontSize={fs} fontWeight="700" fill="white" fontFamily="Trebuchet MS" opacity="0.95">
-                          {tile.value} HH
-                        </text>
-                        <text x={tile.x + pad} y={tile.y + tile.h - pad + 1}
-                          fontSize={Math.max(7, fs - 2)} fill="white" fontFamily="Trebuchet MS" opacity="0.75">
-                          {titleShort}
-                        </text>
-                      </>
-                    )}
-                    {!showText && tile.h > 18 && (
-                      <text x={tile.x + tile.w / 2} y={tile.y + tile.h / 2 + 4}
-                        fontSize="8" fill="white" fontFamily="Trebuchet MS" textAnchor="middle" opacity="0.9">
-                        {tile.value}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
-          )}
-
-          {/* Roles table */}
           <div className="row between" style={{ marginBottom: 8 }}>
-            <span style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>Detalle</span>
+            <span style={EYE}>Detalle horas por cargo</span>
             <button className="btn ghost sm" onClick={addRole}>+ cargo</button>
           </div>
           <table className="t" style={{ fontSize: 12 }}>
             <thead><tr>
-              <th style={{ width: 18 }}></th>
+              <th style={{ width: 16 }}></th>
               <th>Cargo</th>
               <th className="right" style={{ width: 80 }}>HH</th>
               <th style={{ width: 36 }}></th>
@@ -1086,7 +966,104 @@ function ResourcesPanel({ client, groups, retAvg }) {
         </div>
       </div>
 
-      <div className="grid cols-2" style={{ marginTop: 20 }}>
+      {/* ── BOTTOM: Charts side by side ────────────────────────── */}
+      <div className="grid cols-2" style={{ gap: 24, alignItems: "start" }}>
+
+        {/* Donut chart */}
+        <div>
+          <div style={{ ...EYE, marginBottom: 10 }}>Distribución de horas</div>
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <svg viewBox="0 0 220 220" style={{ width: 190, flexShrink: 0 }}>
+              {/* Slices — ERA (orange) starts at top, client (blue) fills the rest */}
+              {totalHH === 0 ? (
+                <circle cx={cx} cy={cy} r={Ro} fill="var(--surface-2)" stroke="var(--line)" />
+              ) : eraHH === 0 ? (
+                <circle cx={cx} cy={cy} r={Ro} fill={CLI_BLUE} />
+              ) : clientHH === 0 ? (
+                <circle cx={cx} cy={cy} r={Ro} fill={ERA_ORANGE} />
+              ) : (
+                <>
+                  <path d={pieSlice(0, eraAngle)} fill={ERA_ORANGE} stroke="white" strokeWidth="1.5" />
+                  <path d={pieSlice(eraAngle, 2 * Math.PI)} fill={CLI_BLUE} stroke="white" strokeWidth="1.5" />
+                </>
+              )}
+              {/* Donut hole — surface overlay first, then dark ERA logo circle */}
+              <circle cx={cx} cy={cy} r={Ri + 2} fill="var(--surface)" />
+              <circle cx={cx} cy={cy} r={Ri} fill={ERA_DARK} />
+              {/* ERA logo inside hole */}
+              <text x={cx} y={cy - 10} textAnchor="middle" fontSize="18" fontWeight="700"
+                fill={ERA_ORANGE} fontFamily="Trebuchet MS" letterSpacing="1">era</text>
+              <text x={cx + 10} y={cy + 1} textAnchor="middle" fontSize="6" fill={ERA_ORANGE}
+                fontFamily="Trebuchet MS" letterSpacing="3" opacity="0.85">GROUP</text>
+              <line x1={cx - Ri * 0.55} y1={cy + 10} x2={cx + Ri * 0.55} y2={cy + 10}
+                stroke={ERA_ORANGE} strokeWidth="0.6" opacity="0.35" />
+              <text x={cx} y={cy + 24} textAnchor="middle" fontSize="12" fontWeight="700"
+                fill="white" fontFamily="Trebuchet MS">{totalHH.toLocaleString("es-CL")} HH</text>
+            </svg>
+
+            {/* Legend */}
+            <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ width: 13, height: 13, background: ERA_ORANGE, borderRadius: 3, flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <div style={{ fontWeight: 700 }}>ERA Group</div>
+                  <div style={{ color: "var(--text-3)", fontSize: 11 }}>{eraHH.toLocaleString("es-CL")} HH · {eraPct}%</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ width: 13, height: 13, background: CLI_BLUE, borderRadius: 3, flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <div style={{ fontWeight: 700 }}>{clientName}</div>
+                  <div style={{ color: "var(--text-3)", fontSize: 11 }}>{clientHH.toLocaleString("es-CL")} HH · {cliPct}%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Treemap */}
+        <div>
+          <div style={{ ...EYE, marginBottom: 10 }}>Horas del cliente por cargo</div>
+          {tmItems.length > 0 ? (
+            <svg viewBox={`0 0 ${TW} ${TH}`} style={{ width: "100%", display: "block", borderRadius: 10, overflow: "hidden" }}>
+              {tiles.map((tile, i) => {
+                const pad = 9;
+                const showFull = tile.w > 60 && tile.h > 38;
+                const showMin  = !showFull && tile.h > 20;
+                const titleShort = tile.title.length > 20 ? tile.title.slice(0, 19) + "…" : tile.title;
+                const fs = Math.min(13, Math.max(8, tile.h / 4.5));
+                return (
+                  <g key={tile.id || i}>
+                    <rect x={tile.x + 1.5} y={tile.y + 1.5} width={tile.w - 3} height={tile.h - 3}
+                      fill={tile.color} rx="5" />
+                    {showFull && (
+                      <>
+                        <text x={tile.x + pad} y={tile.y + tile.h - pad - fs + 2}
+                          fontSize={fs} fontWeight="700" fill="white" fontFamily="Trebuchet MS">
+                          {tile.value} HH
+                        </text>
+                        <text x={tile.x + pad} y={tile.y + tile.h - pad + 2}
+                          fontSize={Math.max(7.5, fs - 2.5)} fill="white" fontFamily="Trebuchet MS" opacity="0.78">
+                          {titleShort}
+                        </text>
+                      </>
+                    )}
+                    {showMin && (
+                      <text x={tile.x + tile.w / 2} y={tile.y + tile.h / 2 + 4}
+                        fontSize="8.5" fontWeight="700" fill="white" fontFamily="Trebuchet MS"
+                        textAnchor="middle">{tile.value}</text>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+          ) : (
+            <div style={{ color: "var(--text-3)", fontSize: 13 }}>Sin cargos con horas definidas.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid cols-2" style={{ marginTop: 24 }}>
         <Stat
           label="Retorno por HH cliente · rango"
           value={`${fmtMoney(clientHH > 0 ? (groups.reduce((s,g)=>s+g.minSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.minSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0, client.currency, { compact: true })} — ${fmtMoney(clientHH > 0 ? (groups.reduce((s,g)=>s+g.maxSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.maxSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0, client.currency, { compact: true })}`}
