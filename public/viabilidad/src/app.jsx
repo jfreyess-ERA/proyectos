@@ -214,7 +214,7 @@ function App() {
             onChange={setGlobalTab}
           />
           {globalTab === "clients" && (
-            <ClientsView onOpen={(id) => { store.setActiveClient(id); setSection("data"); }} />
+            <ClientsView onOpen={(id) => { store.setActiveClient(id); setSection("expenses"); }} />
           )}
           {globalTab === "admin" && <EraAdminView />}
         </main>
