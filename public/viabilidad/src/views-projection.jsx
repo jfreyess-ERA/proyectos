@@ -1169,9 +1169,10 @@ function ResourcesPanel({ client, groups, retAvg }) {
 // HonorariosChart — Honorarios 100% a éxito
 // ============================================================
 function HonorariosChart({ client }) {
-  const feePct      = client?.scenario?.feePct        ?? 30;
-  const feeMonths   = client?.scenario?.feeMonths     ?? 36;
-  const horizonYears = client?.scenario?.horizonYears ?? 5;
+  const sc = { feePctOnSavings: 50, feeMonths: 36, projectionYears: 5, ...(client?.scenario || {}) };
+  const feePct       = sc.feePctOnSavings;
+  const feeMonths    = sc.feeMonths;
+  const horizonYears = sc.projectionYears;
 
   const TEAL   = "#2AAFAF";
   const ORANGE = "#E8A838";

@@ -304,11 +304,11 @@ function ScenariosView({ client }) {
           </Field>
           <Field label="Horizonte (años)">
             <div className="row" style={{ gap: 12 }}>
-              <input type="range" min="1" max="10" step="1" value={client.scenario.horizonYears || 5}
-                     onChange={e => store.updateClient(client.id, { scenario: { ...client.scenario, horizonYears: +e.target.value } })}
+              <input type="range" min="1" max="10" step="1" value={client.scenario.projectionYears || 5}
+                     onChange={e => store.updateClient(client.id, { scenario: { ...client.scenario, projectionYears: +e.target.value } })}
                      style={{ flex: 1 }} />
-              <input className="input right" type="number" min="1" max="20" value={client.scenario.horizonYears || 5}
-                     onChange={e => store.updateClient(client.id, { scenario: { ...client.scenario, horizonYears: +e.target.value } })} style={{ width: 80 }} />
+              <input className="input right" type="number" min="1" max="20" value={client.scenario.projectionYears || 5}
+                     onChange={e => store.updateClient(client.id, { scenario: { ...client.scenario, projectionYears: +e.target.value } })} style={{ width: 80 }} />
             </div>
           </Field>
           <Stat label={t.scenarios.fee} value={fmtRange(feeMin, feeMax, client.currency)} sub={`${client.scenario.feePct}% × ${(client.scenario.feeMonths || 36)} meses`} variant="accent" />
