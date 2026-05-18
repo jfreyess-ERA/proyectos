@@ -248,9 +248,9 @@ function ExpensesView({ client, readonly = false }) {
                 Empieza importando un archivo Excel con los gastos del cliente, o crea las categorías manualmente y añade filas una a una.
               </p>
               <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-                <button className="btn primary" onClick={() => setMode("excel")}>📊 Importar Excel</button>
+                <button className="btn primary" onClick={() => setMode("import")}>📊 Importar datos</button>
                 <button className="btn" onClick={() => setShowAddCat(true)}>+ Crear categoría</button>
-                <button className="btn ghost" onClick={() => setMode("manual")}>Añadir fila manual</button>
+                <button className="btn ghost" onClick={() => setMode("import")}>Añadir fila manual</button>
               </div>
             </>
           )}
@@ -331,9 +331,7 @@ function ExpensesView({ client, readonly = false }) {
         { id: "table",      label: t.expenses.modes.table, count: expenses.length || null },
         { id: "rangos",     label: "⊞ Rangos" },
         ...(!readonly ? [
-          { id: "manual", label: t.expenses.modes.manual },
-          { id: "paste",  label: t.expenses.modes.paste },
-          { id: "excel",  label: "Excel" },
+          { id: "import", label: "Importar datos" },
         ] : []),
       ]} />
 
@@ -354,26 +352,27 @@ function ExpensesView({ client, readonly = false }) {
       {mode === "rangos" && (
         <RangesTab client={client} readonly={readonly} />
       )}
-      {mode === "manual" && (
-        <ManualEntry client={client} catLabel={catLabel} onAdd={(exp) => store.addExpense(client.id, exp)} />
-      )}
-      {mode === "paste" && (
-        <PasteImport client={client} catLabel={catLabel} onImport={(rows) => {
-          store.setExpenses(client.id, [...expenses, ...rows]);
-          setImportToast({ rows: rows.length, cats: 0 });
-          setMode("table");
-        }} />
-      )}
-      {mode === "excel" && (
-        <ExcelImport client={client} catLabel={catLabel} eraCategories={eraCategories}
-          onImport={(rows, newCats) => {
-            setUndoSnapshot([...expenses]);
-            (newCats || []).forEach(cat => { const { _isNew, ...d } = cat; store.addCategory(client.id, d); });
+      {mode === "import" && (
+        <div className="stack lg">
+          {/* ── 1. Excel ── */}
+          <ExcelImport client={client} catLabel={catLabel} eraCategories={eraCategories}
+            onImport={(rows, newCats) => {
+              setUndoSnapshot([...expenses]);
+              (newCats || []).forEach(cat => { const { _isNew, ...d } = cat; store.addCategory(client.id, d); });
+              store.setExpenses(client.id, [...expenses, ...rows]);
+              setImportToast({ rows: rows.length, cats: (newCats || []).length });
+              setMode("table");
+            }}
+          />
+          {/* ── 2. Manual ── */}
+          <ManualEntry client={client} catLabel={catLabel} onAdd={(exp) => store.addExpense(client.id, exp)} />
+          {/* ── 3. CSV ── */}
+          <PasteImport client={client} catLabel={catLabel} onImport={(rows) => {
             store.setExpenses(client.id, [...expenses, ...rows]);
-            setImportToast({ rows: rows.length, cats: (newCats || []).length });
+            setImportToast({ rows: rows.length, cats: 0 });
             setMode("table");
-          }}
-        />
+          }} />
+        </div>
       )}
 
       <AddCategoryModal open={showAddCat} onClose={() => setShowAddCat(false)}
