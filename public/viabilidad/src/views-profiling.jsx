@@ -662,21 +662,46 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
   // Label: above if cy > H*0.55 (bubble is in lower part), below if near top
   const labelPos = (cy, radius) => cy > H * 0.55 ? "above" : "below";
 
+  // ── Feasibility filter ──────────────────────────────────────────
+  const [feasFilter, setFeasFilter] = React.useState(null); // null|"high"|"med"|"low"
+  const visibleGroups = feasFilter == null ? groups
+    : feasFilter === "high" ? groups.filter(g => g.avgFeasibility >= 4)
+    : feasFilter === "med"  ? groups.filter(g => g.avgFeasibility >= 3 && g.avgFeasibility < 4)
+    : groups.filter(g => g.avgFeasibility < 3);
+
   return (
     <div className="card">
       <div className="row between" style={{ marginBottom: 16 }}>
         <h3 className="h3" style={{ margin: 0 }}>Matriz volumen × ahorro</h3>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, color: "var(--text-3)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 11, color: "var(--text-3)" }}>
           <span>● tamaño = gasto total</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            borde:
-            {[{ c: "#2f7d63", label: "factible (4–5)" }, { c: "#c8861a", label: "probable (3)" }, { c: "#c0392b", label: "fuera de análisis (1–2)" }].map(({ c, label }) => (
-              <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-                <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke={c} strokeWidth="2.5"/></svg>
-                {label}
-              </span>
-            ))}
-          </span>
+          {/* Feasibility filter chips */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ marginRight: 2 }}>Factibilidad:</span>
+            {[
+              { key: null,   c: "var(--line)",  label: "Todas" },
+              { key: "high", c: "#2f7d63",      label: "Factible (4–5)" },
+              { key: "med",  c: "#c8861a",      label: "Probable (3)" },
+              { key: "low",  c: "#c0392b",      label: "Fuera (1–2)" },
+            ].map(f => {
+              const active = feasFilter === f.key;
+              return (
+                <button key={String(f.key)} onClick={() => setFeasFilter(active ? null : f.key)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    padding: "2px 8px", borderRadius: 12, cursor: "pointer", fontSize: 10,
+                    fontWeight: active ? 700 : 400,
+                    border: `1.5px solid ${active ? f.c : "var(--line)"}`,
+                    background: active ? f.c + "22" : "transparent",
+                    color: active ? f.c : "var(--text-3)",
+                    transition: "all 0.15s",
+                  }}>
+                  {f.key && <svg width="8" height="8" viewBox="0 0 8 8" style={{ flexShrink: 0 }}><circle cx="4" cy="4" r="3" fill="none" stroke={f.c} strokeWidth="1.8"/></svg>}
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
@@ -709,7 +734,7 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
           </g>
         ))}
         {/* Bubbles — render in two passes: circles first, then labels on top */}
-        {groups.map(g => {
+        {visibleGroups.map(g => {
           const share = total > 0 ? g.total / total * 100 : 0;
           const bx = x(share), by = y(g.avgSavingsPct);
           const radius = r(g.total);
@@ -729,7 +754,7 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
           );
         })}
         {/* Labels pass — on top of all circles */}
-        {groups.map(g => {
+        {visibleGroups.map(g => {
           const share = total > 0 ? g.total / total * 100 : 0;
           const bx = x(share), by = y(g.avgSavingsPct);
           const radius = r(g.total);
@@ -741,9 +766,7 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
           const labelY = isAbove ? by - radius - 5 : by + radius + 13;
           const labelAnchor = bx < W * 0.15 ? "start" : bx > W * 0.85 ? "end" : "middle";
           const TIER_COLORS = { A: "#b8893a", B: "#0F2724", C: "#2A5FA5", D: "#888" };
-          const TIER_SHORT2 = { A: "QW", B: "ES", C: "BI", D: "DC" };
-          const badgeTxt = shortName + " · " + (TIER_SHORT2[tk] || tk);
-          const bgW = badgeTxt.length * 5.6 + 16, bgH = 15;
+          const bgW = shortName.length * 5 + 14, bgH = 13;
           const bgX = labelAnchor === "start" ? bx - 2 : labelAnchor === "end" ? bx - bgW + 2 : bx - bgW / 2;
           const bgY = isAbove ? labelY - bgH + 3 : labelY - bgH + 2;
           return (
@@ -751,11 +774,10 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
                style={{ cursor: onCategoryClick ? "pointer" : "default" }}
                onClick={() => onCategoryClick && onCategoryClick(g.categoryId)}>
               <rect x={bgX} y={bgY} width={bgW} height={bgH} rx={2} fill="var(--surface)" fillOpacity="0.92" />
-              {/* Tier colour strip on left of label */}
-              <rect x={bgX} y={bgY} width={5} height={bgH} rx={2} fill={TIER_COLORS[tk] || "#888"} />
-              <text x={bgX + 8} y={labelY} fontSize="10" fill="var(--ink)"
+              <rect x={bgX} y={bgY} width={4} height={bgH} rx={2} fill={TIER_COLORS[tk] || "#888"} />
+              <text x={bgX + 7} y={labelY - 1} fontSize="9" fill="var(--ink)"
                 textAnchor="start" fontFamily="Trebuchet MS" fontWeight="600">
-                {badgeTxt}
+                {shortName}
               </text>
             </g>
           );
