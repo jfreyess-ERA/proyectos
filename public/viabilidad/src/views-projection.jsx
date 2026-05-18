@@ -408,11 +408,12 @@ function ProjectionView({ client }) {
           </thead>
           <tbody>
             {(() => {
-              // Bars: track fills available column space, fill = value% of track (0-100% absolute)
+              // Bars: track fills available column space, fill = value% of track (0-100 absolute)
+              // value is already 0–100 (e.g. 8.5 for 8.5%), so use directly as CSS %
               const PctBar = ({ value }) => (
                 <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", paddingRight: 4 }}>
                   <div style={{ flex: 1, height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden", minWidth: 20 }}>
-                    <div style={{ width: `${Math.min(100, (value || 0) * 100)}%`, height: "100%", background: "var(--positive-2)", borderRadius: 3 }} />
+                    <div style={{ width: `${Math.min(100, value || 0)}%`, height: "100%", background: "var(--positive-2)", borderRadius: 3 }} />
                   </div>
                   <span style={{ fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "right", flexShrink: 0 }}>{fmtPct(value)}</span>
                 </div>
