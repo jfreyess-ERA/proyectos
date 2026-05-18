@@ -429,6 +429,7 @@ function ProfilingView({ client }) {
   const totalSav = totalSavings(client);
   const [drawerCatId, setDrawerCatId] = React.useState(null);
   const [showLogic, setShowLogic] = React.useState(false);
+  const [activeTier, setActiveTier] = React.useState(null);
 
   if (groups.length === 0) {
     return <Empty icon="◯" title={t.profiling.none} hint={t.expenses.lede} />;
@@ -456,8 +457,10 @@ function ProfilingView({ client }) {
           const list = tiers[tk];
           const sum = list.reduce((s, g) => s + g.total, 0);
           const savSum = list.reduce((s, g) => s + g.potentialSavings, 0);
+          const isActive = activeTier === tk;
           return (
-            <div key={tk} className="card" style={{ padding: 16 }}>
+            <div key={tk} className="card" style={{ padding: 16, cursor: list.length > 0 ? "pointer" : "default", outline: isActive ? "2px solid var(--accent)" : "none", outlineOffset: -2 }}
+              onClick={() => list.length > 0 && setActiveTier(isActive ? null : tk)}>
               <div className="row" style={{ marginBottom: 6 }}>
                 <span className={"tier " + tk}>{t.profiling[`tier${tk}`]}</span>
                 <span className="spacer" />
@@ -472,10 +475,49 @@ function ProfilingView({ client }) {
               <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 8, lineHeight: 1.4 }}>
                 {t.profiling.tierExplain[tk]}
               </div>
+              {list.length > 0 && (
+                <div style={{ fontSize: 11, color: "var(--accent)", marginTop: 8, fontWeight: 600 }}>
+                  {isActive ? "▲ Ocultar" : "▼ Ver categorías"}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+
+      {/* Tier detail panel */}
+      {activeTier && tiers[activeTier].length > 0 && (
+        <div className="card flat" style={{ padding: 0, overflow: "hidden", marginTop: -8 }}>
+          <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 10 }}>
+            <span className={"tier " + activeTier}>{t.profiling[`tier${activeTier}`]}</span>
+            <span style={{ fontSize: 13, color: "var(--text-2)" }}>{tiers[activeTier].length} {tiers[activeTier].length === 1 ? "categoría" : "categorías"}</span>
+          </div>
+          <table className="t">
+            <thead>
+              <tr>
+                <th>{t.expenses.cols.category}</th>
+                <th className="right">{t.profiling.volume}</th>
+                <th className="right">% gasto</th>
+                <th className="right">{t.profiling.savings}</th>
+                <th className="right">{t.profiling.potential}</th>
+                <th className="right">Factib.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tiers[activeTier].map(g => (
+                <tr key={g.categoryId} style={{ cursor: "pointer" }} onClick={() => setDrawerCatId(g.categoryId)}>
+                  <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
+                  <td className="right tabular" style={{ fontWeight: 700 }}>{fmtMoney(g.total, client.currency)}</td>
+                  <td className="right tabular">{fmtPct(total > 0 ? g.total / total * 100 : 0)}</td>
+                  <td className="right tabular">{fmtPct(g.avgSavingsPct)}</td>
+                  <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(g.potentialSavings, client.currency)}</td>
+                  <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Logic toggle */}
       <div style={{ marginTop: -8 }}>
