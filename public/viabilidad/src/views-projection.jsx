@@ -780,35 +780,6 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
       {/* Volume × avg savings matrix */}
       <ProfilingMatrix groups={groups} total={total} client={client} onCategoryClick={setDrawerCatId} />
 
-      {/* Hero retorno */}
-      <div className="card" style={{ background: "var(--ink)", color: "var(--on-ink)", borderColor: "var(--ink)", padding: 32 }}>
-        <div className="grid cols-3" style={{ alignItems: "center", gap: 20 }}>
-          <div>
-            <div style={{ fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", color: "var(--champagne)", fontWeight: 700, marginBottom: 6 }}>
-              {t.projection.retorno5y} {sc.projectionYears} {t.projection.retornoYears}
-            </div>
-            <div style={{ fontSize: 14, opacity: 0.75 }}>{client.legalName}</div>
-            <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>
-              ERA: {sc.feePctOnSavings}% × {sc.feeMonths} meses
-            </div>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", opacity: 0.65 }}>Rango cliente</div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: "var(--champagne)", fontVariantNumeric: "tabular-nums", marginTop: 4 }}>
-              {fmtMoney(retMin, client.currency, { compact: true })} — {fmtMoney(retMax, client.currency, { compact: true })}
-            </div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>medio: {fmtMoney(retAvg, client.currency, { compact: true })}</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", opacity: 0.65 }}>{t.projection.honorariosERA}</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: "rgba(244,241,232,0.9)", fontVariantNumeric: "tabular-nums", marginTop: 4 }}>
-              {fmtMoney(feeMin, client.currency, { compact: true })} — {fmtMoney(feeMax, client.currency, { compact: true })}
-            </div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>medio: {fmtMoney(feeAvg, client.currency, { compact: true })}</div>
-          </div>
-        </div>
-      </div>
-
       {/* Resources Lámina 8 */}
       <ResourcesPanel client={client} groups={inc} retAvg={retAvg} />
 
@@ -1516,4 +1487,61 @@ function GanttView({ client }) {
   );
 }
 
-Object.assign(window, { ProjectionView, GanttView, ResourcesPanel, HonorariosChart });
+// ============================================================
+// RetornoSummaryCard — al final de la pestaña proyección
+// ============================================================
+function RetornoSummaryCard({ client }) {
+  const { t } = useI18n();
+  const store = useStore();
+  const eraCategories = store.state.eraCategories || [];
+  const sc = { feePctOnSavings: 50, feeMonths: 36, projectionYears: 5, includedCategories: null, ...(client?.scenario || {}) };
+
+  const allGroups = aggregateByEra(client, eraCategories);
+  const inc = allGroups.filter(g => sc.includedCategories == null || sc.includedCategories.includes(g.categoryId));
+
+  const sumMin = inc.reduce((s, g) => s + (g.minSavings || 0), 0);
+  const sumMax = inc.reduce((s, g) => s + (g.maxSavings || 0), 0);
+  const sumAvg = inc.reduce((s, g) => s + (g.potentialSavings || (g.minSavings + g.maxSavings) / 2 || 0), 0);
+
+  const feeMin = sumMin * (sc.feePctOnSavings / 100) * (sc.feeMonths / 12);
+  const feeMax = sumMax * (sc.feePctOnSavings / 100) * (sc.feeMonths / 12);
+  const feeAvg = sumAvg * (sc.feePctOnSavings / 100) * (sc.feeMonths / 12);
+
+  const retMin = sumMin * sc.projectionYears - feeMin;
+  const retMax = sumMax * sc.projectionYears - feeMax;
+  const retAvg = sumAvg * sc.projectionYears - feeAvg;
+
+  if (inc.length === 0) return null;
+
+  return (
+    <div className="card" style={{ background: "var(--ink)", color: "var(--on-ink)", borderColor: "var(--ink)", padding: "18px 28px" }}>
+      <div className="grid cols-3" style={{ alignItems: "center", gap: 20 }}>
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase", color: "var(--champagne)", fontWeight: 700, marginBottom: 4 }}>
+            {t.projection.retorno5y} {sc.projectionYears} {t.projection.retornoYears}
+          </div>
+          <div style={{ fontSize: 13, opacity: 0.75 }}>{client.legalName}</div>
+          <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>
+            ERA: {sc.feePctOnSavings}% × {sc.feeMonths} meses
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase", opacity: 0.65 }}>Rango cliente</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "var(--champagne)", fontVariantNumeric: "tabular-nums", marginTop: 3 }}>
+            {fmtMoney(retMin, client.currency, { compact: true })} — {fmtMoney(retMax, client.currency, { compact: true })}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.7, marginTop: 3 }}>medio: {fmtMoney(retAvg, client.currency, { compact: true })}</div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase", opacity: 0.65 }}>{t.projection.honorariosERA}</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: "rgba(244,241,232,0.9)", fontVariantNumeric: "tabular-nums", marginTop: 3 }}>
+            {fmtMoney(feeMin, client.currency, { compact: true })} — {fmtMoney(feeMax, client.currency, { compact: true })}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.7, marginTop: 3 }}>medio: {fmtMoney(feeAvg, client.currency, { compact: true })}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { ProjectionView, GanttView, ResourcesPanel, HonorariosChart, RetornoSummaryCard });

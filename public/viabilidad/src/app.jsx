@@ -412,6 +412,7 @@ function App() {
         {section === "projection" && <ProjectionView client={active} readonly={readonly} onGoToRangos={() => { setSection("expenses"); setRequestedExpensesMode("rangos"); }} />}
         {section === "projection" && <div style={{ marginTop: 40 }}><HonorariosChart client={active} /></div>}
         {section === "projection" && <div style={{ marginTop: 40 }}><GanttView client={active} readonly={readonly} /></div>}
+        {section === "projection" && <div style={{ marginTop: 40 }}><RetornoSummaryCard client={active} /></div>}
         {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}
       </main>
       <SaveIndicator status={saveStatus} />
