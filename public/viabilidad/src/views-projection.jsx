@@ -935,7 +935,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
         const retMax2 = clientHH > 0 ? (groups.reduce((s,g)=>s+g.maxSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.maxSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0;
 
         return (
-          <div style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr", gap: 24, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "auto auto auto auto", columnGap: 16, rowGap: 16, alignItems: "start" }}>
 
             {/* Col 1: HH ERA + barras + analistas */}
             <div style={{ gridColumn: 1, gridRow: 1, width: 190 }}>
@@ -1057,7 +1057,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
             <div style={{ gridColumn: 4, gridRow: 1 }}>
               <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
               {tmItems.length > 0 ? (
-                <div style={{ height: CHART_H }}>
+                <div style={{ width: Math.round(CHART_H * TW / TH), height: CHART_H }}>
                   <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" height="100%"
                     preserveAspectRatio="xMidYMid meet"
                     style={{ display: "block", borderRadius: 10, overflow: "hidden" }}>
