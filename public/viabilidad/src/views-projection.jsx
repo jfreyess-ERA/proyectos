@@ -1368,8 +1368,8 @@ function GanttView({ client }) {
                             <div style={{ display: "grid", gridTemplateColumns: gridCols, columnGap: 1, fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
                               {compress ? (
                                 <>
-                                  <span style={{ gridColumn: String(gCol) }}>M{p.start + nonGDur + 1}</span>
-                                  <span style={{ gridColumn: String(gCol + 6), textAlign: "right" }}>M{p.start + total}</span>
+                                  <span style={{ gridColumn: String(gCol) }}>M1</span>
+                                  <span style={{ gridColumn: String(gCol + 6), textAlign: "right" }}>M{gSeg.dur}</span>
                                 </>
                               ) : (
                                 <>
