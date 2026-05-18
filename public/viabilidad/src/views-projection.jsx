@@ -1231,14 +1231,17 @@ function GanttView({ client }) {
       </div>
 
       {/* Legend */}
-      <div className="card flat" style={{ padding: "14px 18px", background: "var(--surface-2)" }}>
-        <div className="row wrap" style={{ gap: 18, alignItems: "center" }}>
-          <span style={{ fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--text-3)", fontWeight: 700 }}>Etapas:</span>
+      <div className="card flat" style={{ padding: "10px 18px", background: "var(--surface-2)" }}>
+        <div style={{ display: "flex", flexWrap: "nowrap", gap: 10, alignItems: "center" }}>
+          <span style={{ fontSize: 10, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--text-3)", fontWeight: 700, whiteSpace: "nowrap" }}>Etapas:</span>
           {Object.entries(t.gantt.stagesShort).map(([k, label]) => (
-            <span key={k} style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 18, height: 12, background: STAGE_COLORS[k], borderRadius: 2 }} />
-              <strong>{label}</strong>
-              <span style={{ color: "var(--text-3)" }}>· {t.gantt.stages[k]}</span>
+            <span key={k} style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              background: STAGE_COLORS[k], borderRadius: 5,
+              padding: "3px 8px",
+            }}>
+              <strong style={{ fontSize: 11, color: "#fff", whiteSpace: "nowrap" }}>{label}</strong>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap" }}>— {t.gantt.stages[k]}</span>
             </span>
           ))}
         </div>
