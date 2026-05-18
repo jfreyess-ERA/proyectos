@@ -1332,8 +1332,8 @@ function GanttView({ client }) {
                         const label = t.gantt.stagesShort[seg.stage];
                         const isFirst = si === 0;
                         const isLast = si === segments.length - 1;
-                        if (seg.stage !== "G" || seg.dur <= 3) {
-                          // Show individual labels for all stages except long Seguimiento
+                        if (seg.stage !== "G" || seg.dur <= 6) {
+                          // Show individual month blocks for all stages except long Seguimiento
                           return (
                             <div key={si} style={barSeg(color, label, seg.dur, isFirst, isLast, false)}>
                               {Array.from({ length: seg.dur }, (_, j) => (
@@ -1342,12 +1342,26 @@ function GanttView({ client }) {
                             </div>
                           );
                         }
-                        // Seguimiento largo: label | ··· | label
+                        // Seguimiento largo (>6): 3 bloques | ··· | 3 bloques
+                        const bRadius = (left, right) =>
+                          left && right ? 3 : left ? "3px 0 0 3px" : right ? "0 3px 3px 0" : 0;
+                        const miniBlock = (j, side) => (
+                          <div key={side + j} style={{
+                            flex: 1, background: color, display: "flex", alignItems: "center",
+                            justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
+                            borderLeft: side === "e" && j === 0 ? "1px solid rgba(255,255,255,0.35)" : "none",
+                            borderRight: side === "s" && j === 2 ? "1px solid rgba(255,255,255,0.35)" : "none",
+                          }}>{label}</div>
+                        );
                         return (
-                          <div key={si} style={{ ...barSeg(color, label, seg.dur, isFirst, isLast, false), padding: 0, justifyContent: "space-between" }}>
-                            <span style={{ padding: "0 5px", flexShrink: 0 }}>{label}</span>
-                            <span style={{ letterSpacing: 2, opacity: 0.8, flexShrink: 0 }}>···</span>
-                            <span style={{ padding: "0 5px", flexShrink: 0 }}>{label}</span>
+                          <div key={si} style={{
+                            flex: seg.dur, display: "flex", alignItems: "stretch", height: "100%",
+                            borderRadius: bRadius(isFirst, isLast),
+                            overflow: "hidden", marginRight: isLast ? 0 : 1,
+                          }}>
+                            {[0,1,2].map(j => miniBlock(j, "s"))}
+                            <div style={{ flex: Math.max(1, seg.dur - 6), background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.75)", fontSize: 10, letterSpacing: 3 }}>···</div>
+                            {[0,1,2].map(j => miniBlock(j, "e"))}
                           </div>
                         );
                       })}
