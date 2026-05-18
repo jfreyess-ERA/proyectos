@@ -623,7 +623,7 @@ function ProfilingView({ client }) {
       </div>
 
       {/* Volume × savings matrix */}
-      <ProfilingMatrix groups={groups} total={total} client={client} onCategoryClick={setDrawerCatId} />
+      <ProfilingMatrix groups={groups} total={total} client={client} tierConfig={tierConfig} onCategoryClick={setDrawerCatId} />
 
       <CategoryDrawer
         open={drawerCatId != null}
@@ -636,8 +636,13 @@ function ProfilingView({ client }) {
   );
 }
 
-function ProfilingMatrix({ groups, total, client, onCategoryClick }) {
+function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick }) {
   const { t } = useI18n();
+  const tc = tierConfig || DEFAULT_TIER_CONFIG;
+  // Convert nominal volume threshold to % of total for the vertical line
+  const volThreshPct = total > 0 ? (tc.highVolumeAmount / total) * 100 : 8;
+  const savThreshPct = tc.highSavingsPct;
+
   const W = 720, H = 420, P = 54;
   const maxShare = Math.max(...groups.map(g => total > 0 ? g.total / total * 100 : 0), 20);
   const maxSav = Math.max(...groups.map(g => g.avgSavingsPct), 25);
@@ -670,18 +675,18 @@ function ProfilingMatrix({ groups, total, client, onCategoryClick }) {
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
         {/* Quadrant fills */}
-        <rect x={x(8)} y={P} width={W - P - x(8)} height={y(10) - P} fill="rgba(184,137,58,0.08)" />
-        <rect x={x(8)} y={y(10)} width={W - P - x(8)} height={H - P - y(10)} fill="rgba(15,39,36,0.04)" />
+        <rect x={x(volThreshPct)} y={P} width={W - P - x(volThreshPct)} height={y(savThreshPct) - P} fill="rgba(184,137,58,0.08)" />
+        <rect x={x(volThreshPct)} y={y(savThreshPct)} width={W - P - x(volThreshPct)} height={H - P - y(savThreshPct)} fill="rgba(15,39,36,0.04)" />
         {/* Axes */}
         <line x1={P} y1={H - P} x2={W - P} y2={H - P} stroke="var(--line)" />
         <line x1={P} y1={P} x2={P} y2={H - P} stroke="var(--line)" />
         {/* Threshold lines */}
-        <line x1={x(8)} y1={P} x2={x(8)} y2={H - P} stroke="var(--line)" strokeDasharray="3 3" />
-        <line x1={P} y1={y(10)} x2={W - P} y2={y(10)} stroke="var(--line)" strokeDasharray="3 3" />
+        <line x1={x(volThreshPct)} y1={P} x2={x(volThreshPct)} y2={H - P} stroke="var(--line)" strokeDasharray="3 3" />
+        <line x1={P} y1={y(savThreshPct)} x2={W - P} y2={y(savThreshPct)} stroke="var(--line)" strokeDasharray="3 3" />
         {/* Quadrant labels */}
-        <text x={x(8) + 8} y={P + 16} fontSize="10" fill="var(--champagne-2)" fontWeight="700" fontFamily="Trebuchet MS">QUICK WIN</text>
+        <text x={x(volThreshPct) + 8} y={P + 16} fontSize="10" fill="var(--champagne-2)" fontWeight="700" fontFamily="Trebuchet MS">QUICK WIN</text>
         <text x={P + 6} y={P + 16} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS">BAJO IMPACTO</text>
-        <text x={x(8) + 8} y={H - P - 8} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS">ESTRATÉGICA</text>
+        <text x={x(volThreshPct) + 8} y={H - P - 8} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS">ESTRATÉGICA</text>
         <text x={P + 6} y={H - P - 8} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS">DESCARTAR</text>
         {/* Axis labels */}
         <text x={W / 2} y={H - 10} fontSize="11" fill="var(--text-2)" textAnchor="middle" fontFamily="Trebuchet MS" fontWeight="700">% del gasto total →</text>
