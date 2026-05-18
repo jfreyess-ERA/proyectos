@@ -283,7 +283,7 @@ function ScenariosView({ client }) {
       {/* Fee model */}
       <div className="card">
         <h3 className="h3">{t.scenarios.fee}</h3>
-        <div className="grid cols-3" style={{ alignItems: "end", gap: 20, marginBottom: 20 }}>
+        <div className="grid cols-4" style={{ alignItems: "end", gap: 20, marginBottom: 20 }}>
           <Field label={`${t.scenarios.feeLabel} (default)`}>
             <div className="row" style={{ gap: 12 }}>
               <input type="range" min="0" max="50" step="1" value={client.scenario.feePct}
@@ -300,6 +300,15 @@ function ScenariosView({ client }) {
                      style={{ flex: 1 }} />
               <input className="input right" type="number" min="0" max="120" value={client.scenario.feeMonths || 36}
                      onChange={e => store.updateClient(client.id, { scenario: { ...client.scenario, feeMonths: +e.target.value } })} style={{ width: 80 }} />
+            </div>
+          </Field>
+          <Field label="Horizonte (años)">
+            <div className="row" style={{ gap: 12 }}>
+              <input type="range" min="1" max="10" step="1" value={client.scenario.horizonYears || 5}
+                     onChange={e => store.updateClient(client.id, { scenario: { ...client.scenario, horizonYears: +e.target.value } })}
+                     style={{ flex: 1 }} />
+              <input className="input right" type="number" min="1" max="20" value={client.scenario.horizonYears || 5}
+                     onChange={e => store.updateClient(client.id, { scenario: { ...client.scenario, horizonYears: +e.target.value } })} style={{ width: 80 }} />
             </div>
           </Field>
           <Stat label={t.scenarios.fee} value={fmtRange(feeMin, feeMax, client.currency)} sub={`${client.scenario.feePct}% × ${(client.scenario.feeMonths || 36)} meses`} variant="accent" />

@@ -1169,8 +1169,9 @@ function ResourcesPanel({ client, groups, retAvg }) {
 // HonorariosChart — Honorarios 100% a éxito
 // ============================================================
 function HonorariosChart({ client }) {
-  const feePct    = client?.scenario?.feePct    ?? 30;
-  const feeMonths = client?.scenario?.feeMonths ?? 36;
+  const feePct      = client?.scenario?.feePct        ?? 30;
+  const feeMonths   = client?.scenario?.feeMonths     ?? 36;
+  const horizonYears = client?.scenario?.horizonYears ?? 5;
 
   const TEAL   = "#2AAFAF";
   const ORANGE = "#E8A838";
@@ -1178,7 +1179,7 @@ function HonorariosChart({ client }) {
 
   // Chart geometry
   const cx = 100, cy = 52, cw = 370, ch = 178;
-  const totalMonths = 60; // 5 años
+  const totalMonths = horizonYears * 12;
   const feeXW = Math.min(feeMonths / totalMonths, 1) * cw;
   const feeYH = Math.min(feePct    / 100,         1) * ch;
 
@@ -1190,7 +1191,8 @@ function HonorariosChart({ client }) {
   const svgH = cy + ch + 62;
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "28px 0 12px" }}>
+    <div className="card" style={{ padding: "32px 40px" }}>
+      <div style={{ display: "flex", justifyContent: "center" }}>
       <div style={{ maxWidth: 620, width: "100%" }}>
 
         {/* Title */}
@@ -1256,7 +1258,7 @@ function HonorariosChart({ client }) {
             points={`${cx+cw+20},${cy+ch} ${cx+cw+12},${cy+ch-5} ${cx+cw+12},${cy+ch+5}`}
             fill="#666"
           />
-          <text x={cx+cw+28} y={cy+ch+4} fontSize={10.5} fill="#555">5 años</text>
+          <text x={cx+cw+28} y={cy+ch+4} fontSize={10.5} fill="#555">{horizonYears} años</text>
 
           {/* Curly brace under fee period */}
           <path d={bPath} fill="none" stroke={ORANGE} strokeWidth={1.5}/>
@@ -1265,6 +1267,7 @@ function HonorariosChart({ client }) {
           </text>
 
         </svg>
+      </div>
       </div>
     </div>
   );
