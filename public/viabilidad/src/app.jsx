@@ -362,7 +362,6 @@ function App() {
     { id: "expenses",   label: t.nav.expenses, count: active.expenses.length },
     { id: "evolution",  label: t.nav.evolution },
     { id: "projection", label: t.nav.projection },
-    { id: "dashboard",  label: t.nav.dashboard },
     { id: "scenarios",  label: t.nav.scenarios },
   ];
 
@@ -412,7 +411,6 @@ function App() {
         {section === "evolution"  && <EvolutionView client={active} readonly={readonly} />}
         {section === "projection" && <ProjectionView client={active} readonly={readonly} onGoToRangos={() => { setSection("expenses"); setRequestedExpensesMode("rangos"); }} />}
         {section === "projection" && <div style={{ marginTop: 40 }}><GanttView client={active} readonly={readonly} /></div>}
-        {section === "dashboard"  && <DashboardView client={active} readonly={readonly} />}
         {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}
       </main>
       <SaveIndicator status={saveStatus} />
