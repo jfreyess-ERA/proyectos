@@ -920,197 +920,198 @@ function ResourcesPanel({ client, groups, retAvg }) {
       </div>
       <p className="lede" style={{ marginBottom: 20 }}>{t.resources.lede}</p>
 
-      {/* ── Single row: HH ERA | donut | treemap | roles table ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "auto auto 1fr auto", gap: 24, alignItems: "start" }}>
+      {/* ── Layout: col1=HH ERA+analistas | col2=tabla | col3=donut | col4=treemap
+           Stat cards en fila 2 bajo cols 3–4
+      ── */}
+      {(() => {
+        const count = r.eraAnalysts || 1;
+        const PersonIcon = ({ size = 22 }) => (
+          <svg width={size} height={size * 1.15} viewBox="0 0 20 23" fill="none">
+            <circle cx="10" cy="6" r="5" fill={ERA_ORANGE} />
+            <path d="M1 22c0-4.97 4.03-9 9-9s9 4.03 9 9" stroke={ERA_ORANGE} strokeWidth="2" strokeLinecap="round" fill="none" />
+          </svg>
+        );
+        const retMin2 = clientHH > 0 ? (groups.reduce((s,g)=>s+g.minSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.minSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0;
+        const retMax2 = clientHH > 0 ? (groups.reduce((s,g)=>s+g.maxSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.maxSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0;
 
-        {/* Col 1: HH ERA compact */}
-        <div style={{ width: 190 }}>
-          <div style={{ ...EYE, marginBottom: 10 }}>HH ERA / Categoría</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <input className="input right" type="number" value={r.eraHHPerCat}
-              onChange={e => setR({ eraHHPerCat: +e.target.value || 0 })}
-              style={{ width: 90, fontSize: 14, fontWeight: 600 }} />
-            <span style={{ fontSize: 11, color: "var(--text-3)" }}>HH / cat.</span>
-          </div>
-          <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
-            <div style={{ fontSize: 10, color: "var(--text-3)", marginBottom: 3 }}>Total ERA estimado</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: "var(--ink)", lineHeight: 1 }}>
-              {eraHH.toLocaleString("es-CL")}
-              <span style={{ fontSize: 12, fontWeight: 400, color: "var(--text-2)", marginLeft: 4 }}>HH</span>
-            </div>
-            <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 5 }}>{n} cat. × {r.eraHHPerCat} HH</div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[
-              { label: "ERA Group", hh: eraHH, pct: eraPct, color: ERA_ORANGE },
-              { label: clientName,  hh: clientHH, pct: cliPct, color: CLI_BLUE },
-            ].map(({ label, hh, pct, color }) => (
-              <div key={label}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: "var(--ink)" }}>{label}</span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color, fontVariantNumeric: "tabular-nums" }}>
-                    {hh.toLocaleString("es-CL")}
-                    <span style={{ fontSize: 9, fontWeight: 400, marginLeft: 2, color: "var(--text-3)" }}>HH</span>
-                  </span>
-                </div>
-                <div style={{ background: "var(--line)", borderRadius: 4, height: 10, overflow: "hidden" }}>
-                  <div style={{ width: `${hh / maxHH * 100}%`, background: color, height: "100%", borderRadius: 4, transition: "width 0.4s ease" }} />
-                </div>
-                <div style={{ fontSize: 9, color: "var(--text-3)", marginTop: 2 }}>{pct}% del total</div>
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr", gap: 24, alignItems: "start" }}>
+
+            {/* Col 1: HH ERA + barras + analistas */}
+            <div style={{ gridColumn: 1, gridRow: 1, width: 190 }}>
+              <div style={{ ...EYE, marginBottom: 10 }}>HH ERA / Categoría</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <input className="input right" type="number" value={r.eraHHPerCat}
+                  onChange={e => setR({ eraHHPerCat: +e.target.value || 0 })}
+                  style={{ width: 90, fontSize: 14, fontWeight: 600 }} />
+                <span style={{ fontSize: 11, color: "var(--text-3)" }}>HH / cat.</span>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Col 2: Donut + analistas */}
-        <div>
-          <div style={{ ...EYE, marginBottom: 12 }}>Distribución de horas</div>
-          <div style={{ height: CHART_H, width: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg viewBox="0 0 220 220" style={{ height: "100%", width: "auto", display: "block", overflow: "visible" }}>
-              {totalHH === 0 ? (
-                <circle cx={cx} cy={cy} r={Ro} fill="var(--surface-2)" stroke="var(--line)" />
-              ) : eraHH === 0 ? (
-                <circle cx={cx} cy={cy} r={Ro} fill={CLI_BLUE} />
-              ) : clientHH === 0 ? (
-                <circle cx={cx} cy={cy} r={Ro} fill={ERA_ORANGE} />
-              ) : (
-                <>
-                  <path d={pieSlice(0, eraAngle)} fill={ERA_ORANGE} stroke="white" strokeWidth="2" />
-                  <path d={pieSlice(eraAngle, 2 * Math.PI)} fill={CLI_BLUE} stroke="white" strokeWidth="2" />
-                </>
-              )}
-              <circle cx={cx} cy={cy} r={Ri + 3} fill="white" />
-              <circle cx={cx} cy={cy} r={Ri} fill="white" stroke="var(--line)" strokeWidth="1" />
-              <text x={cx} y={cy - 8} textAnchor="middle" fontSize="9.5" fill="var(--text-3)"
-                fontFamily="Trebuchet MS" letterSpacing="0.5" fontWeight="600">TOTAL HH</text>
-              <text x={cx} y={cy + 14} textAnchor="middle" fontSize="22" fontWeight="800"
-                fill="var(--ink)" fontFamily="Trebuchet MS">{totalHH.toLocaleString("es-CL")}</text>
-            </svg>
-          </div>
-          {/* Analistas ERA */}
-          {(() => {
-            const count = r.eraAnalysts || 1;
-            const PersonIcon = ({ color = ERA_ORANGE, size = 22 }) => (
-              <svg width={size} height={size * 1.15} viewBox="0 0 20 23" fill="none">
-                <circle cx="10" cy="6" r="5" fill={color} />
-                <path d="M1 22c0-4.97 4.03-9 9-9s9 4.03 9 9" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none" />
-              </svg>
-            );
-            return (
-              <div style={{ marginTop: 14, width: 220 }}>
-                <div style={{ ...EYE, marginBottom: 8 }}>Analistas ERA</div>
-                {/* Icons row */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10, minHeight: 28 }}>
-                  {Array.from({ length: count }).map((_, i) => (
-                    <PersonIcon key={i} color={ERA_ORANGE} size={22} />
-                  ))}
+              <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: "var(--text-3)", marginBottom: 3 }}>Total ERA estimado</div>
+                <div style={{ fontSize: 26, fontWeight: 800, color: "var(--ink)", lineHeight: 1 }}>
+                  {eraHH.toLocaleString("es-CL")}
+                  <span style={{ fontSize: 12, fontWeight: 400, color: "var(--text-2)", marginLeft: 4 }}>HH</span>
                 </div>
-                {/* Stepper */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 5 }}>{n} cat. × {r.eraHHPerCat} HH</div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+                {[
+                  { label: "ERA Group", hh: eraHH, pct: eraPct, color: ERA_ORANGE },
+                  { label: clientName,  hh: clientHH, pct: cliPct, color: CLI_BLUE },
+                ].map(({ label, hh, pct, color }) => (
+                  <div key={label}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--ink)" }}>{label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color, fontVariantNumeric: "tabular-nums" }}>
+                        {hh.toLocaleString("es-CL")}
+                        <span style={{ fontSize: 9, fontWeight: 400, marginLeft: 2, color: "var(--text-3)" }}>HH</span>
+                      </span>
+                    </div>
+                    <div style={{ background: "var(--line)", borderRadius: 4, height: 10, overflow: "hidden" }}>
+                      <div style={{ width: `${hh / maxHH * 100}%`, background: color, height: "100%", borderRadius: 4, transition: "width 0.4s ease" }} />
+                    </div>
+                    <div style={{ fontSize: 9, color: "var(--text-3)", marginTop: 2 }}>{pct}% del total</div>
+                  </div>
+                ))}
+              </div>
+              {/* Analistas */}
+              <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14 }}>
+                <div style={{ ...EYE, marginBottom: 8 }}>Analistas ERA</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 }}>
+                  {Array.from({ length: count }).map((_, i) => <PersonIcon key={i} size={20} />)}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button onClick={() => setR({ eraAnalysts: Math.max(1, count - 1) })}
-                    style={{ width: 26, height: 26, borderRadius: 6, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 15, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>−</button>
-                  <span style={{ flex: 1, textAlign: "center", fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                    style={{ width: 24, height: 24, borderRadius: 5, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 14, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>−</button>
+                  <span style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>
                     {count} <span style={{ fontWeight: 400, color: "var(--text-3)" }}>analistas</span>
                   </span>
                   <button onClick={() => setR({ eraAnalysts: count + 1 })}
-                    style={{ width: 26, height: 26, borderRadius: 6, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 15, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>+</button>
+                    style={{ width: 24, height: 24, borderRadius: 5, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 14, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>+</button>
                 </div>
-                <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 5, textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 4, textAlign: "center" }}>
                   {Math.round(eraHH / count).toLocaleString("es-CL")} HH / analista
                 </div>
               </div>
-            );
-          })()}
-        </div>
-
-        {/* Col 3: Treemap */}
-        <div>
-          <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
-          {tmItems.length > 0 ? (
-            <div style={{ height: CHART_H }}>
-              <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" height="100%"
-                preserveAspectRatio="xMidYMid meet"
-                style={{ display: "block", borderRadius: 10, overflow: "hidden" }}>
-                {tiles.map((tile, i) => {
-                  const pad = 8;
-                  const showFull = tile.w > 55 && tile.h > 30;
-                  const showMin  = !showFull && (tile.w > 26 || tile.h > 20);
-                  const titleShort = tile.title.length > 22 ? tile.title.slice(0, 20) + "…" : tile.title;
-                  const fs = Math.min(13, Math.max(8, Math.min(tile.w / 7, tile.h / 3.5)));
-                  return (
-                    <g key={tile.id || i}>
-                      <rect x={tile.x + 1.5} y={tile.y + 1.5} width={tile.w - 3} height={tile.h - 3}
-                        fill={tile.color} rx="5" />
-                      {showFull && (
-                        <>
-                          <text x={tile.x + pad} y={tile.y + tile.h - pad - fs + 1}
-                            fontSize={fs} fontWeight="700" fill="white" fontFamily="Trebuchet MS">
-                            {tile.value} HH
-                          </text>
-                          <text x={tile.x + pad} y={tile.y + tile.h - pad + 2}
-                            fontSize={Math.max(7.5, fs - 2)} fill="white" fontFamily="Trebuchet MS" opacity="0.85">
-                            {titleShort}
-                          </text>
-                        </>
-                      )}
-                      {showMin && !showFull && (
-                        <text x={tile.x + tile.w / 2} y={tile.y + tile.h / 2 + 4}
-                          fontSize="8" fontWeight="700" fill="white" fontFamily="Trebuchet MS"
-                          textAnchor="middle">{tile.value}</text>
-                      )}
-                    </g>
-                  );
-                })}
-              </svg>
             </div>
-          ) : (
-            <div style={{ color: "var(--text-3)", fontSize: 13 }}>Sin cargos con horas definidas.</div>
-          )}
-        </div>
 
-        {/* Col 4: Roles table */}
-        <div>
-          <div className="row between" style={{ marginBottom: 8 }}>
-            <span style={EYE}>Detalle horas por cargo</span>
-            <button className="btn ghost sm" onClick={addRole}>+ cargo</button>
+            {/* Col 2: Tabla de cargos */}
+            <div style={{ gridColumn: 2, gridRow: 1 }}>
+              <div className="row between" style={{ marginBottom: 8 }}>
+                <span style={EYE}>Detalle horas por cargo</span>
+                <button className="btn ghost sm" onClick={addRole}>+ cargo</button>
+              </div>
+              <table className="t" style={{ fontSize: 12 }}>
+                <thead><tr>
+                  <th style={{ width: 16 }}></th>
+                  <th>Cargo</th>
+                  <th className="right" style={{ width: 80 }}>HH</th>
+                  <th style={{ width: 36 }}></th>
+                </tr></thead>
+                <tbody>
+                  {r.roles.map((role, i) => (
+                    <tr key={role.id}>
+                      <td><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: ROLE_COLORS[i % ROLE_COLORS.length], verticalAlign: "middle" }} /></td>
+                      <td><input className="input" value={role.title} onChange={e => updRole(i, { title: e.target.value })} /></td>
+                      <td className="right"><input className="input right" type="number" value={role.hours} onChange={e => updRole(i, { hours: +e.target.value || 0 })} /></td>
+                      <td><button className="btn ghost sm danger" onClick={() => removeRole(i)} title="Eliminar">×</button></td>
+                    </tr>
+                  ))}
+                  <tr className="totals">
+                    <td></td><td>Total cliente</td>
+                    <td className="right tabular">{clientHH} HH</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Col 3: Donut */}
+            <div style={{ gridColumn: 3, gridRow: 1 }}>
+              <div style={{ ...EYE, marginBottom: 12 }}>Distribución de horas</div>
+              <div style={{ height: CHART_H, width: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg viewBox="0 0 220 220" style={{ height: "100%", width: "auto", display: "block", overflow: "visible" }}>
+                  {totalHH === 0 ? (
+                    <circle cx={cx} cy={cy} r={Ro} fill="var(--surface-2)" stroke="var(--line)" />
+                  ) : eraHH === 0 ? (
+                    <circle cx={cx} cy={cy} r={Ro} fill={CLI_BLUE} />
+                  ) : clientHH === 0 ? (
+                    <circle cx={cx} cy={cy} r={Ro} fill={ERA_ORANGE} />
+                  ) : (
+                    <>
+                      <path d={pieSlice(0, eraAngle)} fill={ERA_ORANGE} stroke="white" strokeWidth="2" />
+                      <path d={pieSlice(eraAngle, 2 * Math.PI)} fill={CLI_BLUE} stroke="white" strokeWidth="2" />
+                    </>
+                  )}
+                  <circle cx={cx} cy={cy} r={Ri + 3} fill="white" />
+                  <circle cx={cx} cy={cy} r={Ri} fill="white" stroke="var(--line)" strokeWidth="1" />
+                  <text x={cx} y={cy - 8} textAnchor="middle" fontSize="9.5" fill="var(--text-3)"
+                    fontFamily="Trebuchet MS" letterSpacing="0.5" fontWeight="600">TOTAL HH</text>
+                  <text x={cx} y={cy + 14} textAnchor="middle" fontSize="22" fontWeight="800"
+                    fill="var(--ink)" fontFamily="Trebuchet MS">{totalHH.toLocaleString("es-CL")}</text>
+                </svg>
+              </div>
+            </div>
+
+            {/* Col 4: Treemap */}
+            <div style={{ gridColumn: 4, gridRow: 1 }}>
+              <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
+              {tmItems.length > 0 ? (
+                <div style={{ height: CHART_H }}>
+                  <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" height="100%"
+                    preserveAspectRatio="xMidYMid meet"
+                    style={{ display: "block", borderRadius: 10, overflow: "hidden" }}>
+                    {tiles.map((tile, i) => {
+                      const pad = 8;
+                      const showFull = tile.w > 55 && tile.h > 30;
+                      const showMin  = !showFull && (tile.w > 26 || tile.h > 20);
+                      const titleShort = tile.title.length > 22 ? tile.title.slice(0, 20) + "…" : tile.title;
+                      const fs = Math.min(13, Math.max(8, Math.min(tile.w / 7, tile.h / 3.5)));
+                      return (
+                        <g key={tile.id || i}>
+                          <rect x={tile.x + 1.5} y={tile.y + 1.5} width={tile.w - 3} height={tile.h - 3}
+                            fill={tile.color} rx="5" />
+                          {showFull && (
+                            <>
+                              <text x={tile.x + pad} y={tile.y + tile.h - pad - fs + 1}
+                                fontSize={fs} fontWeight="700" fill="white" fontFamily="Trebuchet MS">
+                                {tile.value} HH
+                              </text>
+                              <text x={tile.x + pad} y={tile.y + tile.h - pad + 2}
+                                fontSize={Math.max(7.5, fs - 2)} fill="white" fontFamily="Trebuchet MS" opacity="0.85">
+                                {titleShort}
+                              </text>
+                            </>
+                          )}
+                          {showMin && !showFull && (
+                            <text x={tile.x + tile.w / 2} y={tile.y + tile.h / 2 + 4}
+                              fontSize="8" fontWeight="700" fill="white" fontFamily="Trebuchet MS"
+                              textAnchor="middle">{tile.value}</text>
+                          )}
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+              ) : (
+                <div style={{ color: "var(--text-3)", fontSize: 13 }}>Sin cargos con horas definidas.</div>
+              )}
+            </div>
+
+            {/* Fila 2, cols 3–4: Stat cards bajo donut + treemap */}
+            <div style={{ gridColumn: "3 / 5", gridRow: 2, display: "flex", gap: 16 }}>
+              <Stat
+                label="Retorno por HH cliente · rango"
+                value={`${fmtMoney(retMin2, client.currency, { compact: true })} — ${fmtMoney(retMax2, client.currency, { compact: true })}`}
+                sub={`/ HH cliente (${clientHH} HH)`}
+                variant="accent"
+              />
+              <Stat label={t.resources.categoriesIncluded} value={n} sub={t.scenarios.proposed} variant="dark" />
+            </div>
+
           </div>
-          <table className="t" style={{ fontSize: 12 }}>
-            <thead><tr>
-              <th style={{ width: 16 }}></th>
-              <th>Cargo</th>
-              <th className="right" style={{ width: 80 }}>HH</th>
-              <th style={{ width: 36 }}></th>
-            </tr></thead>
-            <tbody>
-              {r.roles.map((role, i) => (
-                <tr key={role.id}>
-                  <td><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: ROLE_COLORS[i % ROLE_COLORS.length], verticalAlign: "middle" }} /></td>
-                  <td><input className="input" value={role.title} onChange={e => updRole(i, { title: e.target.value })} /></td>
-                  <td className="right"><input className="input right" type="number" value={role.hours} onChange={e => updRole(i, { hours: +e.target.value || 0 })} /></td>
-                  <td><button className="btn ghost sm danger" onClick={() => removeRole(i)} title="Eliminar">×</button></td>
-                </tr>
-              ))}
-              <tr className="totals">
-                <td></td><td>Total cliente</td>
-                <td className="right tabular">{clientHH} HH</td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-      </div>
-
-      {/* ── Stat cards below ───────────────────────────────────── */}
-      <div style={{ display: "flex", gap: 16, marginTop: 24 }}>
-        <Stat
-          label="Retorno por HH cliente · rango"
-          value={`${fmtMoney(clientHH > 0 ? (groups.reduce((s,g)=>s+g.minSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.minSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0, client.currency, { compact: true })} — ${fmtMoney(clientHH > 0 ? (groups.reduce((s,g)=>s+g.maxSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.maxSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0, client.currency, { compact: true })}`}
-          sub={`/ HH cliente (${clientHH} HH)`}
-          variant="accent"
-        />
-        <Stat label={t.resources.categoriesIncluded} value={n} sub={t.scenarios.proposed} variant="dark" />
-      </div>
+        );
+      })()}
     </div>
   );
 }
