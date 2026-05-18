@@ -1166,6 +1166,111 @@ function ResourcesPanel({ client, groups, retAvg }) {
 }
 
 // ============================================================
+// HonorariosChart — Honorarios 100% a éxito
+// ============================================================
+function HonorariosChart({ client }) {
+  const feePct    = client?.scenario?.feePct    ?? 30;
+  const feeMonths = client?.scenario?.feeMonths ?? 36;
+
+  const TEAL   = "#2AAFAF";
+  const ORANGE = "#E8A838";
+  const DARK   = "#003A70";
+
+  // Chart geometry
+  const cx = 100, cy = 52, cw = 370, ch = 178;
+  const totalMonths = 60; // 5 años
+  const feeXW = Math.min(feeMonths / totalMonths, 1) * cw;
+  const feeYH = Math.min(feePct    / 100,         1) * ch;
+
+  // Curly brace path under fee period
+  const bx1 = cx, bx2 = cx + feeXW, bmx = cx + feeXW / 2;
+  const by = cy + ch + 24, bh = 11;
+  const bPath = `M${bx1},${by} C${bx1},${by+bh} ${bmx-4},${by+bh} ${bmx},${by+bh+5} C${bmx+4},${by+bh} ${bx2},${by+bh} ${bx2},${by}`;
+
+  const svgH = cy + ch + 62;
+
+  return (
+    <div style={{ display: "flex", justifyContent: "center", padding: "28px 0 12px" }}>
+      <div style={{ maxWidth: 620, width: "100%" }}>
+
+        {/* Title */}
+        <div style={{ textAlign: "center", marginBottom: 14 }}>
+          <span style={{ fontSize: 22, fontWeight: 800, color: ORANGE }}>Honorarios </span>
+          <span style={{ fontSize: 22, fontWeight: 800, color: DARK }}>100% a </span>
+          <span style={{ fontSize: 22, fontWeight: 800, color: DARK, textDecoration: "underline" }}>éxito</span>
+        </div>
+
+        {/* Fee % indicator bar */}
+        <div style={{ maxWidth: 180, margin: "0 auto 22px", display: "flex", alignItems: "center" }}>
+          <div style={{ position: "relative", flex: 1, height: 4, background: "#e0e0e0", borderRadius: 2 }}>
+            <div style={{ position: "absolute", left: 0, top: 0, width: `${Math.min(feePct, 100)}%`, height: "100%", background: ORANGE, borderRadius: 2 }} />
+            <div style={{
+              position: "absolute", left: `${Math.min(feePct, 100)}%`, top: "50%",
+              transform: "translate(-50%,-50%)", width: 10, height: 10,
+              background: DARK, borderRadius: "50%", border: "2px solid white",
+            }} />
+          </div>
+        </div>
+
+        {/* SVG chart */}
+        <svg viewBox={`0 0 560 ${svgH}`} style={{ width: "100%", display: "block", overflow: "visible" }}>
+
+          {/* Subtitle */}
+          <text x={cx + cw/2} y={cy - 16} textAnchor="middle" fontSize={11} fontWeight={700} fill={DARK}>
+            Optimización de costos en el largo plazo (5 años)
+          </text>
+
+          {/* Y-axis bracket */}
+          <line x1={cx-14} y1={cy}      x2={cx-14} y2={cy+ch} stroke={ORANGE} strokeWidth={1.5}/>
+          <line x1={cx-14} y1={cy}      x2={cx-8}  y2={cy}    stroke={ORANGE} strokeWidth={1.5}/>
+          <line x1={cx-14} y1={cy+ch}   x2={cx-8}  y2={cy+ch} stroke={ORANGE} strokeWidth={1.5}/>
+
+          {/* Y-axis label (rotated) */}
+          <text
+            transform={`rotate(-90, ${cx-42}, ${cy+ch/2})`}
+            x={cx-42} y={cy+ch/2}
+            textAnchor="middle" fontSize={9.5} fontWeight={600} fill={ORANGE}
+          >Ahorros generados por ERA Group</text>
+
+          {/* Teal bar */}
+          <rect x={cx} y={cy} width={cw} height={ch} fill={TEAL} rx={4}/>
+
+          {/* Gray box — ERA honorarios */}
+          {feeXW > 0 && feeYH > 0 && (
+            <rect x={cx} y={cy} width={feeXW} height={feeYH} fill="rgba(212,212,212,0.92)" rx={3}/>
+          )}
+
+          {/* Labels inside gray box */}
+          {feeXW > 50 && feeYH > 32 && (<>
+            <text x={cx+feeXW/2} y={cy+feeYH/2 - 9} textAnchor="middle" fontSize={11} fontWeight={700} fill="#333">
+              Honorarios ERA
+            </text>
+            <text x={cx+feeXW/2} y={cy+feeYH/2 + 9} textAnchor="middle" fontSize={12} fontWeight={700} fill={ORANGE}>
+              {feePct}%
+            </text>
+          </>)}
+
+          {/* X axis + arrow */}
+          <line x1={cx} y1={cy+ch} x2={cx+cw+20} y2={cy+ch} stroke="#666" strokeWidth={1.5}/>
+          <polygon
+            points={`${cx+cw+20},${cy+ch} ${cx+cw+12},${cy+ch-5} ${cx+cw+12},${cy+ch+5}`}
+            fill="#666"
+          />
+          <text x={cx+cw+28} y={cy+ch+4} fontSize={10.5} fill="#555">5 años</text>
+
+          {/* Curly brace under fee period */}
+          <path d={bPath} fill="none" stroke={ORANGE} strokeWidth={1.5}/>
+          <text x={bmx} y={by+bh+21} textAnchor="middle" fontSize={10.5} fill={ORANGE} fontWeight={600}>
+            {feeMonths} meses
+          </text>
+
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // Gantt (Lámina 9)
 // ============================================================
 function GanttView({ client }) {
@@ -1407,4 +1512,4 @@ function GanttView({ client }) {
   );
 }
 
-Object.assign(window, { ProjectionView, GanttView, ResourcesPanel });
+Object.assign(window, { ProjectionView, GanttView, ResourcesPanel, HonorariosChart });
