@@ -12,21 +12,197 @@ function ProjectionView({ client }) {
   const tableCardRef = React.useRef(null);
   const [downloading, setDownloading] = React.useState(false);
 
-  const downloadTableImage = async () => {
+  const downloadTableImage = () => {
     if (!tableCardRef.current || downloading) return;
     setDownloading(true);
     try {
-      // domtoimage uses SVG foreignObject → browser renders natively → oklch works
-      const dataUrl = await domtoimage.toPng(tableCardRef.current, { scale: 2 });
+      const card = tableCardRef.current;
+      const sc2 = { feePct: 30, feePctOnSavings: 50, feeMonths: 36, projectionYears: 5, includedCategories: null, ...(client.scenario || {}) };
+
+      // ── color helpers ──────────────────────────────────────────
+      const nc = document.createElement("canvas").getContext("2d");
+      const toHex = v => {
+        if (!v || v === "none" || v === "transparent") return null;
+        if (v.includes("oklch")) { try { nc.fillStyle = v; return nc.fillStyle; } catch(e) { return null; } }
+        try { nc.fillStyle = v; return nc.fillStyle; } catch(e) { return null; }
+      };
+      const cs = el => getComputedStyle(el);
+
+      // ── measure table ──────────────────────────────────────────
+      const cardRect = card.getBoundingClientRect();
+      const S = 2; // scale
+      const W = Math.ceil(cardRect.width);
+
+      // Read header row and data rows from the rendered table
+      const table = card.querySelector("table");
+      const thead = table.querySelector("thead tr");
+      const tbodyRows = Array.from(table.querySelectorAll("tbody tr"));
+
+      const thEls = Array.from(thead.querySelectorAll("th"));
+      const colWidths = thEls.map(th => Math.ceil(th.getBoundingClientRect().width));
+      const ROW_H = 36, HEAD_H = 32, TOTALS_H = 36;
+
+      // Read header section height (eyebrow + title + filter chips)
+      const headerSection = card.querySelector("div");
+      const headerH = Math.ceil(headerSection.getBoundingClientRect().height);
+
+      // Retorno bar height
+      const retornoBar = card.lastElementChild;
+      const retornoH = Math.ceil(retornoBar.getBoundingClientRect().height);
+
+      // Data rows (skip totals row which is last)
+      const dataRows = tbodyRows.slice(0, -1);
+      const totalRow = tbodyRows[tbodyRows.length - 1];
+
+      const tableH = HEAD_H + dataRows.length * ROW_H + TOTALS_H;
+      const H = headerH + tableH + retornoH;
+
+      // ── setup canvas ───────────────────────────────────────────
+      const cv = document.createElement("canvas");
+      cv.width = W * S; cv.height = H * S;
+      const ctx = cv.getContext("2d");
+      ctx.scale(S, S);
+
+      // palette from computed styles
+      const bodyBg = toHex(cs(card).backgroundColor) || "#ffffff";
+      const surface2 = toHex(cs(thead).backgroundColor) || "#f5f4f0";
+      const lineColor = "#d8d5cc";
+      const inkColor = "#0d1f3c";
+      const champagne = "#c8861a";
+      const positive = "#2f7d63";
+      const textMuted = "#6b6860";
+      const totalsBg = toHex(cs(totalRow).backgroundColor) || "#f5f1e0";
+
+      // helper: draw filled rect
+      const rect = (x, y, w, h, fill) => { ctx.fillStyle = fill; ctx.fillRect(x, y, w, h); };
+      // helper: draw bottom border
+      const line = (y, x0, x1, color = lineColor) => { ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); };
+      // helper: draw text clipped to cell
+      const cellText = (text, x, y, w, h, color, align = "left", bold = false, size = 12) => {
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x + 4, y, w - 8, h); ctx.clip();
+        ctx.fillStyle = color;
+        ctx.font = `${bold ? "600" : "400"} ${size}px "Trebuchet MS", Arial, sans-serif`;
+        ctx.textBaseline = "middle";
+        const cx = align === "right" ? x + w - 6 : align === "center" ? x + w / 2 : x + 8;
+        ctx.textAlign = align === "right" ? "right" : align === "center" ? "center" : "left";
+        ctx.fillText(String(text || ""), cx, y + h / 2);
+        ctx.restore();
+      };
+
+      // ── 1. Header section (white bg) ───────────────────────────
+      rect(0, 0, W, headerH, "#ffffff");
+      // eyebrow
+      ctx.fillStyle = champagne; ctx.font = `700 9px "Trebuchet MS", Arial`;
+      ctx.textBaseline = "middle"; ctx.fillText("TABLA RESUMEN", 20, 18);
+      // title
+      ctx.fillStyle = inkColor; ctx.font = `700 14px "Trebuchet MS", Arial`;
+      ctx.fillText("Factibilidad y proyección de ahorros (anuales)", 20, 36);
+      line(headerH, 0, W, lineColor);
+
+      // ── 2. Table header row ────────────────────────────────────
+      let ty = headerH;
+      rect(0, ty, W, HEAD_H, surface2);
+      let tx = 0;
+      thEls.forEach((th, i) => {
+        const w = colWidths[i];
+        const text = th.textContent.replace(/[↕↓↑]/g, "").trim();
+        const align = i <= 1 ? "left" : "right";
+        cellText(text, tx, ty, w, HEAD_H, textMuted, align, true, 10);
+        tx += w;
+      });
+      line(ty + HEAD_H, 0, W, lineColor);
+      ty += HEAD_H;
+
+      // ── 3. Data rows ───────────────────────────────────────────
+      dataRows.forEach((tr, ri) => {
+        const bg = ri % 2 === 1 ? "#f9f8f6" : "#ffffff";
+        rect(0, ty, W, ROW_H, bg);
+        const tds = Array.from(tr.querySelectorAll("td"));
+        tx = 0;
+        tds.forEach((td, i) => {
+          const w = colWidths[i];
+          if (i === 0) { tx += w; return; } // checkbox col — skip
+          const rawColor = toHex(cs(td).color) || inkColor;
+          const align = i <= 1 ? "left" : "right";
+          const bold = cs(td).fontWeight >= 600;
+          // For feasibility dots col, draw colored squares
+          if (i === 5) {
+            const dots = td.querySelectorAll("span[style]");
+            const filledCount = Array.from(dots).filter(d => !getComputedStyle(d).opacity || getComputedStyle(d).opacity >= 1).length;
+            const dotW = 10, dotH = 8, gap = 3;
+            const total5W = 5 * dotW + 4 * gap;
+            let dx = tx + (w - total5W) / 2;
+            for (let d = 0; d < 5; d++) {
+              ctx.fillStyle = d < Math.round(filledCount) ? "#1f4f85" : "#d8d5cc";
+              ctx.beginPath(); ctx.roundRect(dx, ty + ROW_H/2 - dotH/2, dotW, dotH, 2); ctx.fill();
+              dx += dotW + gap;
+            }
+          } else {
+            cellText(td.textContent.trim(), tx, ty, w, ROW_H, rawColor, align, bold, 12);
+          }
+          tx += w;
+        });
+        line(ty + ROW_H, 0, W, lineColor);
+        ty += ROW_H;
+      });
+
+      // ── 4. Totals row ──────────────────────────────────────────
+      rect(0, ty, W, TOTALS_H, totalsBg);
+      const totalTds = Array.from(totalRow.querySelectorAll("td"));
+      tx = 0;
+      totalTds.forEach((td, i) => {
+        const w = colWidths[i];
+        const align = i <= 1 ? "left" : "right";
+        const c = toHex(cs(td).color) || inkColor;
+        cellText(td.textContent.trim(), tx, ty, w, TOTALS_H, c, align, true, 12);
+        tx += w;
+      });
+      ty += TOTALS_H;
+
+      // ── 5. Retorno bar ─────────────────────────────────────────
+      const retBg = toHex(cs(retornoBar).backgroundColor) || "#0d2240";
+      rect(0, ty, W, retornoH, retBg);
+
+      // left label
+      ctx.fillStyle = champagne; ctx.font = `700 9px "Trebuchet MS", Arial`;
+      ctx.textBaseline = "middle";
+      ctx.fillText(`RETORNO CLIENTE ${sc2.projectionYears} ${sc2.projectionYears === 1 ? "AÑO" : "AÑOS"}`, 20, ty + retornoH * 0.35);
+      ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.font = `400 10px "Trebuchet MS", Arial`;
+      ctx.fillText(`ERA ${sc2.feePctOnSavings}% × ${sc2.feeMonths}m · ${client.legalName}`, 20, ty + retornoH * 0.7);
+
+      // center: main values
+      const retSpan = retornoBar.querySelector("div:nth-child(2) div:nth-child(2)");
+      const retText = retSpan ? retSpan.textContent.trim() : "";
+      const medioSpan = retornoBar.querySelector("div:nth-child(2) div:nth-child(3)");
+      const medioText = medioSpan ? medioSpan.textContent.trim() : "";
+      ctx.fillStyle = champagne; ctx.font = `700 18px "Trebuchet MS", Arial`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(retText, W / 2, ty + retornoH * 0.38);
+      ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.font = `400 10px "Trebuchet MS", Arial`;
+      ctx.fillText(medioText, W / 2, ty + retornoH * 0.72);
+      ctx.textAlign = "left";
+
+      // ERA logo text (right) — just text since img is hard
+      ctx.fillStyle = "rgba(255,255,255,0.75)"; ctx.font = `700 15px "Trebuchet MS", Arial`;
+      ctx.textAlign = "right"; ctx.textBaseline = "middle";
+      ctx.fillText("era GROUP", W - 20, ty + retornoH / 2);
+      ctx.textAlign = "left";
+
+      // ── 6. Border around whole image ───────────────────────────
+      ctx.strokeStyle = lineColor; ctx.lineWidth = 1;
+      ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+
+      // ── 7. Download ────────────────────────────────────────────
       const link = document.createElement("a");
       link.download = `tabla-resumen-${(client.legalName || "cliente").replace(/\s+/g, "-").toLowerCase()}.png`;
-      link.href = dataUrl;
+      link.href = cv.toDataURL("image/png");
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err) {
       console.error("[download]", err);
-      alert("No se pudo generar la imagen: " + (err.message || err));
+      alert("Error al generar imagen: " + (err.message || err));
     } finally {
       setDownloading(false);
     }
