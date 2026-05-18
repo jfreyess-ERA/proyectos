@@ -458,103 +458,121 @@ function NewClientModal({ open, onClose, onCreate }) {
 function ClientDataView({ client, readonly = false }) {
   const { t } = useI18n();
   const store = useStore();
+  const [expanded, setExpanded] = React.useState(false); // collapsed by default
   const update = (patch) => store.updateClient(client.id, patch);
   const updateContact = (patch) => update({ contact: { ...client.contact, ...patch } });
 
   return (
     <div className="stack lg">
-      <div>
-        <div className="eyebrow">{t.client.general}</div>
-        <h2 className="h2">{client.legalName || "—"}</h2>
-      </div>
-
-      <div className="grid cols-2">
-        <div className="card">
-          <h3 className="h3">{t.client.general}</h3>
-          <div className="grid cols-2" style={{ gap: 12 }}>
-            <Field label={t.client.legalName} span={2}>
-              <input className="input" value={client.legalName || ""} onChange={e => update({ legalName: e.target.value })} readOnly={readonly} />
-            </Field>
-            <Field label={t.client.tradeName}>
-              <input className="input" value={client.tradeName || ""} onChange={e => update({ tradeName: e.target.value })} readOnly={readonly} />
-            </Field>
-            <Field label={t.client.taxId}>
-              <input className="input" value={client.taxId || ""} onChange={e => update({ taxId: e.target.value })} readOnly={readonly} />
-            </Field>
-            <Field label={t.client.sector} span={2}>
-              <input className="input" value={client.sector || ""} onChange={e => update({ sector: e.target.value })} readOnly={readonly} />
-            </Field>
-            <Field label={t.client.employees}>
-              <input className="input right" type="number" value={client.employees ?? ""} onChange={e => update({ employees: e.target.value === "" ? null : +e.target.value })} readOnly={readonly} />
-            </Field>
-            <Field label={t.client.sites}>
-              <input className="input right" type="number" value={client.sites ?? ""} onChange={e => update({ sites: e.target.value === "" ? null : +e.target.value })} readOnly={readonly} />
-            </Field>
-            <Field label={t.client.country}>
-              <input className="input" value={client.country || ""} onChange={e => update({ country: e.target.value })} readOnly={readonly} />
-            </Field>
-            <Field label={t.client.currency}>
-              <CurrencySelect value={client.currency} onChange={v => update({ currency: v })} disabled={readonly} />
-            </Field>
-          </div>
+      {/* Collapsible header */}
+      <button
+        onClick={() => setExpanded(v => !v)}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          width: "100%", background: "var(--surface-2)", border: "1px solid var(--line)",
+          borderRadius: 8, padding: "12px 20px", cursor: "pointer", textAlign: "left",
+        }}
+      >
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 2 }}>{t.client.general}</div>
+          <span className="h3" style={{ margin: 0 }}>{client.legalName || "—"}</span>
         </div>
+        <span style={{ fontSize: 18, color: "var(--text-3)", marginLeft: 12, flexShrink: 0 }}>
+          {expanded ? "▲" : "▼"}
+        </span>
+      </button>
 
-        <div className="stack">
-          <div className="card">
-            <h3 className="h3">Facturación</h3>
-            <div className="grid cols-2" style={{ gap: 12 }}>
-              <Field label={t.client.year}>
-                <input className="input right" type="number" value={client.year ?? ""} onChange={e => update({ year: +e.target.value })} readOnly={readonly} />
-              </Field>
-              <Field label={t.client.stage}>
-                <select className="select" value={client.stage} onChange={e => update({ stage: +e.target.value })} disabled={readonly}>
-                  {t.client.stages.map((s, i) => <option key={i} value={i}>{s}</option>)}
-                </select>
-              </Field>
-              <Field label={`${t.client.revenue} (${client.currency})`} span={2}>
-                <MoneyInput value={client.revenue ?? 0} onChange={v => update({ revenue: v || null })} disabled={readonly} />
-              </Field>
-              <Field label={`${t.client.ebitda} (${client.currency})`} span={2}>
-                <MoneyInput value={client.ebitda ?? 0} onChange={v => update({ ebitda: v || null })} disabled={readonly} />
-              </Field>
+      {expanded && (
+        <>
+          <div className="grid cols-2">
+            <div className="card">
+              <h3 className="h3">{t.client.general}</h3>
+              <div className="grid cols-2" style={{ gap: 12 }}>
+                <Field label={t.client.legalName} span={2}>
+                  <input className="input" value={client.legalName || ""} onChange={e => update({ legalName: e.target.value })} readOnly={readonly} />
+                </Field>
+                <Field label={t.client.tradeName}>
+                  <input className="input" value={client.tradeName || ""} onChange={e => update({ tradeName: e.target.value })} readOnly={readonly} />
+                </Field>
+                <Field label={t.client.taxId}>
+                  <input className="input" value={client.taxId || ""} onChange={e => update({ taxId: e.target.value })} readOnly={readonly} />
+                </Field>
+                <Field label={t.client.sector} span={2}>
+                  <input className="input" value={client.sector || ""} onChange={e => update({ sector: e.target.value })} readOnly={readonly} />
+                </Field>
+                <Field label={t.client.employees}>
+                  <input className="input right" type="number" value={client.employees ?? ""} onChange={e => update({ employees: e.target.value === "" ? null : +e.target.value })} readOnly={readonly} />
+                </Field>
+                <Field label={t.client.sites}>
+                  <input className="input right" type="number" value={client.sites ?? ""} onChange={e => update({ sites: e.target.value === "" ? null : +e.target.value })} readOnly={readonly} />
+                </Field>
+                <Field label={t.client.country}>
+                  <input className="input" value={client.country || ""} onChange={e => update({ country: e.target.value })} readOnly={readonly} />
+                </Field>
+                <Field label={t.client.currency}>
+                  <CurrencySelect value={client.currency} onChange={v => update({ currency: v })} disabled={readonly} />
+                </Field>
+              </div>
+            </div>
+
+            <div className="stack">
+              <div className="card">
+                <h3 className="h3">Facturación</h3>
+                <div className="grid cols-2" style={{ gap: 12 }}>
+                  <Field label={t.client.year}>
+                    <input className="input right" type="number" value={client.year ?? ""} onChange={e => update({ year: +e.target.value })} readOnly={readonly} />
+                  </Field>
+                  <Field label={t.client.stage}>
+                    <select className="select" value={client.stage} onChange={e => update({ stage: +e.target.value })} disabled={readonly}>
+                      {t.client.stages.map((s, i) => <option key={i} value={i}>{s}</option>)}
+                    </select>
+                  </Field>
+                  <Field label={`${t.client.revenue} (${client.currency})`} span={2}>
+                    <MoneyInput value={client.revenue ?? 0} onChange={v => update({ revenue: v || null })} disabled={readonly} />
+                  </Field>
+                  <Field label={`${t.client.ebitda} (${client.currency})`} span={2}>
+                    <MoneyInput value={client.ebitda ?? 0} onChange={v => update({ ebitda: v || null })} disabled={readonly} />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="card">
+                <h3 className="h3">{t.client.contact}</h3>
+                <div className="grid cols-2" style={{ gap: 12 }}>
+                  <Field label={t.client.contact} span={2}>
+                    <input className="input" value={client.contact?.name || ""} onChange={e => updateContact({ name: e.target.value })} readOnly={readonly} />
+                  </Field>
+                  <Field label={t.client.contactRole}>
+                    <input className="input" value={client.contact?.role || ""} onChange={e => updateContact({ role: e.target.value })} readOnly={readonly} />
+                  </Field>
+                  <Field label={t.client.phone}>
+                    <input className="input" value={client.contact?.phone || ""} onChange={e => updateContact({ phone: e.target.value })} readOnly={readonly} />
+                  </Field>
+                  <Field label={t.client.email} span={2}>
+                    <input className="input" value={client.contact?.email || ""} onChange={e => updateContact({ email: e.target.value })} readOnly={readonly} />
+                  </Field>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="card">
-            <h3 className="h3">{t.client.contact}</h3>
-            <div className="grid cols-2" style={{ gap: 12 }}>
-              <Field label={t.client.contact} span={2}>
-                <input className="input" value={client.contact?.name || ""} onChange={e => updateContact({ name: e.target.value })} readOnly={readonly} />
-              </Field>
-              <Field label={t.client.contactRole}>
-                <input className="input" value={client.contact?.role || ""} onChange={e => updateContact({ role: e.target.value })} readOnly={readonly} />
-              </Field>
-              <Field label={t.client.phone}>
-                <input className="input" value={client.contact?.phone || ""} onChange={e => updateContact({ phone: e.target.value })} readOnly={readonly} />
-              </Field>
-              <Field label={t.client.email} span={2}>
-                <input className="input" value={client.contact?.email || ""} onChange={e => updateContact({ email: e.target.value })} readOnly={readonly} />
-              </Field>
-            </div>
+            <h3 className="h3">{t.client.notes}</h3>
+            <textarea className="textarea" value={client.notes || ""} onChange={e => update({ notes: e.target.value })} placeholder="…" readOnly={readonly} />
           </div>
-        </div>
-      </div>
 
-      <div className="card">
-        <h3 className="h3">{t.client.notes}</h3>
-        <textarea className="textarea" value={client.notes || ""} onChange={e => update({ notes: e.target.value })} placeholder="…" readOnly={readonly} />
-      </div>
-
-      <div className="row between">
-        <div className="meta" style={{ fontSize: 12, color: "var(--text-3)" }}>
-          {t.clients.created}: {new Date(client.createdAt).toLocaleDateString()} · {t.clients.lastEdit}: {new Date(client.updatedAt).toLocaleString()}
-        </div>
-        <button className="btn danger" disabled={readonly} onClick={() => {
-          if (confirm(t.common.confirmDelete)) {
-            store.deleteClient(client.id);
-          }
-        }}>{t.actions.delete}</button>
-      </div>
+          <div className="row between">
+            <div className="meta" style={{ fontSize: 12, color: "var(--text-3)" }}>
+              {t.clients.created}: {new Date(client.createdAt).toLocaleDateString()} · {t.clients.lastEdit}: {new Date(client.updatedAt).toLocaleString()}
+            </div>
+            <button className="btn danger" disabled={readonly} onClick={() => {
+              if (confirm(t.common.confirmDelete)) {
+                store.deleteClient(client.id);
+              }
+            }}>{t.actions.delete}</button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
