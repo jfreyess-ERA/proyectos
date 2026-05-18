@@ -935,10 +935,14 @@ function ResourcesPanel({ client, groups, retAvg }) {
         const retMax2 = clientHH > 0 ? (groups.reduce((s,g)=>s+g.maxSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.maxSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0;
 
         return (
-          <div style={{ display: "grid", gridTemplateColumns: "auto auto auto auto", columnGap: 16, rowGap: 16, alignItems: "start" }}>
+          /* Outer flex: [left group: col1+col2] + [right group: col3+col4 / stat cards] */
+          <div style={{ display: "flex", gap: 16, alignItems: "start" }}>
+
+          {/* ── Left group: HH ERA + tabla ── */}
+          <div style={{ display: "flex", gap: 16, alignItems: "start", flexShrink: 0 }}>
 
             {/* Col 1: HH ERA + barras + analistas */}
-            <div style={{ gridColumn: 1, gridRow: 1, width: 190 }}>
+            <div style={{ width: 190 }}>
               <div style={{ ...EYE, marginBottom: 10 }}>HH ERA / Categoría</div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                 <input className="input right" type="number" value={r.eraHHPerCat}
@@ -996,7 +1000,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
             </div>
 
             {/* Col 2: Tabla de cargos */}
-            <div style={{ gridColumn: 2, gridRow: 1 }}>
+            <div>
               <div className="row between" style={{ marginBottom: 8 }}>
                 <span style={EYE}>Detalle horas por cargo</span>
                 <button className="btn ghost sm" onClick={addRole}>+ cargo</button>
@@ -1026,8 +1030,14 @@ function ResourcesPanel({ client, groups, retAvg }) {
               </table>
             </div>
 
+          </div>{/* end left group */}
+
+          {/* ── Right group: donut + treemap arriba / stat cards abajo ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
+            <div style={{ display: "flex", gap: 16, alignItems: "start" }}>
+
             {/* Col 3: Donut */}
-            <div style={{ gridColumn: 3, gridRow: 1 }}>
+            <div>
               <div style={{ ...EYE, marginBottom: 12 }}>Distribución de horas</div>
               <div style={{ height: CHART_H, width: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg viewBox="0 0 220 220" style={{ height: "100%", width: "auto", display: "block", overflow: "visible" }}>
@@ -1054,10 +1064,10 @@ function ResourcesPanel({ client, groups, retAvg }) {
             </div>
 
             {/* Col 4: Treemap */}
-            <div style={{ gridColumn: 4, gridRow: 1 }}>
+            <div style={{ flex: 1 }}>
               <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
               {tmItems.length > 0 ? (
-                <div style={{ width: Math.round(CHART_H * TW / TH), height: CHART_H }}>
+                <div style={{ height: CHART_H }}>
                   <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" height="100%"
                     preserveAspectRatio="xMidYMid meet"
                     style={{ display: "block", borderRadius: 10, overflow: "hidden" }}>
@@ -1098,18 +1108,26 @@ function ResourcesPanel({ client, groups, retAvg }) {
               )}
             </div>
 
-            {/* Fila 2, cols 3–4: Stat cards bajo donut + treemap */}
-            <div style={{ gridColumn: "3 / 5", gridRow: 2, display: "flex", gap: 16 }}>
-              <Stat
-                label="Retorno por HH cliente · rango"
-                value={`${fmtMoney(retMin2, client.currency, { compact: true })} — ${fmtMoney(retMax2, client.currency, { compact: true })}`}
-                sub={`/ HH cliente (${clientHH} HH)`}
-                variant="accent"
-              />
-              <Stat label={t.resources.categoriesIncluded} value={n} sub={t.scenarios.proposed} variant="dark" />
+            </div>{/* end donut+treemap row */}
+
+            {/* Stat cards — pegados justo bajo donut+treemap */}
+            <div style={{ display: "flex", gap: 16 }}>
+              <div style={{ flex: 1 }}>
+                <Stat
+                  label="Retorno por HH cliente · rango"
+                  value={`${fmtMoney(retMin2, client.currency, { compact: true })} — ${fmtMoney(retMax2, client.currency, { compact: true })}`}
+                  sub={`/ HH cliente (${clientHH} HH)`}
+                  variant="accent"
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <Stat label={t.resources.categoriesIncluded} value={n} sub={t.scenarios.proposed} variant="dark" />
+              </div>
             </div>
 
-          </div>
+          </div>{/* end right group */}
+
+          </div>{/* end outer flex */}
         );
       })()}
     </div>
