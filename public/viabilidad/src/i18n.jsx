@@ -181,7 +181,7 @@ const STRINGS = {
       tier: "Prioridad",
       tierA: "Quick win",
       tierB: "Estratégica",
-      tierC: "Mantener",
+      tierC: "Bajo impacto",
       tierD: "Descartar",
       volume: "Volumen",
       suppliers: "Proveedores",
@@ -189,10 +189,10 @@ const STRINGS = {
       potential: "Ahorro potencial",
       none: "Sin datos cargados",
       tierExplain: {
-        A: "Alto volumen, ahorro >10%, fácil de mover",
-        B: "Volumen medio-alto, requiere cambio estructural",
-        C: "Volumen bajo o ahorro marginal",
-        D: "No justifica la intervención",
+        A: "Alto volumen · ahorro ≥10% · factibilidad ≥4",
+        B: "Alto volumen o bajo ahorro · difícil de ejecutar",
+        C: "Ahorro alto pero volumen bajo",
+        D: "Bajo volumen y bajo ahorro",
       },
     },
     dashboard: {

@@ -352,12 +352,17 @@ function savingsRange(client) {
 }
 
 function tierFor(group, totalClient) {
-  const share = totalClient > 0 ? group.total / totalClient : 0;
-  const sav = group.avgSavingsPct;
-  if (sav >= 12 && share >= 0.04) return "A";
-  if (sav >= 8 && share >= 0.08) return "B";
-  if (sav < 4 || share < 0.015) return "D";
-  return "C";
+  const sharePct = totalClient > 0 ? (group.total / totalClient) * 100 : 0;
+  const sav  = group.avgSavingsPct;   // 0-100
+  const feas = group.avgFeasibility ?? 3; // 1-5
+
+  const highSavings = sav  >= 10;
+  const highVolume  = sharePct >= 8;
+
+  if (highSavings && highVolume && feas >= 4) return "A"; // Quick Win
+  if (highSavings && !highVolume)             return "C"; // Bajo impacto
+  if (!highSavings && !highVolume)            return "D"; // Descartar
+  return "B";                                             // Estratégica (alto vol, bajo ahorro · o alto ahorro/vol con feas baja)
 }
 
 const MONTH_LABELS_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
