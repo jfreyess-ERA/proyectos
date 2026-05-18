@@ -13,7 +13,7 @@ const STRINGS = {
       expenses: "Gastos y datos cliente",
       profiling: "Perfilado",
       evolution: "Evolución",
-      projection: "Proyección",
+      projection: "Proyección ahorros y plan de trabajo",
       gantt: "Plan de trabajo",
       scenarios: "Escenarios",
     },
