@@ -920,50 +920,88 @@ function ResourcesPanel({ client, groups, retAvg }) {
       </div>
       <p className="lede" style={{ marginBottom: 20 }}>{t.resources.lede}</p>
 
-      {/* ── TOP: Parameters (HH ERA + bars only) ─────────────── */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ ...EYE, marginBottom: 10 }}>HH ERA / Categoría</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <input className="input right" type="number" value={r.eraHHPerCat}
-            onChange={e => setR({ eraHHPerCat: +e.target.value || 0 })}
-            style={{ width: 110, fontSize: 15, fontWeight: 600 }} />
-          <span style={{ fontSize: 12, color: "var(--text-3)" }}>HH / cat.</span>
-        </div>
-        <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4 }}>Total ERA estimado</div>
-          <div style={{ fontSize: 30, fontWeight: 800, color: "var(--ink)", lineHeight: 1 }}>
-            {eraHH.toLocaleString("es-CL")}
-            <span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-2)", marginLeft: 5 }}>HH</span>
+      {/* ── Unified 3-col grid ───────────────────────────────────
+           Col 1 (auto): donut width
+           Col 2 (1fr):  treemap / flexible
+           Col 3 (auto): roles table (spans rows 1–2)
+           Row 1: HH ERA section (cols 1–2) | roles table (col 3)
+           Row 2: donut (col 1) | treemap (col 2)  | roles table cont.
+           Row 3: stat cards (cols 1–2)
+      ───────────────────────────────────────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 24, alignItems: "start" }}>
+
+        {/* Row 1 cols 1–2: HH ERA / Categoría + stat block + bars */}
+        <div style={{ gridColumn: "1 / 3", gridRow: 1 }}>
+          <div style={{ ...EYE, marginBottom: 10 }}>HH ERA / Categoría</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <input className="input right" type="number" value={r.eraHHPerCat}
+              onChange={e => setR({ eraHHPerCat: +e.target.value || 0 })}
+              style={{ width: 110, fontSize: 15, fontWeight: 600 }} />
+            <span style={{ fontSize: 12, color: "var(--text-3)" }}>HH / cat.</span>
           </div>
-          <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 6 }}>{n} cat. × {r.eraHHPerCat} HH</div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {[
-            { label: "ERA Group", hh: eraHH, pct: eraPct, color: ERA_ORANGE },
-            { label: clientName,  hh: clientHH, pct: cliPct, color: CLI_BLUE },
-          ].map(({ label, hh, pct, color }) => (
-            <div key={label}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>{label}</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color, fontVariantNumeric: "tabular-nums" }}>
-                  {hh.toLocaleString("es-CL")}
-                  <span style={{ fontSize: 9, fontWeight: 400, marginLeft: 3, color: "var(--text-3)" }}>HH</span>
-                </span>
-              </div>
-              <div style={{ background: "var(--line)", borderRadius: 4, height: 14, overflow: "hidden" }}>
-                <div style={{ width: `${hh / maxHH * 100}%`, background: color, height: "100%", borderRadius: 4, transition: "width 0.4s ease" }} />
-              </div>
-              <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 3 }}>{pct}% del total</div>
+          <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4 }}>Total ERA estimado</div>
+            <div style={{ fontSize: 30, fontWeight: 800, color: "var(--ink)", lineHeight: 1 }}>
+              {eraHH.toLocaleString("es-CL")}
+              <span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-2)", marginLeft: 5 }}>HH</span>
             </div>
-          ))}
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 6 }}>{n} cat. × {r.eraHHPerCat} HH</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {[
+              { label: "ERA Group", hh: eraHH, pct: eraPct, color: ERA_ORANGE },
+              { label: clientName,  hh: clientHH, pct: cliPct, color: CLI_BLUE },
+            ].map(({ label, hh, pct, color }) => (
+              <div key={label}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>{label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color, fontVariantNumeric: "tabular-nums" }}>
+                    {hh.toLocaleString("es-CL")}
+                    <span style={{ fontSize: 9, fontWeight: 400, marginLeft: 3, color: "var(--text-3)" }}>HH</span>
+                  </span>
+                </div>
+                <div style={{ background: "var(--line)", borderRadius: 4, height: 14, overflow: "hidden" }}>
+                  <div style={{ width: `${hh / maxHH * 100}%`, background: color, height: "100%", borderRadius: 4, transition: "width 0.4s ease" }} />
+                </div>
+                <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 3 }}>{pct}% del total</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* ── BOTTOM: donut | treemap | roles table | stats ──────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto auto", gap: 24, alignItems: "start" }}>
+        {/* Col 3 rows 1–2: Roles table */}
+        <div style={{ gridColumn: 3, gridRow: "1 / 3" }}>
+          <div className="row between" style={{ marginBottom: 8 }}>
+            <span style={EYE}>Detalle horas por cargo</span>
+            <button className="btn ghost sm" onClick={addRole}>+ cargo</button>
+          </div>
+          <table className="t" style={{ fontSize: 12 }}>
+            <thead><tr>
+              <th style={{ width: 16 }}></th>
+              <th>Cargo</th>
+              <th className="right" style={{ width: 80 }}>HH</th>
+              <th style={{ width: 36 }}></th>
+            </tr></thead>
+            <tbody>
+              {r.roles.map((role, i) => (
+                <tr key={role.id}>
+                  <td><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: ROLE_COLORS[i % ROLE_COLORS.length], verticalAlign: "middle" }} /></td>
+                  <td><input className="input" value={role.title} onChange={e => updRole(i, { title: e.target.value })} /></td>
+                  <td className="right"><input className="input right" type="number" value={role.hours} onChange={e => updRole(i, { hours: +e.target.value || 0 })} /></td>
+                  <td><button className="btn ghost sm danger" onClick={() => removeRole(i)} title="Eliminar">×</button></td>
+                </tr>
+              ))}
+              <tr className="totals">
+                <td></td><td>Total cliente</td>
+                <td className="right tabular">{clientHH} HH</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        {/* Donut */}
-        <div>
+        {/* Row 2 col 1: Donut */}
+        <div style={{ gridColumn: 1, gridRow: 2 }}>
           <div style={{ ...EYE, marginBottom: 12 }}>Distribución de horas</div>
           <div style={{ height: CHART_H, width: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg viewBox="0 0 220 220" style={{ height: "100%", width: "auto", display: "block", overflow: "visible" }}>
@@ -989,8 +1027,8 @@ function ResourcesPanel({ client, groups, retAvg }) {
           </div>
         </div>
 
-        {/* Treemap */}
-        <div>
+        {/* Row 2 col 2: Treemap */}
+        <div style={{ gridColumn: 2, gridRow: 2 }}>
           <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
           {tmItems.length > 0 ? (
             <div style={{ height: CHART_H, maxWidth: 320 }}>
@@ -1034,39 +1072,8 @@ function ResourcesPanel({ client, groups, retAvg }) {
           )}
         </div>
 
-        {/* Roles table */}
-        <div>
-          <div className="row between" style={{ marginBottom: 8 }}>
-            <span style={EYE}>Detalle horas por cargo</span>
-            <button className="btn ghost sm" onClick={addRole}>+ cargo</button>
-          </div>
-          <table className="t" style={{ fontSize: 12 }}>
-            <thead><tr>
-              <th style={{ width: 16 }}></th>
-              <th>Cargo</th>
-              <th className="right" style={{ width: 80 }}>HH</th>
-              <th style={{ width: 36 }}></th>
-            </tr></thead>
-            <tbody>
-              {r.roles.map((role, i) => (
-                <tr key={role.id}>
-                  <td><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: ROLE_COLORS[i % ROLE_COLORS.length], verticalAlign: "middle" }} /></td>
-                  <td><input className="input" value={role.title} onChange={e => updRole(i, { title: e.target.value })} /></td>
-                  <td className="right"><input className="input right" type="number" value={role.hours} onChange={e => updRole(i, { hours: +e.target.value || 0 })} /></td>
-                  <td><button className="btn ghost sm danger" onClick={() => removeRole(i)} title="Eliminar">×</button></td>
-                </tr>
-              ))}
-              <tr className="totals">
-                <td></td><td>Total cliente</td>
-                <td className="right tabular">{clientHH} HH</td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Stat cards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, width: 230 }}>
+        {/* Row 3 cols 1–2: Stat cards */}
+        <div style={{ gridColumn: "1 / 3", gridRow: 3, display: "flex", gap: 16 }}>
           <Stat
             label="Retorno por HH cliente · rango"
             value={`${fmtMoney(clientHH > 0 ? (groups.reduce((s,g)=>s+g.minSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.minSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0, client.currency, { compact: true })} — ${fmtMoney(clientHH > 0 ? (groups.reduce((s,g)=>s+g.maxSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.maxSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0, client.currency, { compact: true })}`}
