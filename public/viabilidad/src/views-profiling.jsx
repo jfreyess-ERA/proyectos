@@ -677,26 +677,21 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
               </span>
             ))}
           </span>
-          <span style={{ color: "var(--text-3)", fontStyle: "italic" }}>
-            El badge dentro de cada burbuja (QW/ES/BI/DC) es el tier real — el cuadrante visual no considera factibilidad.
-          </span>
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
-        {/* Quadrant fills */}
-        <rect x={x(volThreshPct)} y={P} width={W - P - x(volThreshPct)} height={y(savThreshPct) - P} fill="rgba(184,137,58,0.08)" />
-        <rect x={x(volThreshPct)} y={y(savThreshPct)} width={W - P - x(volThreshPct)} height={H - P - y(savThreshPct)} fill="rgba(15,39,36,0.04)" />
         {/* Axes */}
         <line x1={P} y1={H - P} x2={W - P} y2={H - P} stroke="var(--line)" />
         <line x1={P} y1={P} x2={P} y2={H - P} stroke="var(--line)" />
-        {/* Threshold lines */}
-        <line x1={x(volThreshPct)} y1={P} x2={x(volThreshPct)} y2={H - P} stroke="var(--line)" strokeDasharray="3 3" />
-        <line x1={P} y1={y(savThreshPct)} x2={W - P} y2={y(savThreshPct)} stroke="var(--line)" strokeDasharray="3 3" />
-        {/* Quadrant labels — centred in each quadrant to avoid ambiguity */}
-        <text x={(x(volThreshPct) + W - P) / 2} y={P + 16} fontSize="10" fill="var(--champagne-2)" fontWeight="700" fontFamily="Trebuchet MS" textAnchor="middle">QUICK WIN</text>
-        <text x={(P + x(volThreshPct)) / 2}      y={P + 16} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS" textAnchor="middle">BAJO IMPACTO</text>
-        <text x={(x(volThreshPct) + W - P) / 2} y={H - P - 8} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS" textAnchor="middle">ESTRATÉGICA</text>
-        <text x={(P + x(volThreshPct)) / 2}      y={H - P - 8} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS" textAnchor="middle">DESCARTAR</text>
+        {/* Threshold lines + value labels */}
+        <line x1={x(volThreshPct)} y1={P} x2={x(volThreshPct)} y2={H - P} stroke="var(--text-3)" strokeDasharray="4 3" strokeWidth="1" />
+        <text x={x(volThreshPct)} y={P - 4} textAnchor="middle" fontSize="9" fill="var(--text-3)" fontFamily="Trebuchet MS" fontStyle="italic">
+          {fmtMoney(tc.highVolumeAmount, client.currency, { compact: true })}
+        </text>
+        <line x1={P} y1={y(savThreshPct)} x2={W - P} y2={y(savThreshPct)} stroke="var(--text-3)" strokeDasharray="4 3" strokeWidth="1" />
+        <text x={W - P + 4} y={y(savThreshPct) + 3} textAnchor="start" fontSize="9" fill="var(--text-3)" fontFamily="Trebuchet MS" fontStyle="italic">
+          {tc.highSavingsPct}%
+        </text>
         {/* Axis labels */}
         <text x={W / 2} y={H - 10} fontSize="11" fill="var(--text-2)" textAnchor="middle" fontFamily="Trebuchet MS" fontWeight="700">% del gasto total →</text>
         <text x={14} y={H / 2} fontSize="11" fill="var(--text-2)" textAnchor="middle" fontFamily="Trebuchet MS" fontWeight="700" transform={`rotate(-90 14 ${H / 2})`}>% ahorro estimado →</text>
@@ -731,30 +726,6 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
             >
               <title>{fullName} [{t.profiling[`tier${tk}`]}]: {fmtMoney(g.total, client.currency, { compact: true })} · {fmtPct(g.avgSavingsPct)} ahorro · factibilidad {g.avgFeasibility.toFixed(1)}</title>
             </circle>
-          );
-        })}
-        {/* Tier badge inside each bubble (center) */}
-        {groups.map(g => {
-          const share = total > 0 ? g.total / total * 100 : 0;
-          const bx = x(share), by = y(g.avgSavingsPct);
-          const radius = r(g.total);
-          if (radius < 14) return null;
-          const tk = tierFor(g, tc);
-          const TIER_SHORT = { A: "QW", B: "ES", C: "BI", D: "DC" };
-          const TIER_COLORS_B = { A: "#b8893a", B: "#0F2724", C: "#2A5FA5", D: "#888" };
-          const lbl = TIER_SHORT[tk] || tk;
-          const fs = Math.min(11, radius * 0.48);
-          const bw = lbl.length * fs * 0.65 + 8, bh = fs + 6;
-          return (
-            <g key={"tk-" + g.categoryId} style={{ pointerEvents: "none" }}>
-              <rect x={bx - bw / 2} y={by - bh / 2} width={bw} height={bh} rx={3}
-                fill={TIER_COLORS_B[tk] || "#888"} fillOpacity="0.75" />
-              <text x={bx} y={by + fs * 0.35} textAnchor="middle"
-                fontSize={fs} fontWeight="800"
-                fill="white" fontFamily="Trebuchet MS">
-                {lbl}
-              </text>
-            </g>
           );
         })}
         {/* Labels pass — on top of all circles */}
