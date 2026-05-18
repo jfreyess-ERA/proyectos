@@ -988,24 +988,39 @@ function ResourcesPanel({ client, groups, retAvg }) {
             </svg>
           </div>
           {/* Analistas ERA */}
-          <div style={{ marginTop: 14, width: 220 }}>
-            <div style={{ ...EYE, marginBottom: 8 }}>Analistas ERA</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <button onClick={() => setR({ eraAnalysts: Math.max(1, (r.eraAnalysts || 1) - 1) })}
-                style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 16, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>−</button>
-              <div style={{ flex: 1, textAlign: "center" }}>
-                <span style={{ fontSize: 26, fontWeight: 800, color: ERA_ORANGE, fontVariantNumeric: "tabular-nums" }}>
-                  {r.eraAnalysts || 1}
-                </span>
-                <span style={{ fontSize: 11, color: "var(--text-3)", marginLeft: 5 }}>analistas</span>
+          {(() => {
+            const count = r.eraAnalysts || 1;
+            const PersonIcon = ({ color = ERA_ORANGE, size = 22 }) => (
+              <svg width={size} height={size * 1.15} viewBox="0 0 20 23" fill="none">
+                <circle cx="10" cy="6" r="5" fill={color} />
+                <path d="M1 22c0-4.97 4.03-9 9-9s9 4.03 9 9" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none" />
+              </svg>
+            );
+            return (
+              <div style={{ marginTop: 14, width: 220 }}>
+                <div style={{ ...EYE, marginBottom: 8 }}>Analistas ERA</div>
+                {/* Icons row */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10, minHeight: 28 }}>
+                  {Array.from({ length: count }).map((_, i) => (
+                    <PersonIcon key={i} color={ERA_ORANGE} size={22} />
+                  ))}
+                </div>
+                {/* Stepper */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button onClick={() => setR({ eraAnalysts: Math.max(1, count - 1) })}
+                    style={{ width: 26, height: 26, borderRadius: 6, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 15, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>−</button>
+                  <span style={{ flex: 1, textAlign: "center", fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                    {count} <span style={{ fontWeight: 400, color: "var(--text-3)" }}>analistas</span>
+                  </span>
+                  <button onClick={() => setR({ eraAnalysts: count + 1 })}
+                    style={{ width: 26, height: 26, borderRadius: 6, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 15, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>+</button>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 5, textAlign: "center" }}>
+                  {Math.round(eraHH / count).toLocaleString("es-CL")} HH / analista
+                </div>
               </div>
-              <button onClick={() => setR({ eraAnalysts: (r.eraAnalysts || 1) + 1 })}
-                style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 16, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>+</button>
-            </div>
-            <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 4, textAlign: "center" }}>
-              {Math.round(eraHH / (r.eraAnalysts || 1)).toLocaleString("es-CL")} HH / analista
-            </div>
-          </div>
+            );
+          })()}
         </div>
 
         {/* Col 3: Treemap */}
