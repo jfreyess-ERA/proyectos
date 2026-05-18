@@ -426,7 +426,12 @@ function ProfilingView({ client }) {
   const eraCategories = store.state.eraCategories || [];
   const tierConfig = store.state.tierConfig || DEFAULT_TIER_CONFIG;
   const groups = aggregateByEra(client, eraCategories);
-  const total = totalSpend(client);
+  // Use the sum of ERA groups as total — not totalSpend() — so that
+  // the matrix threshold line (volThreshPct = highVolumeAmount/total)
+  // is equivalent to the tierFor comparison (g.total >= highVolumeAmount).
+  // totalSpend() would include expenses without ERA category, making the
+  // denominator larger and shifting the threshold line left.
+  const total = groups.reduce((s, g) => s + g.total, 0) || totalSpend(client);
   const totalSav = totalSavings(client);
   const [drawerCatId, setDrawerCatId] = React.useState(null);
   const [showLogic, setShowLogic] = React.useState(false);
@@ -684,11 +689,11 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
         {/* Threshold lines */}
         <line x1={x(volThreshPct)} y1={P} x2={x(volThreshPct)} y2={H - P} stroke="var(--line)" strokeDasharray="3 3" />
         <line x1={P} y1={y(savThreshPct)} x2={W - P} y2={y(savThreshPct)} stroke="var(--line)" strokeDasharray="3 3" />
-        {/* Quadrant labels */}
-        <text x={x(volThreshPct) + 8} y={P + 16} fontSize="10" fill="var(--champagne-2)" fontWeight="700" fontFamily="Trebuchet MS">QUICK WIN</text>
-        <text x={P + 6} y={P + 16} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS">BAJO IMPACTO</text>
-        <text x={x(volThreshPct) + 8} y={H - P - 8} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS">ESTRATÉGICA</text>
-        <text x={P + 6} y={H - P - 8} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS">DESCARTAR</text>
+        {/* Quadrant labels — centred in each quadrant to avoid ambiguity */}
+        <text x={(x(volThreshPct) + W - P) / 2} y={P + 16} fontSize="10" fill="var(--champagne-2)" fontWeight="700" fontFamily="Trebuchet MS" textAnchor="middle">QUICK WIN</text>
+        <text x={(P + x(volThreshPct)) / 2}      y={P + 16} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS" textAnchor="middle">BAJO IMPACTO</text>
+        <text x={(x(volThreshPct) + W - P) / 2} y={H - P - 8} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS" textAnchor="middle">ESTRATÉGICA</text>
+        <text x={(P + x(volThreshPct)) / 2}      y={H - P - 8} fontSize="10" fill="var(--text-3)" fontFamily="Trebuchet MS" textAnchor="middle">DESCARTAR</text>
         {/* Axis labels */}
         <text x={W / 2} y={H - 10} fontSize="11" fill="var(--text-2)" textAnchor="middle" fontFamily="Trebuchet MS" fontWeight="700">% del gasto total →</text>
         <text x={14} y={H / 2} fontSize="11" fill="var(--text-2)" textAnchor="middle" fontFamily="Trebuchet MS" fontWeight="700" transform={`rotate(-90 14 ${H / 2})`}>% ahorro estimado →</text>
