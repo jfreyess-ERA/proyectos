@@ -9,6 +9,27 @@ function ProjectionView({ client }) {
   const [drawerCatId, setDrawerCatId] = React.useState(null);
   const [sort, setSort] = React.useState({ col: null, dir: "desc" });
   const [feasFilter, setFeasFilter] = React.useState(new Set()); // empty = all
+  const tableCardRef = React.useRef(null);
+  const [downloading, setDownloading] = React.useState(false);
+
+  const downloadTableImage = async () => {
+    if (!tableCardRef.current || downloading) return;
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(tableCardRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement("a");
+      link.download = `tabla-resumen-${(client.legalName || "cliente").replace(/\s+/g, "-").toLowerCase()}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } finally {
+      setDownloading(false);
+    }
+  };
   const sc = { feePct: 30, feePctOnSavings: 50, feeMonths: 36, projectionYears: 5, includedCategories: null, ...(client.scenario || {}) };
   const groups = aggregateByEra(client, eraCategories);
   const total = totalSpend(client);
@@ -116,7 +137,7 @@ function ProjectionView({ client }) {
       </div>
 
       {/* Tabla 2: Resumen factibilidad y proyección de ahorros */}
-      <div className="card flat" style={{ padding: 0, overflow: "hidden" }}>
+      <div ref={tableCardRef} className="card flat" style={{ padding: 0, overflow: "hidden" }}>
         {/* Header + filtros */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)" }}>
           <div className="row between" style={{ marginBottom: 10 }}>
@@ -124,7 +145,18 @@ function ProjectionView({ client }) {
               <div className="eyebrow">Tabla resumen</div>
               <h3 className="h3" style={{ margin: 0 }}>Factibilidad y proyección de ahorros (anuales)</h3>
             </div>
-            <Pill variant="champagne">{sortedGroups.length} / {groups.length}</Pill>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Pill variant="champagne">{sortedGroups.length} / {groups.length}</Pill>
+              <button
+                className="btn ghost sm"
+                title="Descargar tabla como imagen"
+                disabled={downloading}
+                onClick={downloadTableImage}
+                style={{ fontSize: 15, padding: "3px 8px", lineHeight: 1 }}
+              >
+                {downloading ? "…" : "⬇"}
+              </button>
+            </div>
           </div>
           {/* Factibilidad filter */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
