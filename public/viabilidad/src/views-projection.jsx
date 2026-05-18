@@ -1033,11 +1033,14 @@ function ResourcesPanel({ client, groups, retAvg }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
             <div style={{ display: "flex", gap: 16, alignItems: "stretch" }}>
 
-            {/* Col 3: Donut + leyenda ERA/Cliente + íconos analistas */}
-            <div style={{ width: 220, flexShrink: 0 }}>
-              <div style={{ ...EYE, marginBottom: 12 }}>Distribución de horas</div>
-              <div style={{ height: CHART_H, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg viewBox="0 0 220 220" style={{ height: "100%", width: "auto", display: "block", overflow: "visible" }}>
+            {/* Col 3: donut grande a la izquierda, leyenda+analistas a la derecha */}
+            <div style={{ flexShrink: 0, display: "flex", gap: 14, alignItems: "flex-start" }}>
+
+              {/* Donut — 260×260 */}
+              <div>
+                <div style={{ ...EYE, marginBottom: 12 }}>Distribución de horas</div>
+                <svg viewBox="0 0 220 220"
+                  style={{ width: 260, height: 260, display: "block", overflow: "visible" }}>
                   {totalHH === 0 ? (
                     <circle cx={cx} cy={cy} r={Ro} fill="var(--surface-2)" stroke="var(--line)" />
                   ) : eraHH === 0 ? (
@@ -1058,29 +1061,34 @@ function ResourcesPanel({ client, groups, retAvg }) {
                     fill="var(--ink)" fontFamily="Trebuchet MS">{totalHH.toLocaleString("es-CL")}</text>
                 </svg>
               </div>
-              {/* Leyenda ERA / Cliente */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 10 }}>
+
+              {/* Leyenda + analistas — columna vertical a la derecha del donut */}
+              <div style={{ paddingTop: 26, display: "flex", flexDirection: "column", gap: 10, width: 110 }}>
+                {/* Leyenda ERA / cliente */}
                 {[
                   { label: "ERA Group", hh: eraHH, pct: eraPct, color: ERA_ORANGE },
                   { label: clientName,  hh: clientHH, pct: cliPct, color: CLI_BLUE },
                 ].map(({ label, hh, pct, color }) => (
-                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
-                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                    <span style={{ color: "var(--text-2)", flex: 1 }}>{label}</span>
-                    <span style={{ fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
+                  <div key={label} style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ width: 9, height: 9, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>{label}</span>
+                    </div>
+                    <div style={{ paddingLeft: 14, fontSize: 11, color, fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>
                       {hh.toLocaleString("es-CL")} HH
-                    </span>
-                    <span style={{ color: "var(--text-3)", fontSize: 10, marginLeft: 3 }}>({pct}%)</span>
+                      <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-3)", marginLeft: 4 }}>({pct}%)</span>
+                    </div>
                   </div>
                 ))}
-              </div>
-              {/* Íconos analistas ERA */}
-              <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
-                <div style={{ ...EYE, marginBottom: 6 }}>Analistas ERA</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {Array.from({ length: count }).map((_, i) => <PersonIcon key={i} size={20} />)}
+                {/* Analistas ERA — íconos en grilla 3 columnas */}
+                <div style={{ borderTop: "1px solid var(--line)", paddingTop: 10, marginTop: 4 }}>
+                  <div style={{ ...EYE, marginBottom: 6 }}>Analistas ERA</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, auto)", gap: 4, justifyContent: "start" }}>
+                    {Array.from({ length: count }).map((_, i) => <PersonIcon key={i} size={20} />)}
+                  </div>
                 </div>
               </div>
+
             </div>
 
             {/* Col 4: Treemap — se estira hasta igualar altura de Col 3 */}
