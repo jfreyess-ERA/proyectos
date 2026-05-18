@@ -1254,7 +1254,7 @@ function GanttView({ client }) {
             <col style={{ width: 60 }} />
             {STAGE_KEYS.map(k => <col key={"c-" + k} style={{ width: 54 }} />)}
             <col style={{ width: 60 }} />
-            <col style={{ width: 220 }} />
+            <col style={{ width: 130 }} />
             <col style={{ width: "100%" }} />
           </colgroup>
           <thead>
