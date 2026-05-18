@@ -3,6 +3,7 @@
    ============================================================ */
 
 function TierConfigSection({ store }) {
+  const { t } = useI18n();
   const tc = store.state.tierConfig || DEFAULT_TIER_CONFIG;
   const [draft, setDraft] = React.useState(null);
 
@@ -27,10 +28,10 @@ function TierConfigSection({ store }) {
   };
 
   const tierConditions = [
-    { tk: "A", cond: `Gasto ≥ ${fmtAmt(cur.highVolumeAmount)}  ·  ahorro ≥ ${cur.highSavingsPct}%  ·  factibilidad ≥ ${cur.quickWinFeasMin}` },
-    { tk: "B", cond: `Gasto ≥ ${fmtAmt(cur.highVolumeAmount)}  ·  sin cumplir Quick Win` },
-    { tk: "C", cond: `Gasto < ${fmtAmt(cur.highVolumeAmount)}  ·  ahorro ≥ ${cur.highSavingsPct}%  ·  factibilidad ≥ ${cur.lowVolFeasMin}` },
-    { tk: "D", cond: `Gasto < ${fmtAmt(cur.highVolumeAmount)}  ·  ahorro < ${cur.highSavingsPct}%  o  factibilidad < ${cur.lowVolFeasMin}` },
+    { tk: "A", name: t.tierA, cond: `Gasto ≥ ${fmtAmt(cur.highVolumeAmount)}  ·  ahorro ≥ ${cur.highSavingsPct}%  ·  factibilidad ≥ ${cur.quickWinFeasMin}` },
+    { tk: "B", name: t.tierB, cond: `Gasto ≥ ${fmtAmt(cur.highVolumeAmount)}  ·  sin cumplir Quick Win` },
+    { tk: "C", name: t.tierC, cond: `Gasto < ${fmtAmt(cur.highVolumeAmount)}  ·  ahorro ≥ ${cur.highSavingsPct}%  ·  factibilidad ≥ ${cur.lowVolFeasMin}` },
+    { tk: "D", name: t.tierD, cond: `Gasto < ${fmtAmt(cur.highVolumeAmount)}  ·  ahorro < ${cur.highSavingsPct}%  o  factibilidad < ${cur.lowVolFeasMin}` },
   ];
 
   const inputStyle = { width: "100%", padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "var(--surface)", color: "var(--text-1)" };
@@ -41,7 +42,7 @@ function TierConfigSection({ store }) {
     <div style={{ marginTop: 32 }}>
       <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Umbrales de clasificación</div>
       <p style={{ fontSize: 13, color: "var(--text-3)", marginTop: 0, marginBottom: 16 }}>
-        Define los valores que determinan la asignación de tiers A/B/C/D a cada categoría ERA.
+        Define los valores que determinan la asignación de tiers ({t.tierA} / {t.tierB} / {t.tierC} / {t.tierD}) a cada categoría ERA.
       </p>
 
       <div className="card" style={{ marginBottom: 16 }}>
@@ -117,11 +118,12 @@ function TierConfigSection({ store }) {
         </div>
         <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 13 }}>
           <tbody>
-            {tierConditions.map(({ tk, cond }) => (
+            {tierConditions.map(({ tk, name, cond }) => (
               <tr key={tk} style={{ borderBottom: "1px solid var(--line)" }}>
                 <td style={{ padding: "7px 12px 7px 0", whiteSpace: "nowrap" }}>
                   <span className={"tier " + tk}>{tk}</span>
                 </td>
+                <td style={{ padding: "7px 8px 7px 0", whiteSpace: "nowrap", fontWeight: 600, fontSize: 12, color: "var(--text-1)", minWidth: 110 }}>{name}</td>
                 <td style={{ padding: "7px 12px", color: "var(--text-2)", lineHeight: 1.5 }}>{cond}</td>
               </tr>
             ))}

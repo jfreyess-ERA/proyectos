@@ -644,8 +644,9 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
   const savThreshPct = tc.highSavingsPct;
 
   const W = 720, H = 420, P = 54;
-  const maxShare = Math.max(...groups.map(g => total > 0 ? g.total / total * 100 : 0), 20);
-  const maxSav = Math.max(...groups.map(g => g.avgSavingsPct), 25);
+  // Domain must include both data values AND the threshold lines so dashed lines stay visible
+  const maxShare = Math.max(...groups.map(g => total > 0 ? g.total / total * 100 : 0), volThreshPct * 1.15, 20);
+  const maxSav = Math.max(...groups.map(g => g.avgSavingsPct), savThreshPct * 1.2, 25);
 
   const x = (share) => P + (share / maxShare) * (W - P * 2);
   const y = (sav) => H - P - (sav / maxSav) * (H - P * 2);
