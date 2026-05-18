@@ -921,7 +921,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
       <p className="lede" style={{ marginBottom: 20 }}>{t.resources.lede}</p>
 
       {/* ── TOP: Parameters — 1/3 + 2/3 ──────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 24, marginBottom: 28, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 24, marginBottom: 28, alignItems: "start" }}>
 
         {/* HH ERA / categoría */}
         <div>
