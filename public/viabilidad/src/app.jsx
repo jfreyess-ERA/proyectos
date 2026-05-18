@@ -122,7 +122,7 @@ function EraAdminView() {
 function App() {
   const { t } = useI18n();
   const store = useStore();
-  const [section, setSection] = React.useState("data");
+  const [section, setSection] = React.useState("expenses");
   const [globalTab, setGlobalTab] = React.useState("clients");
   const [readonly, setReadonly] = React.useState(false);
   const eraCategories = store.state.eraCategories || [];
@@ -151,11 +151,11 @@ function App() {
     const existing = store.state.clients.find(c => c.prospectId === prospectId);
     if (existing) {
       store.setActiveClient(existing.id);
-      setSection("data");
+      setSection("expenses");
     } else {
       // Create new analysis linked to this prospect
       store.addClient(prospectName, prospectId).then(() => {
-        setSection("data");
+        setSection("expenses");
       });
     }
     // Clean up URL param without reloading
@@ -175,7 +175,7 @@ function App() {
       const found = store.state.clients.find(c => c.id === viewId);
       if (found) {
         store.setActiveClient(found.id);
-        setSection("data");
+        setSection("expenses");
         if (isReadonly) setReadonly(true);
       }
       // Clean URL
@@ -224,7 +224,6 @@ function App() {
   }
 
   const tabs = [
-    { id: "data",       label: t.nav.data },
     { id: "expenses",   label: t.nav.expenses, count: active.expenses.length },
     { id: "evolution",  label: t.nav.evolution },
     { id: "projection", label: t.nav.projection },
@@ -272,8 +271,8 @@ function App() {
       )}
       <main>
         <Tabs tabs={tabs} active={section} onChange={setSection} />
-        {section === "data"       && <ClientDataView client={active} readonly={readonly} />}
         {section === "expenses"   && <ExpensesView client={active} readonly={readonly} />}
+        {section === "expenses"   && <ClientDataView client={active} readonly={readonly} />}
         {section === "evolution"  && <EvolutionView client={active} readonly={readonly} />}
         {section === "projection" && <ProjectionView client={active} readonly={readonly} />}
         {section === "dashboard"  && <DashboardView client={active} readonly={readonly} />}
