@@ -408,6 +408,7 @@ function App() {
         <Tabs tabs={tabs} active={section} onChange={setSection} />
         {section === "expenses"   && <ExpensesView client={active} readonly={readonly} requestedMode={requestedExpensesMode} onRequestedModeConsumed={() => setRequestedExpensesMode(null)} />}
         {section === "expenses"   && <ClientDataView client={active} readonly={readonly} />}
+        {section === "expenses"   && <SpendSummary client={active} />}
         {section === "evolution"  && <EvolutionView client={active} readonly={readonly} />}
         {section === "projection" && <ProjectionView client={active} readonly={readonly} onGoToRangos={() => { setSection("expenses"); setRequestedExpensesMode("rangos"); }} />}
         {section === "projection" && <div style={{ marginTop: 40 }}><GanttView client={active} readonly={readonly} /></div>}

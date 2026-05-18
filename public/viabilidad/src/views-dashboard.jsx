@@ -391,4 +391,65 @@ function ScenariosView({ client }) {
   );
 }
 
-Object.assign(window, { DashboardView, ScenariosView });
+// ============================================================
+// SpendSummary — hero stats + distribución del gasto
+// Se muestra al final de la pestaña Gastos
+// ============================================================
+function SpendSummary({ client }) {
+  const { t } = useI18n();
+  const store = useStore();
+  const eraCategories = store.state.eraCategories || [];
+  const total = totalSpend(client);
+  const groups = aggregateByEra(client, eraCategories);
+
+  if (groups.length === 0) return null;
+
+  const sumMin = groups.reduce((s, g) => s + (g.minSavings || 0), 0);
+  const sumMax = groups.reduce((s, g) => s + (g.maxSavings || 0), 0);
+  const ofRevenue = client.revenue > 0 ? (total / client.revenue) * 100 : null;
+  const savPctMin = total > 0 ? (sumMin / total) * 100 : 0;
+  const savPctMax = total > 0 ? (sumMax / total) * 100 : 0;
+  const catLabel = (cat) => cat ? (cat.label || cat.key) : "—";
+
+  return (
+    <div className="stack lg" style={{ marginTop: 8 }}>
+      <div className="grid cols-4">
+        <Stat label={t.dashboard.currentSpend} value={fmtMoney(total, client.currency)}
+              sub={ofRevenue != null ? `${fmtPct(ofRevenue)} ${t.dashboard.ofRevenue}` : null} variant="dark" />
+        <Stat label={t.dashboard.potentialSavings} value={fmtRange(sumMin, sumMax, client.currency)}
+              sub={`${fmtPct(savPctMin)} – ${fmtPct(savPctMax)}`} variant="accent" />
+        <Stat label={t.dashboard.categoriesAnalyzed} value={groups.length}
+              sub={`${client.expenses.length} ${t.expenses.rowCount}`} />
+        <Stat label="3 años" value={fmtRange(sumMin * 3, sumMax * 3, client.currency)}
+              sub={t.dashboard.potentialSavings.toLowerCase()} />
+      </div>
+      <div className="card">
+        <h3 className="h3">Distribución del gasto</h3>
+        <div style={{ display: "flex", height: 36, borderRadius: 4, overflow: "hidden", border: "1px solid var(--line)" }}>
+          {groups.map(g => {
+            const w = total > 0 ? (g.total / total) * 100 : 0;
+            return (
+              <div key={g.categoryId}
+                   title={`${catLabel(g.category)}: ${fmtMoney(g.total, client.currency)} (${fmtPct(w)})`}
+                   style={{ width: w + "%", background: g.category?.color || "#ccc" }} />
+            );
+          })}
+        </div>
+        <div className="row wrap" style={{ marginTop: 12, gap: 12 }}>
+          {groups.map(g => {
+            const w = total > 0 ? (g.total / total) * 100 : 0;
+            return (
+              <div key={g.categoryId} style={{ fontSize: 11, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 10, height: 10, background: g.category?.color || "#ccc", borderRadius: 2 }} />
+                <span>{catLabel(g.category)}</span>
+                <span style={{ color: "var(--text-3)" }}>{fmtPct(w)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { DashboardView, ScenariosView, SpendSummary });
