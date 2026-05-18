@@ -713,43 +713,68 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
         {/* Bubbles — render in two passes: circles first, then labels on top */}
         {groups.map(g => {
           const share = total > 0 ? g.total / total * 100 : 0;
-          const cx = x(share), cy = y(g.avgSavingsPct);
+          const bx = x(share), by = y(g.avgSavingsPct);
           const radius = r(g.total);
+          const tk = tierFor(g, tc);
           const fullName = t.categories[g.category?.key] || g.category?.label || g.category?.key || "—";
           return (
             <circle
               key={"c-" + g.categoryId}
-              cx={cx} cy={cy} r={radius}
+              cx={bx} cy={by} r={radius}
               fill={g.category?.color || "#ccc"} fillOpacity="0.75"
               stroke={feasColor(g.avgFeasibility)} strokeWidth="3"
               style={{ cursor: onCategoryClick ? "pointer" : "default" }}
               onClick={() => onCategoryClick && onCategoryClick(g.categoryId)}
             >
-              <title>{fullName}: {fmtMoney(g.total, client.currency, { compact: true })} · {fmtPct(g.avgSavingsPct)} ahorro · factibilidad {g.avgFeasibility.toFixed(1)}</title>
+              <title>{fullName} [{tk}]: {fmtMoney(g.total, client.currency, { compact: true })} · {fmtPct(g.avgSavingsPct)} ahorro · factibilidad {g.avgFeasibility.toFixed(1)}</title>
             </circle>
+          );
+        })}
+        {/* Tier badge inside each bubble (center) */}
+        {groups.map(g => {
+          const share = total > 0 ? g.total / total * 100 : 0;
+          const bx = x(share), by = y(g.avgSavingsPct);
+          const radius = r(g.total);
+          if (radius < 14) return null;
+          const tk = tierFor(g, tc);
+          return (
+            <text key={"tk-" + g.categoryId}
+              x={bx} y={by + 4} textAnchor="middle"
+              fontSize={Math.min(13, radius * 0.55)} fontWeight="800"
+              fill="white" fontFamily="Trebuchet MS"
+              opacity="0.7" style={{ pointerEvents: "none" }}>
+              {tk}
+            </text>
           );
         })}
         {/* Labels pass — on top of all circles */}
         {groups.map(g => {
           const share = total > 0 ? g.total / total * 100 : 0;
-          const cx = x(share), cy = y(g.avgSavingsPct);
+          const bx = x(share), by = y(g.avgSavingsPct);
           const radius = r(g.total);
           if (radius <= 8) return null;
+          const tk = tierFor(g, tc);
           const fullName = t.categories[g.category?.key] || g.category?.label || g.category?.key || "—";
           const shortName = fullName.length > 15 ? fullName.slice(0, 13) + "…" : fullName;
-          const isAbove = labelPos(cy, radius) === "above";
-          const labelY = isAbove ? cy - radius - 5 : cy + radius + 13;
-          const labelAnchor = cx < W * 0.15 ? "start" : cx > W * 0.85 ? "end" : "middle";
-          const bgW = shortName.length * 6 + 8, bgH = 13;
-          const bgX = labelAnchor === "start" ? cx - 2 : labelAnchor === "end" ? cx - bgW + 2 : cx - bgW / 2;
+          const isAbove = labelPos(by, radius) === "above";
+          const labelY = isAbove ? by - radius - 5 : by + radius + 13;
+          const labelAnchor = bx < W * 0.15 ? "start" : bx > W * 0.85 ? "end" : "middle";
+          // Badge: "shortName [B]" with tier coloured pill
+          const TIER_COLORS = { A: "#b8893a", B: "#0F2724", C: "#2A5FA5", D: "#888" };
+          const badgeTxt = shortName;
+          const bgW = badgeTxt.length * 6 + 22, bgH = 15;
+          const bgX = labelAnchor === "start" ? bx - 2 : labelAnchor === "end" ? bx - bgW + 2 : bx - bgW / 2;
           const bgY = isAbove ? labelY - bgH + 3 : labelY - bgH + 2;
           return (
             <g key={"l-" + g.categoryId}
                style={{ cursor: onCategoryClick ? "pointer" : "default" }}
                onClick={() => onCategoryClick && onCategoryClick(g.categoryId)}>
-              <rect x={bgX} y={bgY} width={bgW} height={bgH} rx={2} fill="var(--surface)" fillOpacity="0.88" />
-              <text x={cx} y={labelY} fontSize="10" fill="var(--ink)" textAnchor={labelAnchor} fontFamily="Trebuchet MS" fontWeight="600">
-                {shortName}
+              <rect x={bgX} y={bgY} width={bgW} height={bgH} rx={2} fill="var(--surface)" fillOpacity="0.92" />
+              {/* Tier colour strip on left of label */}
+              <rect x={bgX} y={bgY} width={5} height={bgH} rx={2} fill={TIER_COLORS[tk] || "#888"} />
+              <text x={bgX + 8} y={labelY} fontSize="10" fill="var(--ink)"
+                textAnchor="start" fontFamily="Trebuchet MS" fontWeight="600">
+                {badgeTxt}
               </text>
             </g>
           );
