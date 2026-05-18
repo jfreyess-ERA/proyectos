@@ -659,7 +659,7 @@ function ProfilingMatrix({ groups, total, client, onCategoryClick }) {
           <span>● tamaño = gasto total</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
             borde:
-            {[{ c: "#2f7d63", label: "fácil (4–5)" }, { c: "#c8861a", label: "media (3)" }, { c: "#c0392b", label: "difícil (1–2)" }].map(({ c, label }) => (
+            {[{ c: "#2f7d63", label: "factible (4–5)" }, { c: "#c8861a", label: "probable (3)" }, { c: "#c0392b", label: "fuera de análisis (1–2)" }].map(({ c, label }) => (
               <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
                 <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke={c} strokeWidth="2.5"/></svg>
                 {label}
