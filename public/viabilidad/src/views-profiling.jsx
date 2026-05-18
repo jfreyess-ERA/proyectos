@@ -597,7 +597,7 @@ function ProfilingView({ client }) {
               const share = total > 0 ? (g.total / total) * 100 : 0;
               return (
                 <tr key={g.categoryId} style={{ cursor: "pointer" }} onClick={() => setDrawerCatId(g.categoryId)}>
-                  <td><span className={"tier " + tk}>{tk}</span></td>
+                  <td><span className={"tier " + tk}>{t.profiling[`tier${tk}`]}</span></td>
                   <td>
                     <CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} />
                     <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 2 }}>{g.lines} líneas</div>
@@ -726,7 +726,7 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
               style={{ cursor: onCategoryClick ? "pointer" : "default" }}
               onClick={() => onCategoryClick && onCategoryClick(g.categoryId)}
             >
-              <title>{fullName} [{tk}]: {fmtMoney(g.total, client.currency, { compact: true })} · {fmtPct(g.avgSavingsPct)} ahorro · factibilidad {g.avgFeasibility.toFixed(1)}</title>
+              <title>{fullName} [{t.profiling[`tier${tk}`]}]: {fmtMoney(g.total, client.currency, { compact: true })} · {fmtPct(g.avgSavingsPct)} ahorro · factibilidad {g.avgFeasibility.toFixed(1)}</title>
             </circle>
           );
         })}
@@ -737,13 +737,14 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
           const radius = r(g.total);
           if (radius < 14) return null;
           const tk = tierFor(g, tc);
+          const TIER_SHORT = { A: "QW", B: "ES", C: "BI", D: "DC" };
           return (
             <text key={"tk-" + g.categoryId}
               x={bx} y={by + 4} textAnchor="middle"
-              fontSize={Math.min(13, radius * 0.55)} fontWeight="800"
+              fontSize={Math.min(11, radius * 0.48)} fontWeight="800"
               fill="white" fontFamily="Trebuchet MS"
               opacity="0.7" style={{ pointerEvents: "none" }}>
-              {tk}
+              {TIER_SHORT[tk] || tk}
             </text>
           );
         })}
