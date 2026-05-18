@@ -18,13 +18,21 @@ function ProjectionView({ client }) {
     try {
       const origEl = tableCardRef.current;
 
-      // Inline computed styles recursively so html2canvas resolves CSS variables
-      const PROPS = [
-        "color","background-color","border-color",
+      // html2canvas doesn't understand oklch() — convert via canvas 2D which does
+      const _normCtx = document.createElement("canvas").getContext("2d");
+      const normalizeColor = (val) => {
+        if (!val || !val.includes("oklch")) return val;
+        try { _normCtx.fillStyle = val; return _normCtx.fillStyle; } catch(_) { return val; }
+      };
+
+      const COLOR_PROPS = [
+        "color","background-color",
         "border-top-color","border-bottom-color","border-left-color","border-right-color",
+      ];
+      const OTHER_PROPS = [
         "border-top-width","border-bottom-width","border-left-width","border-right-width",
         "border-top-style","border-bottom-style","border-left-style","border-right-style",
-        "border-radius","border-top-left-radius","border-top-right-radius",
+        "border-top-left-radius","border-top-right-radius",
         "border-bottom-left-radius","border-bottom-right-radius",
         "font-size","font-weight","font-family","font-style","letter-spacing","line-height",
         "text-align","text-transform","text-decoration","white-space",
@@ -32,16 +40,22 @@ function ProjectionView({ client }) {
         "margin-top","margin-bottom","margin-left","margin-right",
         "display","flex-direction","align-items","justify-content","gap","flex","flex-wrap","flex-shrink",
         "width","height","min-width","max-width","min-height",
-        "opacity","overflow","position","vertical-align","box-sizing",
-        "filter",
+        "opacity","overflow","position","vertical-align","box-sizing","filter",
       ];
+
       const walk = (orig, clone) => {
         const cs = window.getComputedStyle(orig);
-        for (const p of PROPS) {
+        for (const p of COLOR_PROPS) {
+          try {
+            const val = normalizeColor(cs.getPropertyValue(p));
+            if (val) clone.style.setProperty(p, val);
+          } catch(_) {}
+        }
+        for (const p of OTHER_PROPS) {
           try {
             const val = cs.getPropertyValue(p);
             if (val) clone.style.setProperty(p, val);
-          } catch (_) {}
+          } catch(_) {}
         }
         for (let i = 0; i < orig.children.length; i++) {
           if (clone.children[i]) walk(orig.children[i], clone.children[i]);
