@@ -1360,7 +1360,7 @@ function GanttView({ client }) {
                             overflow: "hidden", marginRight: isLast ? 0 : 1,
                           }}>
                             {[0,1,2].map(j => miniBlock(j, "s"))}
-                            <div style={{ flex: Math.max(1, seg.dur - 6), background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.75)", fontSize: 10, letterSpacing: 3 }}>···</div>
+                            <div style={{ width: 20, flexShrink: 0, background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.75)", fontSize: 10, letterSpacing: 3 }}>···</div>
                             {[0,1,2].map(j => miniBlock(j, "e"))}
                           </div>
                         );
