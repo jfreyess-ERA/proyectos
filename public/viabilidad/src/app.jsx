@@ -125,6 +125,7 @@ function App() {
   const [section, setSection] = React.useState("expenses");
   const [globalTab, setGlobalTab] = React.useState("clients");
   const [readonly, setReadonly] = React.useState(false);
+  const [requestedExpensesMode, setRequestedExpensesMode] = React.useState(null);
   const eraCategories = store.state.eraCategories || [];
   const saveStatus = store.state.saveStatus || 'idle';
 
@@ -271,10 +272,10 @@ function App() {
       )}
       <main>
         <Tabs tabs={tabs} active={section} onChange={setSection} />
-        {section === "expenses"   && <ExpensesView client={active} readonly={readonly} />}
+        {section === "expenses"   && <ExpensesView client={active} readonly={readonly} requestedMode={requestedExpensesMode} onRequestedModeConsumed={() => setRequestedExpensesMode(null)} />}
         {section === "expenses"   && <ClientDataView client={active} readonly={readonly} />}
         {section === "evolution"  && <EvolutionView client={active} readonly={readonly} />}
-        {section === "projection" && <ProjectionView client={active} readonly={readonly} />}
+        {section === "projection" && <ProjectionView client={active} readonly={readonly} onGoToRangos={() => { setSection("expenses"); setRequestedExpensesMode("rangos"); }}}
         {section === "dashboard"  && <DashboardView client={active} readonly={readonly} />}
         {section === "dashboard"  && <GanttView client={active} readonly={readonly} />}
         {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}

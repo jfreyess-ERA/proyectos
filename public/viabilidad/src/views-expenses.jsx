@@ -180,11 +180,16 @@ function RangesTab({ client, readonly = false }) {
   );
 }
 
-function ExpensesView({ client, readonly = false }) {
+function ExpensesView({ client, readonly = false, requestedMode = null, onRequestedModeConsumed }) {
   const { t } = useI18n();
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
   const [mode, setMode] = React.useState("table");
+
+  // Allow parent (e.g. ProjectionView drawer link) to request a mode change
+  React.useEffect(() => {
+    if (requestedMode) { setMode(requestedMode); onRequestedModeConsumed?.(); }
+  }, [requestedMode]);
   const [showAddCat, setShowAddCat] = React.useState(false);
   const [importToast, setImportToast] = React.useState(null); // { rows, cats }
   const [drawerIdx, setDrawerIdx] = React.useState(null);     // expense index for side drawer

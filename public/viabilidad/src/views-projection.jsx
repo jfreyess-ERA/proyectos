@@ -2,7 +2,7 @@
    Projection (Lámina 7) + Resources (Lámina 8) + Gantt (Lámina 9)
    ============================================================ */
 
-function ProjectionView({ client }) {
+function ProjectionView({ client, onGoToRangos }) {
   const { t } = useI18n();
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
@@ -11,6 +11,7 @@ function ProjectionView({ client }) {
   const [feasFilter, setFeasFilter] = React.useState(new Set()); // empty = all
   const tableCardRef = React.useRef(null);
   const [downloading, setDownloading] = React.useState(false);
+  const [showRangos, setShowRangos] = React.useState(false);
 
   const downloadTableImage = () => {
     if (!tableCardRef.current || downloading) return;
@@ -555,9 +556,53 @@ function ProjectionView({ client }) {
       </div>
 
       {/* Edit ranges per expense line */}
-      <div className="card flat" style={{ padding: "14px 20px", background: "var(--surface-2)", fontSize: 13, color: "var(--text-2)" }}>
-        💡 Los rangos por línea (alcance, ahorro mín/máx, factibilidad) se configuran en la pestaña <strong>Gastos → Rangos</strong>.
+      <div className="card flat" style={{ padding: "14px 20px", background: "var(--surface-2)", fontSize: 13, color: "var(--text-2)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <span>💡 Los rangos por línea (alcance, ahorro mín/máx, factibilidad) se configuran en la pestaña <strong>Gastos y datos cliente → Rangos</strong>.</span>
+        <button
+          className="btn ghost sm"
+          onClick={() => setShowRangos(true)}
+          style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+        >
+          ⊞ Editar rangos →
+        </button>
       </div>
+
+      {/* Rangos slide-over drawer */}
+      {showRangos && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex" }} onClick={() => setShowRangos(false)}>
+          {/* Backdrop */}
+          <div style={{ flex: 1, background: "rgba(0,0,0,0.25)" }} />
+          {/* Panel */}
+          <div
+            style={{ width: "min(540px, 95vw)", background: "var(--bg)", boxShadow: "-4px 0 24px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", overflow: "hidden" }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Panel header */}
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div className="eyebrow">Proyección</div>
+                <h3 className="h3" style={{ margin: 0 }}>Rangos por categoría</h3>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {onGoToRangos && (
+                  <button
+                    className="btn ghost sm"
+                    onClick={() => { setShowRangos(false); onGoToRangos(); }}
+                    title="Abrir en pestaña Gastos y datos cliente"
+                  >
+                    Ir a Gastos y datos cliente → Rangos ↗
+                  </button>
+                )}
+                <button className="btn ghost sm" onClick={() => setShowRangos(false)} style={{ fontSize: 18, padding: "2px 8px", lineHeight: 1 }}>✕</button>
+              </div>
+            </div>
+            {/* Panel body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+              <RangesTab client={client} readonly={false} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tier cards (Quick win / Estratégica / Mantener / Descartar) */}
       <div className="grid cols-4">
