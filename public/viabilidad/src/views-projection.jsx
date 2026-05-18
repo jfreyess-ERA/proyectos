@@ -68,7 +68,13 @@ function ProjectionView({ client }) {
         allowTaint: true,
         useCORS: true,
         logging: false,
-        onclone: (_doc, clone) => walk(origEl, clone),
+        onclone: (cloneDoc, clone) => {
+          // Remove ALL external/internal stylesheets from the clone so
+          // html2canvas never tries to parse oklch() color syntax from CSS rules.
+          // Computed styles are already inlined on each element by walk().
+          cloneDoc.querySelectorAll('link[rel="stylesheet"], style').forEach(el => el.remove());
+          walk(origEl, clone);
+        },
       });
 
       const link = document.createElement("a");
