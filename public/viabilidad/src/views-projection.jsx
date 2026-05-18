@@ -978,12 +978,9 @@ function ResourcesPanel({ client, groups, retAvg }) {
                   </div>
                 ))}
               </div>
-              {/* Analistas */}
+              {/* Analistas — solo control numérico; los íconos aparecen bajo el donut */}
               <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14 }}>
                 <div style={{ ...EYE, marginBottom: 8 }}>Analistas ERA</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 }}>
-                  {Array.from({ length: count }).map((_, i) => <PersonIcon key={i} size={20} />)}
-                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button onClick={() => setR({ eraAnalysts: Math.max(1, count - 1) })}
                     style={{ width: 24, height: 24, borderRadius: 5, border: "1px solid var(--line)", background: "var(--surface-2)", fontSize: 14, cursor: "pointer", color: "var(--ink)", lineHeight: 1, flexShrink: 0 }}>−</button>
@@ -1036,10 +1033,10 @@ function ResourcesPanel({ client, groups, retAvg }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
             <div style={{ display: "flex", gap: 16, alignItems: "start" }}>
 
-            {/* Col 3: Donut */}
-            <div>
+            {/* Col 3: Donut + leyenda ERA/Cliente + íconos analistas */}
+            <div style={{ width: 220, flexShrink: 0 }}>
               <div style={{ ...EYE, marginBottom: 12 }}>Distribución de horas</div>
-              <div style={{ height: CHART_H, width: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ height: CHART_H, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg viewBox="0 0 220 220" style={{ height: "100%", width: "auto", display: "block", overflow: "visible" }}>
                   {totalHH === 0 ? (
                     <circle cx={cx} cy={cy} r={Ro} fill="var(--surface-2)" stroke="var(--line)" />
@@ -1060,6 +1057,29 @@ function ResourcesPanel({ client, groups, retAvg }) {
                   <text x={cx} y={cy + 14} textAnchor="middle" fontSize="22" fontWeight="800"
                     fill="var(--ink)" fontFamily="Trebuchet MS">{totalHH.toLocaleString("es-CL")}</text>
                 </svg>
+              </div>
+              {/* Leyenda ERA / Cliente */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 10 }}>
+                {[
+                  { label: "ERA Group", hh: eraHH, pct: eraPct, color: ERA_ORANGE },
+                  { label: clientName,  hh: clientHH, pct: cliPct, color: CLI_BLUE },
+                ].map(({ label, hh, pct, color }) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                    <span style={{ color: "var(--text-2)", flex: 1 }}>{label}</span>
+                    <span style={{ fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
+                      {hh.toLocaleString("es-CL")} HH
+                    </span>
+                    <span style={{ color: "var(--text-3)", fontSize: 10, marginLeft: 3 }}>({pct}%)</span>
+                  </div>
+                ))}
+              </div>
+              {/* Íconos analistas ERA */}
+              <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+                <div style={{ ...EYE, marginBottom: 6 }}>Analistas ERA</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  {Array.from({ length: count }).map((_, i) => <PersonIcon key={i} size={20} />)}
+                </div>
               </div>
             </div>
 
@@ -1110,19 +1130,22 @@ function ResourcesPanel({ client, groups, retAvg }) {
 
             </div>{/* end donut+treemap row */}
 
-            {/* Stat cards — pegados justo bajo donut+treemap */}
-            <div style={{ display: "flex", gap: 16 }}>
-              <div style={{ flex: 1 }}>
-                <Stat
-                  label="Retorno por HH cliente · rango"
-                  value={`${fmtMoney(retMin2, client.currency, { compact: true })} — ${fmtMoney(retMax2, client.currency, { compact: true })}`}
-                  sub={`/ HH cliente (${clientHH} HH)`}
-                  variant="accent"
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <Stat label={t.resources.categoriesIncluded} value={n} sub={t.scenarios.proposed} variant="dark" />
-              </div>
+            {/* Stat card — retorno por HH cliente: ancho, compacto, solo naranja */}
+            <div style={{
+              background: ERA_ORANGE, borderRadius: 10, padding: "10px 20px",
+              display: "flex", alignItems: "center", gap: 20,
+            }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "white", opacity: 0.85,
+                letterSpacing: 0.7, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                Retorno por HH cliente · rango
+              </span>
+              <span style={{ fontSize: 22, fontWeight: 800, color: "white",
+                fontVariantNumeric: "tabular-nums", flex: 1, textAlign: "center" }}>
+                {fmtMoney(retMin2, client.currency, { compact: true })} — {fmtMoney(retMax2, client.currency, { compact: true })}
+              </span>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap" }}>
+                / HH cliente ({clientHH} HH)
+              </span>
             </div>
 
           </div>{/* end right group */}
