@@ -907,6 +907,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
   const tiles = buildTreemap(tmItems, 2, 2, TW - 4, TH - 4);
 
   const EYE = { fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--text-3)", fontWeight: 700 };
+  const CHART_H = 230; // shared height for both charts
 
   return (
     <div className="card">
@@ -918,18 +919,27 @@ function ResourcesPanel({ client, groups, retAvg }) {
       </div>
       <p className="lede" style={{ marginBottom: 20 }}>{t.resources.lede}</p>
 
-      {/* ── TOP: Parameter editors ─────────────────────────────── */}
-      <div className="grid cols-2" style={{ gap: 24, marginBottom: 28, alignItems: "start" }}>
+      {/* ── TOP: Parameters — 1/3 + 2/3 ──────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 24, marginBottom: 28, alignItems: "start" }}>
 
-        {/* HH ERA / categoría */}
+        {/* HH ERA / categoría — prominente */}
         <div>
           <div style={{ ...EYE, marginBottom: 10 }}>HH ERA / Categoría</div>
-          <Field label={t.resources.eraHH}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
             <input className="input right" type="number" value={r.eraHHPerCat}
-              onChange={e => setR({ eraHHPerCat: +e.target.value || 0 })} style={{ width: 120 }} />
-          </Field>
-          <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 6 }}>
-            {n} categorías × {r.eraHHPerCat} HH = <strong>{eraHH.toLocaleString("es-CL")} HH ERA</strong> total
+              onChange={e => setR({ eraHHPerCat: +e.target.value || 0 })}
+              style={{ width: 110, fontSize: 15, fontWeight: 600 }} />
+            <span style={{ fontSize: 12, color: "var(--text-3)" }}>HH / cat.</span>
+          </div>
+          <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "14px 16px" }}>
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4 }}>Total ERA estimado</div>
+            <div style={{ fontSize: 30, fontWeight: 800, color: "var(--ink)", lineHeight: 1 }}>
+              {eraHH.toLocaleString("es-CL")}
+              <span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-2)", marginLeft: 5 }}>HH</span>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 6 }}>
+              {n} cat. × {r.eraHHPerCat} HH
+            </div>
           </div>
         </div>
 
@@ -966,15 +976,16 @@ function ResourcesPanel({ client, groups, retAvg }) {
         </div>
       </div>
 
-      {/* ── BOTTOM: Charts side by side ────────────────────────── */}
-      <div className="grid cols-2" style={{ gap: 24, alignItems: "start" }}>
+      {/* ── BOTTOM: Charts — equal columns, equal height ─────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
 
         {/* Donut chart */}
         <div>
-          <div style={{ ...EYE, marginBottom: 10 }}>Distribución de horas</div>
-          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <svg viewBox="0 0 220 220" style={{ width: 190, flexShrink: 0 }}>
-              {/* Slices — ERA (orange) starts at top, client (blue) fills the rest */}
+          <div style={{ ...EYE, marginBottom: 12 }}>Distribución de horas</div>
+
+          {/* Donut SVG — fixed height, same as treemap */}
+          <div style={{ height: CHART_H, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg viewBox="0 0 220 220" style={{ height: "100%", width: "auto", display: "block", overflow: "visible" }}>
               {totalHH === 0 ? (
                 <circle cx={cx} cy={cy} r={Ro} fill="var(--surface-2)" stroke="var(--line)" />
               ) : eraHH === 0 ? (
@@ -983,80 +994,78 @@ function ResourcesPanel({ client, groups, retAvg }) {
                 <circle cx={cx} cy={cy} r={Ro} fill={ERA_ORANGE} />
               ) : (
                 <>
-                  <path d={pieSlice(0, eraAngle)} fill={ERA_ORANGE} stroke="white" strokeWidth="1.5" />
-                  <path d={pieSlice(eraAngle, 2 * Math.PI)} fill={CLI_BLUE} stroke="white" strokeWidth="1.5" />
+                  <path d={pieSlice(0, eraAngle)} fill={ERA_ORANGE} stroke="white" strokeWidth="2" />
+                  <path d={pieSlice(eraAngle, 2 * Math.PI)} fill={CLI_BLUE} stroke="white" strokeWidth="2" />
                 </>
               )}
-              {/* Donut hole — surface overlay first, then dark ERA logo circle */}
-              <circle cx={cx} cy={cy} r={Ri + 2} fill="var(--surface)" />
-              <circle cx={cx} cy={cy} r={Ri} fill={ERA_DARK} />
-              {/* ERA logo inside hole */}
-              <text x={cx} y={cy - 10} textAnchor="middle" fontSize="18" fontWeight="700"
-                fill={ERA_ORANGE} fontFamily="Trebuchet MS" letterSpacing="1">era</text>
-              <text x={cx + 10} y={cy + 1} textAnchor="middle" fontSize="6" fill={ERA_ORANGE}
-                fontFamily="Trebuchet MS" letterSpacing="3" opacity="0.85">GROUP</text>
-              <line x1={cx - Ri * 0.55} y1={cy + 10} x2={cx + Ri * 0.55} y2={cy + 10}
-                stroke={ERA_ORANGE} strokeWidth="0.6" opacity="0.35" />
-              <text x={cx} y={cy + 24} textAnchor="middle" fontSize="12" fontWeight="700"
-                fill="white" fontFamily="Trebuchet MS">{totalHH.toLocaleString("es-CL")} HH</text>
+              {/* Donut hole — white with total HH */}
+              <circle cx={cx} cy={cy} r={Ri + 3} fill="white" />
+              <circle cx={cx} cy={cy} r={Ri} fill="white" stroke="var(--line)" strokeWidth="1" />
+              <text x={cx} y={cy - 8} textAnchor="middle" fontSize="9.5" fill="var(--text-3)"
+                fontFamily="Trebuchet MS" letterSpacing="0.5" fontWeight="600">TOTAL HH</text>
+              <text x={cx} y={cy + 14} textAnchor="middle" fontSize="22" fontWeight="800"
+                fill="var(--ink)" fontFamily="Trebuchet MS">{totalHH.toLocaleString("es-CL")}</text>
             </svg>
+          </div>
 
-            {/* Legend */}
-            <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <span style={{ width: 13, height: 13, background: ERA_ORANGE, borderRadius: 3, flexShrink: 0, marginTop: 1 }} />
-                <div>
-                  <div style={{ fontWeight: 700 }}>ERA Group</div>
-                  <div style={{ color: "var(--text-3)", fontSize: 11 }}>{eraHH.toLocaleString("es-CL")} HH · {eraPct}%</div>
-                </div>
+          {/* Legend below donut */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 20, marginTop: 14, fontSize: 12 }}>
+            <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+              <span style={{ width: 12, height: 12, background: ERA_ORANGE, borderRadius: 3, flexShrink: 0 }} />
+              <div>
+                <span style={{ fontWeight: 700 }}>ERA Group</span>
+                <span style={{ color: "var(--text-3)", marginLeft: 6 }}>{eraHH.toLocaleString("es-CL")} HH · {eraPct}%</span>
               </div>
-              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <span style={{ width: 13, height: 13, background: CLI_BLUE, borderRadius: 3, flexShrink: 0, marginTop: 1 }} />
-                <div>
-                  <div style={{ fontWeight: 700 }}>{clientName}</div>
-                  <div style={{ color: "var(--text-3)", fontSize: 11 }}>{clientHH.toLocaleString("es-CL")} HH · {cliPct}%</div>
-                </div>
+            </div>
+            <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+              <span style={{ width: 12, height: 12, background: CLI_BLUE, borderRadius: 3, flexShrink: 0 }} />
+              <div>
+                <span style={{ fontWeight: 700 }}>{clientName}</span>
+                <span style={{ color: "var(--text-3)", marginLeft: 6 }}>{clientHH.toLocaleString("es-CL")} HH · {cliPct}%</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Treemap */}
+        {/* Treemap — same height as donut container */}
         <div>
-          <div style={{ ...EYE, marginBottom: 10 }}>Horas del cliente por cargo</div>
+          <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
           {tmItems.length > 0 ? (
-            <svg viewBox={`0 0 ${TW} ${TH}`} style={{ width: "100%", display: "block", borderRadius: 10, overflow: "hidden" }}>
-              {tiles.map((tile, i) => {
-                const pad = 9;
-                const showFull = tile.w > 60 && tile.h > 38;
-                const showMin  = !showFull && tile.h > 20;
-                const titleShort = tile.title.length > 20 ? tile.title.slice(0, 19) + "…" : tile.title;
-                const fs = Math.min(13, Math.max(8, tile.h / 4.5));
-                return (
-                  <g key={tile.id || i}>
-                    <rect x={tile.x + 1.5} y={tile.y + 1.5} width={tile.w - 3} height={tile.h - 3}
-                      fill={tile.color} rx="5" />
-                    {showFull && (
-                      <>
-                        <text x={tile.x + pad} y={tile.y + tile.h - pad - fs + 2}
-                          fontSize={fs} fontWeight="700" fill="white" fontFamily="Trebuchet MS">
-                          {tile.value} HH
-                        </text>
-                        <text x={tile.x + pad} y={tile.y + tile.h - pad + 2}
-                          fontSize={Math.max(7.5, fs - 2.5)} fill="white" fontFamily="Trebuchet MS" opacity="0.78">
-                          {titleShort}
-                        </text>
-                      </>
-                    )}
-                    {showMin && (
-                      <text x={tile.x + tile.w / 2} y={tile.y + tile.h / 2 + 4}
-                        fontSize="8.5" fontWeight="700" fill="white" fontFamily="Trebuchet MS"
-                        textAnchor="middle">{tile.value}</text>
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
+            <div style={{ height: CHART_H }}>
+              <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" height="100%"
+                preserveAspectRatio="none" style={{ display: "block", borderRadius: 10, overflow: "hidden" }}>
+                {tiles.map((tile, i) => {
+                  const pad = 9;
+                  const showFull = tile.w > 60 && tile.h > 38;
+                  const showMin  = !showFull && tile.h > 20;
+                  const titleShort = tile.title.length > 20 ? tile.title.slice(0, 19) + "…" : tile.title;
+                  const fs = Math.min(13, Math.max(8, tile.h / 4.5));
+                  return (
+                    <g key={tile.id || i}>
+                      <rect x={tile.x + 1.5} y={tile.y + 1.5} width={tile.w - 3} height={tile.h - 3}
+                        fill={tile.color} rx="5" />
+                      {showFull && (
+                        <>
+                          <text x={tile.x + pad} y={tile.y + tile.h - pad - fs + 2}
+                            fontSize={fs} fontWeight="700" fill="white" fontFamily="Trebuchet MS">
+                            {tile.value} HH
+                          </text>
+                          <text x={tile.x + pad} y={tile.y + tile.h - pad + 2}
+                            fontSize={Math.max(7.5, fs - 2.5)} fill="white" fontFamily="Trebuchet MS" opacity="0.78">
+                            {titleShort}
+                          </text>
+                        </>
+                      )}
+                      {showMin && (
+                        <text x={tile.x + tile.w / 2} y={tile.y + tile.h / 2 + 4}
+                          fontSize="8.5" fontWeight="700" fill="white" fontFamily="Trebuchet MS"
+                          textAnchor="middle">{tile.value}</text>
+                      )}
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
           ) : (
             <div style={{ color: "var(--text-3)", fontSize: 13 }}>Sin cargos con horas definidas.</div>
           )}
