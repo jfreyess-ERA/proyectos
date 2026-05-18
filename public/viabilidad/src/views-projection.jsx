@@ -942,6 +942,36 @@ function ResourcesPanel({ client, groups, retAvg }) {
               {n} cat. × {r.eraHHPerCat} HH
             </div>
           </div>
+
+          {/* ── HH bars ─────────────────────────────────────────── */}
+          <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>ERA Group</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: ERA_ORANGE, fontVariantNumeric: "tabular-nums" }}>
+                  {eraHH.toLocaleString("es-CL")}
+                  <span style={{ fontSize: 9, fontWeight: 400, marginLeft: 3, color: "var(--text-3)" }}>HH</span>
+                </span>
+              </div>
+              <div style={{ background: "var(--line)", borderRadius: 4, height: 14, overflow: "hidden" }}>
+                <div style={{ width: `${eraHH / maxHH * 100}%`, background: ERA_ORANGE, height: "100%", borderRadius: 4, transition: "width 0.4s ease" }} />
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 3 }}>{eraPct}% del total</div>
+            </div>
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>{clientName}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: CLI_BLUE, fontVariantNumeric: "tabular-nums" }}>
+                  {clientHH.toLocaleString("es-CL")}
+                  <span style={{ fontSize: 9, fontWeight: 400, marginLeft: 3, color: "var(--text-3)" }}>HH</span>
+                </span>
+              </div>
+              <div style={{ background: "var(--line)", borderRadius: 4, height: 14, overflow: "hidden" }}>
+                <div style={{ width: `${clientHH / maxHH * 100}%`, background: CLI_BLUE, height: "100%", borderRadius: 4, transition: "width 0.4s ease" }} />
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 3 }}>{cliPct}% del total</div>
+            </div>
+          </div>
         </div>
 
         {/* Roles table */}
@@ -977,8 +1007,8 @@ function ResourcesPanel({ client, groups, retAvg }) {
         </div>
       </div>
 
-      {/* ── BOTTOM: 3-col charts — donut | treemap | bars ──────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 190px", gap: 24, alignItems: "start" }}>
+      {/* ── BOTTOM: donut | treemap | stats ────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 24, alignItems: "start" }}>
 
         {/* 1 · Donut */}
         <div>
@@ -1012,7 +1042,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
         <div>
           <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
           {tmItems.length > 0 ? (
-            <div style={{ height: CHART_H, maxWidth: 220 }}>
+            <div style={{ height: CHART_H, maxWidth: 280 }}>
               <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" height="100%"
                 preserveAspectRatio="none" style={{ display: "block", borderRadius: 10, overflow: "hidden" }}>
                 {tiles.map((tile, i) => {
@@ -1052,60 +1082,17 @@ function ResourcesPanel({ client, groups, retAvg }) {
           )}
         </div>
 
-        {/* 3 · Horizontal bars */}
-        <div>
-          <div style={{ ...EYE, marginBottom: 18 }}>HH estimadas</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-
-            {/* ERA bar */}
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>ERA Group</span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: ERA_ORANGE, fontVariantNumeric: "tabular-nums" }}>
-                  {eraHH.toLocaleString("es-CL")}
-                  <span style={{ fontSize: 10, fontWeight: 400, marginLeft: 3, color: "var(--text-3)" }}>HH</span>
-                </span>
-              </div>
-              <div style={{ background: "var(--surface-2)", borderRadius: 6, height: 20, overflow: "hidden" }}>
-                <div style={{
-                  width: `${eraHH / maxHH * 100}%`, background: ERA_ORANGE,
-                  height: "100%", borderRadius: 6, transition: "width 0.4s ease"
-                }} />
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 5 }}>{eraPct}% del total</div>
-            </div>
-
-            {/* Client bar */}
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>{clientName}</span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: CLI_BLUE, fontVariantNumeric: "tabular-nums" }}>
-                  {clientHH.toLocaleString("es-CL")}
-                  <span style={{ fontSize: 10, fontWeight: 400, marginLeft: 3, color: "var(--text-3)" }}>HH</span>
-                </span>
-              </div>
-              <div style={{ background: "var(--surface-2)", borderRadius: 6, height: 20, overflow: "hidden" }}>
-                <div style={{
-                  width: `${clientHH / maxHH * 100}%`, background: CLI_BLUE,
-                  height: "100%", borderRadius: 6, transition: "width 0.4s ease"
-                }} />
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 5 }}>{cliPct}% del total</div>
-            </div>
-
-          </div>
+        {/* 3 · Stat cards stacked */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, width: 230 }}>
+          <Stat
+            label="Retorno por HH cliente · rango"
+            value={`${fmtMoney(clientHH > 0 ? (groups.reduce((s,g)=>s+g.minSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.minSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0, client.currency, { compact: true })} — ${fmtMoney(clientHH > 0 ? (groups.reduce((s,g)=>s+g.maxSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.maxSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0, client.currency, { compact: true })}`}
+            sub={`/ HH cliente (${clientHH} HH)`}
+            variant="accent"
+          />
+          <Stat label={t.resources.categoriesIncluded} value={n} sub={t.scenarios.proposed} variant="dark" />
         </div>
 
-      </div>
-
-      <div className="grid cols-2" style={{ marginTop: 24 }}>
-        <Stat
-          label="Retorno por HH cliente · rango"
-          value={`${fmtMoney(clientHH > 0 ? (groups.reduce((s,g)=>s+g.minSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.minSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0, client.currency, { compact: true })} — ${fmtMoney(clientHH > 0 ? (groups.reduce((s,g)=>s+g.maxSavings,0) * client.scenario.projectionYears - groups.reduce((s,g)=>s+g.maxSavings,0) * (client.scenario.feePctOnSavings/100) * (client.scenario.feeMonths/12)) / clientHH : 0, client.currency, { compact: true })}`}
-          sub={`/ HH cliente (${clientHH} HH)`}
-          variant="accent"
-        />
-        <Stat label={t.resources.categoriesIncluded} value={n} sub={t.scenarios.proposed} variant="dark" />
       </div>
     </div>
   );
