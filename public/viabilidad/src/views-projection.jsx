@@ -1127,7 +1127,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
 
           </div>{/* end right group */}
 
-          </div>{/* end outer flex */}
+          </div>
         );
       })()}
     </div>
