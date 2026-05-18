@@ -993,7 +993,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
         <div>
           <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
           {tmItems.length > 0 ? (
-            <div style={{ height: CHART_H, maxWidth: 320 }}>
+            <div style={{ height: CHART_H }}>
               <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" height="100%"
                 preserveAspectRatio="xMidYMid meet"
                 style={{ display: "block", borderRadius: 10, overflow: "hidden" }}>
