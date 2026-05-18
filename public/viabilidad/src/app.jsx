@@ -275,7 +275,7 @@ function App() {
         {section === "expenses"   && <ExpensesView client={active} readonly={readonly} requestedMode={requestedExpensesMode} onRequestedModeConsumed={() => setRequestedExpensesMode(null)} />}
         {section === "expenses"   && <ClientDataView client={active} readonly={readonly} />}
         {section === "evolution"  && <EvolutionView client={active} readonly={readonly} />}
-        {section === "projection" && <ProjectionView client={active} readonly={readonly} onGoToRangos={() => { setSection("expenses"); setRequestedExpensesMode("rangos"); }}}
+        {section === "projection" && <ProjectionView client={active} readonly={readonly} onGoToRangos={() => { setSection("expenses"); setRequestedExpensesMode("rangos"); }} />}
         {section === "dashboard"  && <DashboardView client={active} readonly={readonly} />}
         {section === "dashboard"  && <GanttView client={active} readonly={readonly} />}
         {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}
