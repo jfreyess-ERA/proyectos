@@ -115,15 +115,9 @@ function ProjectionView({ client }) {
       ty += HEAD_H;
 
       // ── 3. Data rows ───────────────────────────────────────────
-      // Pre-compute max values for bar scaling (col 6 = minPct, col 7 = maxPct)
-      const maxMinPctVal = Math.max(...dataRows.map(tr => {
-        const td = tr.querySelectorAll("td")[6];
-        return td ? parseFloat(td.textContent) || 0 : 0;
-      }), 0.01);
-      const maxMaxPctVal = Math.max(...dataRows.map(tr => {
-        const td = tr.querySelectorAll("td")[7];
-        return td ? parseFloat(td.textContent) || 0 : 0;
-      }), 0.01);
+      // Bars are absolute 0–100%
+      const maxMinPctVal = 100;
+      const maxMaxPctVal = 100;
 
       dataRows.forEach((tr, ri) => {
         const bg = ri % 2 === 1 ? "#f9f8f6" : "#ffffff";
@@ -150,11 +144,12 @@ function ProjectionView({ client }) {
               dx += dotW + gap;
             }
           } else if (i === 6 || i === 7) {
-            // % ahorr_min / % ahorr_max — bar + number
-            const pctText = td.textContent.trim();
-            const pctVal = parseFloat(pctText) || 0;
-            const maxPct = i === 6 ? maxMinPctVal : maxMaxPctVal;
-            const BAR_W = 48, BAR_H = 6, GAP = 6, NUM_W = 36;
+            // % ahorr_min / % ahorr_max — bar + number (0–100% absolute scale)
+            const span = td.querySelector("span");
+            const pctText = span ? span.textContent.trim() : td.textContent.trim();
+            const pctVal = parseFloat(pctText) || 0; // e.g. 35 for "35.0%"
+            const maxPct = 100;
+            const BAR_W = 60, BAR_H = 6, GAP = 6, NUM_W = 36;
             const totalW = BAR_W + GAP + NUM_W;
             const bx = tx + w - totalW - 8;
             const by = ty + ROW_H / 2 - BAR_H / 2;
@@ -413,12 +408,11 @@ function ProjectionView({ client }) {
           </thead>
           <tbody>
             {(() => {
-              const maxMinPct = Math.max(...sortedGroups.map(g => g.avgMinPct || 0), 0.01);
-              const maxMaxPct = Math.max(...sortedGroups.map(g => g.avgMaxPct || 0), 0.01);
-              const PctBar = ({ value, max }) => (
+              // Bars are absolute 0–100%: a 35% value fills 35% of the bar width
+              const PctBar = ({ value }) => (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, width: "100%" }}>
-                  <div style={{ width: 48, height: 6, background: "var(--line)", borderRadius: 3, flexShrink: 0, overflow: "hidden" }}>
-                    <div style={{ width: `${Math.min(100, (value / max) * 100)}%`, height: "100%", background: "var(--positive-2)", borderRadius: 3 }} />
+                  <div style={{ width: 60, height: 6, background: "var(--line)", borderRadius: 3, flexShrink: 0, overflow: "hidden" }}>
+                    <div style={{ width: `${Math.min(100, (value || 0) * 100)}%`, height: "100%", background: "var(--positive-2)", borderRadius: 3 }} />
                   </div>
                   <span style={{ fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "right" }}>{fmtPct(value)}</span>
                 </div>
@@ -440,8 +434,8 @@ function ProjectionView({ client }) {
                   <td className="right tabular">{fmtPct(g.avgScopePct)}</td>
                   <td className="right tabular">{fmtMoney(g.optimizationAmount, client.currency)}</td>
                   <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
-                  <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} max={maxMinPct} /></td>
-                  <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} max={maxMaxPct} /></td>
+                  <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} /></td>
+                  <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} /></td>
                   <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(g.minSavings, client.currency)}</td>
                   <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(g.maxSavings, client.currency)}</td>
                 </tr>
