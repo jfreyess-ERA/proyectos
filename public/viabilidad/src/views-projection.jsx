@@ -144,21 +144,21 @@ function ProjectionView({ client }) {
               dx += dotW + gap;
             }
           } else if (i === 6 || i === 7) {
-            // % ahorr_min / % ahorr_max — bar + number (0–100% absolute scale)
+            // % ahorr_min / % ahorr_max — bar fills available space, fill = value% of track
             const span = td.querySelector("span");
             const pctText = span ? span.textContent.trim() : td.textContent.trim();
             const pctVal = parseFloat(pctText) || 0; // e.g. 35 for "35.0%"
-            const maxPct = 100;
-            const BAR_W = 60, BAR_H = 6, GAP = 6, NUM_W = 36;
-            const totalW = BAR_W + GAP + NUM_W;
-            const bx = tx + w - totalW - 8;
+            const BAR_H = 6, GAP = 6, NUM_W = 36, PAD = 8;
+            // track spans from left edge to right edge minus number - gap - right padding
+            const BAR_W = Math.max(20, w - PAD - GAP - NUM_W - PAD);
+            const bx = tx + PAD;
             const by = ty + ROW_H / 2 - BAR_H / 2;
             // track bg
             ctx.fillStyle = "#d8d5cc"; ctx.beginPath(); ctx.roundRect(bx, by, BAR_W, BAR_H, 3); ctx.fill();
             // fill
-            const fillW = Math.min(BAR_W, (pctVal / (maxPct || 1)) * BAR_W);
-            ctx.fillStyle = "#2f7d63"; ctx.beginPath(); ctx.roundRect(bx, by, fillW, BAR_H, 3); ctx.fill();
-            // text
+            const fillW = Math.min(BAR_W, (pctVal / 100) * BAR_W);
+            if (fillW > 0) { ctx.fillStyle = "#2f7d63"; ctx.beginPath(); ctx.roundRect(bx, by, fillW, BAR_H, 3); ctx.fill(); }
+            // text (right-aligned, after bar)
             cellText(pctText, bx + BAR_W + GAP, ty, NUM_W, ROW_H, inkColor, "right", false, 12);
           } else {
             cellText(td.textContent.trim(), tx, ty, w, ROW_H, rawColor, align, bold, 12);
@@ -408,13 +408,13 @@ function ProjectionView({ client }) {
           </thead>
           <tbody>
             {(() => {
-              // Bars are absolute 0–100%: a 35% value fills 35% of the bar width
+              // Bars: track fills available column space, fill = value% of track (0-100% absolute)
               const PctBar = ({ value }) => (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, width: "100%" }}>
-                  <div style={{ width: 60, height: 6, background: "var(--line)", borderRadius: 3, flexShrink: 0, overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", paddingRight: 4 }}>
+                  <div style={{ flex: 1, height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden", minWidth: 20 }}>
                     <div style={{ width: `${Math.min(100, (value || 0) * 100)}%`, height: "100%", background: "var(--positive-2)", borderRadius: 3 }} />
                   </div>
-                  <span style={{ fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "right" }}>{fmtPct(value)}</span>
+                  <span style={{ fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "right", flexShrink: 0 }}>{fmtPct(value)}</span>
                 </div>
               );
               return sortedGroups.map(g => {
