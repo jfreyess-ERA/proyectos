@@ -877,7 +877,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
   const ERA_ORANGE = "#E8A838";
   const CLI_BLUE   = "#2A5FA5";
   const ERA_DARK   = "#0F2724";
-  const clientName = (client.name || "Cliente").split(" ").slice(0, 3).join(" ");
+  const clientName = (client.legalName || client.name || "Cliente").split(/\s+/)[0];
 
   const eraPct = totalHH > 0 ? Math.round((eraHH / totalHH) * 100) : 0;
   const cliPct = 100 - eraPct;
@@ -918,7 +918,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
           <h3 className="h3" style={{ margin: 0 }}>{t.resources.title}</h3>
         </div>
       </div>
-      <p className="lede" style={{ marginBottom: 20 }}>{t.resources.lede}</p>
+      <p className="lede" style={{ marginBottom: 20, whiteSpace: "nowrap" }}>{t.resources.lede}</p>
 
       {/* ── Layout: col1=HH ERA+analistas | col2=tabla | col3=donut | col4=treemap
            Stat cards en fila 2 bajo cols 3–4
@@ -1130,9 +1130,9 @@ function ResourcesPanel({ client, groups, retAvg }) {
 
             </div>{/* end donut+treemap row */}
 
-            {/* Stat card — retorno por HH cliente: ancho, compacto, solo naranja */}
+            {/* Stat card — retorno por HH cliente: ancho, compacto, verde claro */}
             <div style={{
-              background: ERA_ORANGE, borderRadius: 10, padding: "10px 20px",
+              background: "#27AE60", borderRadius: 10, padding: "10px 20px",
               display: "flex", alignItems: "center", gap: 20,
             }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: "white", opacity: 0.85,
