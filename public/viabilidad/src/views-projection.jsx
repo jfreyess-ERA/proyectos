@@ -1250,20 +1250,20 @@ function GanttView({ client }) {
       <div className="card flat" style={{ padding: 0, overflow: "auto" }}>
         <table className="t" style={{ tableLayout: "fixed", minWidth: 900 }}>
           <colgroup>
-            <col style={{ width: 220 }} />
             <col style={{ width: 56 }} />
             <col style={{ width: 60 }} />
             {STAGE_KEYS.map(k => <col key={"c-" + k} style={{ width: 54 }} />)}
             <col style={{ width: 60 }} />
+            <col style={{ width: 220 }} />
             <col style={{ width: "100%" }} />
           </colgroup>
           <thead>
             <tr>
-              <th rowSpan="2" style={{ verticalAlign: "bottom" }}>{t.expenses.cols.category}</th>
               <th rowSpan="2" className="right" style={{ verticalAlign: "bottom" }}>N°</th>
               <th rowSpan="2" className="right" style={{ verticalAlign: "bottom" }}>{t.gantt.start}</th>
               <th colSpan={STAGE_KEYS.length} style={{ textAlign: "center", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>Meses por etapa</th>
               <th rowSpan="2" className="right" style={{ verticalAlign: "bottom" }}>Total</th>
+              <th rowSpan="2" style={{ verticalAlign: "bottom" }}>{t.expenses.cols.category}</th>
               <th style={{ textAlign: "center", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>Cronograma</th>
             </tr>
             <tr>
@@ -1308,7 +1308,6 @@ function GanttView({ client }) {
 
               return (
                 <tr key={g.categoryId}>
-                  <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
                   <td className="right tabular">{i + 1}</td>
                   <td className="right">
                     <input className="input right" type="number" min="0" max="48" value={p.start}
@@ -1323,6 +1322,7 @@ function GanttView({ client }) {
                     </td>
                   ))}
                   <td className="right tabular" style={{ fontWeight: 700 }}>{total}m</td>
+                  <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
                   <td style={{ padding: "4px 8px" }}>
                     <div style={{ display: "flex", height: 22, alignItems: "stretch" }}>
                       {/* Start offset */}
