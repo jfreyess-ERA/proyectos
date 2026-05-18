@@ -1031,7 +1031,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
 
           {/* ── Right group: donut + treemap arriba / stat cards abajo ── */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
-            <div style={{ display: "flex", gap: 16, alignItems: "start" }}>
+            <div style={{ display: "flex", gap: 16, alignItems: "stretch" }}>
 
             {/* Col 3: Donut + leyenda ERA/Cliente + íconos analistas */}
             <div style={{ width: 220, flexShrink: 0 }}>
@@ -1083,11 +1083,11 @@ function ResourcesPanel({ client, groups, retAvg }) {
               </div>
             </div>
 
-            {/* Col 4: Treemap */}
-            <div style={{ flex: 1 }}>
+            {/* Col 4: Treemap — se estira hasta igualar altura de Col 3 */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <div style={{ ...EYE, marginBottom: 12 }}>Horas del cliente por cargo</div>
               {tmItems.length > 0 ? (
-                <div style={{ height: CHART_H }}>
+                <div style={{ flex: 1 }}>
                   <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" height="100%"
                     preserveAspectRatio="xMidYMid meet"
                     style={{ display: "block", borderRadius: 10, overflow: "hidden" }}>
