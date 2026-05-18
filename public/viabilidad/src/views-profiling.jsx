@@ -677,6 +677,9 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
               </span>
             ))}
           </span>
+          <span style={{ color: "var(--text-3)", fontStyle: "italic" }}>
+            El badge dentro de cada burbuja (QW/ES/BI/DC) es el tier real — el cuadrante visual no considera factibilidad.
+          </span>
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
@@ -738,14 +741,20 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
           if (radius < 14) return null;
           const tk = tierFor(g, tc);
           const TIER_SHORT = { A: "QW", B: "ES", C: "BI", D: "DC" };
+          const TIER_COLORS_B = { A: "#b8893a", B: "#0F2724", C: "#2A5FA5", D: "#888" };
+          const lbl = TIER_SHORT[tk] || tk;
+          const fs = Math.min(11, radius * 0.48);
+          const bw = lbl.length * fs * 0.65 + 8, bh = fs + 6;
           return (
-            <text key={"tk-" + g.categoryId}
-              x={bx} y={by + 4} textAnchor="middle"
-              fontSize={Math.min(11, radius * 0.48)} fontWeight="800"
-              fill="white" fontFamily="Trebuchet MS"
-              opacity="0.7" style={{ pointerEvents: "none" }}>
-              {TIER_SHORT[tk] || tk}
-            </text>
+            <g key={"tk-" + g.categoryId} style={{ pointerEvents: "none" }}>
+              <rect x={bx - bw / 2} y={by - bh / 2} width={bw} height={bh} rx={3}
+                fill={TIER_COLORS_B[tk] || "#888"} fillOpacity="0.75" />
+              <text x={bx} y={by + fs * 0.35} textAnchor="middle"
+                fontSize={fs} fontWeight="800"
+                fill="white" fontFamily="Trebuchet MS">
+                {lbl}
+              </text>
+            </g>
           );
         })}
         {/* Labels pass — on top of all circles */}
@@ -760,10 +769,10 @@ function ProfilingMatrix({ groups, total, client, tierConfig, onCategoryClick })
           const isAbove = labelPos(by, radius) === "above";
           const labelY = isAbove ? by - radius - 5 : by + radius + 13;
           const labelAnchor = bx < W * 0.15 ? "start" : bx > W * 0.85 ? "end" : "middle";
-          // Badge: "shortName [B]" with tier coloured pill
           const TIER_COLORS = { A: "#b8893a", B: "#0F2724", C: "#2A5FA5", D: "#888" };
-          const badgeTxt = shortName;
-          const bgW = badgeTxt.length * 6 + 22, bgH = 15;
+          const TIER_SHORT2 = { A: "QW", B: "ES", C: "BI", D: "DC" };
+          const badgeTxt = shortName + " · " + (TIER_SHORT2[tk] || tk);
+          const bgW = badgeTxt.length * 5.6 + 16, bgH = 15;
           const bgX = labelAnchor === "start" ? bx - 2 : labelAnchor === "end" ? bx - bgW + 2 : bx - bgW / 2;
           const bgY = isAbove ? labelY - bgH + 3 : labelY - bgH + 2;
           return (
