@@ -257,49 +257,46 @@ function ProjectionView({ client }) {
 
         {/* Retorno cliente — incluido en la descarga */}
         <div style={{
-          padding: "20px 24px",
+          padding: "10px 20px",
           background: "var(--ink)",
           color: "var(--on-ink)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 24,
+          gap: 20,
         }}>
-          <div>
+          {/* Left: label + subtitle */}
+          <div style={{ flexShrink: 0 }}>
             <div style={{
-              fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase",
-              color: "var(--champagne)", fontWeight: 700, marginBottom: 4,
+              fontSize: 9, letterSpacing: 1.2, textTransform: "uppercase",
+              color: "var(--champagne)", fontWeight: 700, marginBottom: 2,
             }}>
               Retorno cliente {sc.projectionYears} {sc.projectionYears === 1 ? "año" : "años"}
             </div>
-            <div style={{ fontSize: 12, opacity: 0.6 }}>
-              ERA {sc.feePctOnSavings}% × {sc.feeMonths} meses · {client.legalName}
+            <div style={{ fontSize: 11, opacity: 0.55 }}>
+              ERA {sc.feePctOnSavings}% × {sc.feeMonths}m · {client.legalName}
             </div>
           </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 4 }}>Rango cliente</div>
+
+          {/* Center: main values */}
+          <div style={{ textAlign: "center", flex: 1 }}>
             <div style={{
-              fontSize: 28, fontWeight: 700, color: "var(--champagne)",
+              fontSize: 22, fontWeight: 700, color: "var(--champagne)",
               fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
             }}>
               {fmtMoney(retMin, client.currency)} — {fmtMoney(retMax, client.currency)}
             </div>
-            <div style={{ fontSize: 12, opacity: 0.65, marginTop: 4 }}>
+            <div style={{ fontSize: 11, opacity: 0.6, marginTop: 2 }}>
               medio: {fmtMoney(retAvg, client.currency)}
             </div>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 4 }}>Honorarios ERA</div>
-            <div style={{
-              fontSize: 20, fontWeight: 700, color: "rgba(244,241,232,0.85)",
-              fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
-            }}>
-              {fmtMoney(feeMin, client.currency)} — {fmtMoney(feeMax, client.currency)}
-            </div>
-            <div style={{ fontSize: 12, opacity: 0.65, marginTop: 4 }}>
-              medio: {fmtMoney(feeAvg, client.currency)}
-            </div>
-          </div>
+
+          {/* Right: ERA logo (invert to white for dark bg) */}
+          <img
+            src="../era-logo-cropped.png"
+            alt="ERA Group"
+            style={{ height: 30, flexShrink: 0, filter: "brightness(0) invert(1)", opacity: 0.85 }}
+          />
         </div>
       </div>
 
