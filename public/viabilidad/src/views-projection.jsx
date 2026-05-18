@@ -115,6 +115,16 @@ function ProjectionView({ client }) {
       ty += HEAD_H;
 
       // ── 3. Data rows ───────────────────────────────────────────
+      // Pre-compute max values for bar scaling (col 6 = minPct, col 7 = maxPct)
+      const maxMinPctVal = Math.max(...dataRows.map(tr => {
+        const td = tr.querySelectorAll("td")[6];
+        return td ? parseFloat(td.textContent) || 0 : 0;
+      }), 0.01);
+      const maxMaxPctVal = Math.max(...dataRows.map(tr => {
+        const td = tr.querySelectorAll("td")[7];
+        return td ? parseFloat(td.textContent) || 0 : 0;
+      }), 0.01);
+
       dataRows.forEach((tr, ri) => {
         const bg = ri % 2 === 1 ? "#f9f8f6" : "#ffffff";
         rect(0, ty, W, ROW_H, bg);
@@ -128,6 +138,7 @@ function ProjectionView({ client }) {
           const bold = cs(td).fontWeight >= 600;
           // For feasibility dots col, draw colored squares
           if (i === 5) {
+            // Feasibility dots
             const dots = td.querySelectorAll("span[style]");
             const filledCount = Array.from(dots).filter(d => !getComputedStyle(d).opacity || getComputedStyle(d).opacity >= 1).length;
             const dotW = 10, dotH = 8, gap = 3;
@@ -138,6 +149,22 @@ function ProjectionView({ client }) {
               ctx.beginPath(); ctx.roundRect(dx, ty + ROW_H/2 - dotH/2, dotW, dotH, 2); ctx.fill();
               dx += dotW + gap;
             }
+          } else if (i === 6 || i === 7) {
+            // % ahorr_min / % ahorr_max — bar + number
+            const pctText = td.textContent.trim();
+            const pctVal = parseFloat(pctText) || 0;
+            const maxPct = i === 6 ? maxMinPctVal : maxMaxPctVal;
+            const BAR_W = 48, BAR_H = 6, GAP = 6, NUM_W = 36;
+            const totalW = BAR_W + GAP + NUM_W;
+            const bx = tx + w - totalW - 8;
+            const by = ty + ROW_H / 2 - BAR_H / 2;
+            // track bg
+            ctx.fillStyle = "#d8d5cc"; ctx.beginPath(); ctx.roundRect(bx, by, BAR_W, BAR_H, 3); ctx.fill();
+            // fill
+            const fillW = Math.min(BAR_W, (pctVal / (maxPct || 1)) * BAR_W);
+            ctx.fillStyle = "#2f7d63"; ctx.beginPath(); ctx.roundRect(bx, by, fillW, BAR_H, 3); ctx.fill();
+            // text
+            cellText(pctText, bx + BAR_W + GAP, ty, NUM_W, ROW_H, inkColor, "right", false, 12);
           } else {
             cellText(td.textContent.trim(), tx, ty, w, ROW_H, rawColor, align, bold, 12);
           }
@@ -385,7 +412,18 @@ function ProjectionView({ client }) {
             </tr>
           </thead>
           <tbody>
-            {sortedGroups.map(g => {
+            {(() => {
+              const maxMinPct = Math.max(...sortedGroups.map(g => g.avgMinPct || 0), 0.01);
+              const maxMaxPct = Math.max(...sortedGroups.map(g => g.avgMaxPct || 0), 0.01);
+              const PctBar = ({ value, max }) => (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, width: "100%" }}>
+                  <div style={{ width: 48, height: 6, background: "var(--line)", borderRadius: 3, flexShrink: 0, overflow: "hidden" }}>
+                    <div style={{ width: `${Math.min(100, (value / max) * 100)}%`, height: "100%", background: "var(--positive-2)", borderRadius: 3 }} />
+                  </div>
+                  <span style={{ fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "right" }}>{fmtPct(value)}</span>
+                </div>
+              );
+              return sortedGroups.map(g => {
               const included = isIncluded(g.categoryId);
               return (
                 <tr key={g.categoryId} style={{ opacity: included ? 1 : 0.45, cursor: "pointer" }}
@@ -402,13 +440,14 @@ function ProjectionView({ client }) {
                   <td className="right tabular">{fmtPct(g.avgScopePct)}</td>
                   <td className="right tabular">{fmtMoney(g.optimizationAmount, client.currency)}</td>
                   <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
-                  <td className="right tabular">{fmtPct(g.avgMinPct)}</td>
-                  <td className="right tabular">{fmtPct(g.avgMaxPct)}</td>
+                  <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} max={maxMinPct} /></td>
+                  <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} max={maxMaxPct} /></td>
                   <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(g.minSavings, client.currency)}</td>
                   <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(g.maxSavings, client.currency)}</td>
                 </tr>
               );
-            })}
+            });
+          })()}
             <tr className="totals">
               <td></td>
               <td>{t.expenses.total}</td>
