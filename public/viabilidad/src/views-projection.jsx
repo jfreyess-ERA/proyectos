@@ -1308,18 +1308,14 @@ function GanttView({ client }) {
                   <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
                   <td style={{ padding: "4px 8px" }}>
                     {(() => {
-                      // Si hay un Seguimiento largo, construimos un gridTemplateColumns
-                      // especial: 1fr por cada mes normal + 20px fijo para los puntos + 1fr×3 al final.
-                      // Así los 6 bloques Seg. son exactamente 1fr (=mismo ancho que el resto)
-                      // y los ··· ocupan solo 20px.
-                      const gSeg = segments.find(s => s.stage === "G" && s.dur > 6);
-                      const preG = gSeg
-                        ? p.start + segments.reduce((s, seg) => seg === gSeg ? s : s + seg.dur, 0)
-                        : 0;
-                      const gridCols = gSeg
-                        ? (preG > 0 ? `repeat(${preG}, 1fr) ` : '') + '1fr 1fr 1fr 20px 1fr 1fr 1fr'
-                        : `repeat(${totalMonths}, 1fr)`;
-                      const gCol = preG + 1; // columna grid donde empieza G (1-indexed)
+                      // Siempre 20 columnas de igual ancho (1fr).
+                      // Si total > 20: Seguimiento se comprime a 3 + dots(1 bloque) + 3 = 7 slots.
+                      const BLOCKS = 20;
+                      const gSeg = segments.find(s => s.stage === "G");
+                      const nonGDur = segments.reduce((s, seg) => seg === gSeg ? s : s + seg.dur, 0);
+                      const compress = (p.start + total) > BLOCKS && !!gSeg;
+                      const gCol = p.start + nonGDur + 1; // columna donde empieza G (1-indexed)
+                      const gridCols = `repeat(${BLOCKS}, 1fr)`;
 
                       return (
                         <>
@@ -1332,7 +1328,7 @@ function GanttView({ client }) {
                               const label = t.gantt.stagesShort[seg.stage];
                               const isFirst = si === 0;
                               const isLast = si === segments.length - 1;
-                              if (seg !== gSeg) {
+                              if (!compress || seg !== gSeg) {
                                 return Array.from({ length: seg.dur }, (_, j) => (
                                   <div key={`${si}-${j}`} style={{
                                     gridColumn: String(colStart + j),
@@ -1342,7 +1338,7 @@ function GanttView({ client }) {
                                   }}>{label}</div>
                                 ));
                               }
-                              // Seguimiento largo: 3×1fr + 20px + 3×1fr
+                              // Seguimiento comprimido: 3 bloques + 1 bloque de dots + 3 bloques
                               return [
                                 ...[0,1,2].map(j => (
                                   <div key={`${si}-s${j}`} style={{
@@ -1371,7 +1367,7 @@ function GanttView({ client }) {
                           {total > 0 && (
                             <div style={{ display: "grid", gridTemplateColumns: gridCols, columnGap: 1, fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
                               <span style={{ gridColumn: String(p.start + 1) }}>M{p.start + 1}</span>
-                              <span style={{ gridColumn: gSeg ? String(gCol + 6) : String(p.start + total), textAlign: "right" }}>M{p.start + total}</span>
+                              <span style={{ gridColumn: compress ? String(gCol + 6) : String(p.start + total), textAlign: "right" }}>M{p.start + total}</span>
                             </div>
                           )}
                         </>
