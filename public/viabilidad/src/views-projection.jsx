@@ -1327,23 +1327,31 @@ function GanttView({ client }) {
                             }}>{label}</div>
                           ));
                         }
-                        // Seguimiento largo (>6): 3 bloques + ··· fijo + 3 bloques
-                        return (
-                          <div key={si} style={{
-                            gridColumn: `${colStart} / span ${seg.dur}`,
-                            display: "flex", alignItems: "stretch",
-                            borderRadius: isFirst ? "3px 0 0 3px" : isLast ? "0 3px 3px 0" : 0,
-                            overflow: "hidden",
-                          }}>
-                            {[0,1,2].map(j => (
-                              <div key={"s"+j} style={{ flex: 1, background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700, borderRight: j === 2 ? "1px solid rgba(255,255,255,0.3)" : undefined }}>{label}</div>
-                            ))}
-                            <div style={{ width: 20, flexShrink: 0, background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.75)", fontSize: 10, letterSpacing: 3 }}>···</div>
-                            {[0,1,2].map(j => (
-                              <div key={"e"+j} style={{ flex: 1, background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700, borderLeft: j === 0 ? "1px solid rgba(255,255,255,0.3)" : undefined }}>{label}</div>
-                            ))}
-                          </div>
-                        );
+                        // Seguimiento largo (>6): 3 celdas + dots spanning medio + 3 celdas
+                        // Cada bloque ocupa exactamente 1 columna del grid = mismo ancho
+                        return [
+                          ...[0,1,2].map(j => (
+                            <div key={`${si}-s${j}`} style={{
+                              gridColumn: String(colStart + j),
+                              background: color, display: "flex", alignItems: "center",
+                              justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
+                              borderRadius: isFirst && j === 0 ? "3px 0 0 3px" : 0,
+                            }}>{label}</div>
+                          )),
+                          <div key={`${si}-dots`} style={{
+                            gridColumn: `${colStart + 3} / span ${seg.dur - 6}`,
+                            background: color, display: "flex", alignItems: "center",
+                            justifyContent: "center", color: "rgba(255,255,255,0.7)", fontSize: 10, letterSpacing: 3,
+                          }}>···</div>,
+                          ...[0,1,2].map(j => (
+                            <div key={`${si}-e${j}`} style={{
+                              gridColumn: String(colStart + seg.dur - 3 + j),
+                              background: color, display: "flex", alignItems: "center",
+                              justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
+                              borderRadius: isLast && j === 2 ? "0 3px 3px 0" : 0,
+                            }}>{label}</div>
+                          )),
+                        ];
                       })}
                     </div>
                     {/* Month scale: M{start+1} … M{end} */}
