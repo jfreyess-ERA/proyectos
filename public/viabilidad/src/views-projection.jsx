@@ -16,24 +16,56 @@ function ProjectionView({ client }) {
     if (!tableCardRef.current || downloading) return;
     setDownloading(true);
     try {
-      // foreignObjectRendering=true lets the browser resolve CSS variables
-      const canvas = await html2canvas(tableCardRef.current, {
+      const origEl = tableCardRef.current;
+
+      // Inline computed styles recursively so html2canvas resolves CSS variables
+      const PROPS = [
+        "color","background-color","border-color",
+        "border-top-color","border-bottom-color","border-left-color","border-right-color",
+        "border-top-width","border-bottom-width","border-left-width","border-right-width",
+        "border-top-style","border-bottom-style","border-left-style","border-right-style",
+        "border-radius","border-top-left-radius","border-top-right-radius",
+        "border-bottom-left-radius","border-bottom-right-radius",
+        "font-size","font-weight","font-family","font-style","letter-spacing","line-height",
+        "text-align","text-transform","text-decoration","white-space",
+        "padding-top","padding-bottom","padding-left","padding-right",
+        "margin-top","margin-bottom","margin-left","margin-right",
+        "display","flex-direction","align-items","justify-content","gap","flex","flex-wrap","flex-shrink",
+        "width","height","min-width","max-width","min-height",
+        "opacity","overflow","position","vertical-align","box-sizing",
+        "filter",
+      ];
+      const walk = (orig, clone) => {
+        const cs = window.getComputedStyle(orig);
+        for (const p of PROPS) {
+          try {
+            const val = cs.getPropertyValue(p);
+            if (val) clone.style.setProperty(p, val);
+          } catch (_) {}
+        }
+        for (let i = 0; i < orig.children.length; i++) {
+          if (clone.children[i]) walk(orig.children[i], clone.children[i]);
+        }
+      };
+
+      const canvas = await html2canvas(origEl, {
         backgroundColor: "#ffffff",
         scale: 2,
+        allowTaint: true,
         useCORS: true,
-        foreignObjectRendering: true,
         logging: false,
+        onclone: (_doc, clone) => walk(origEl, clone),
       });
+
       const link = document.createElement("a");
       link.download = `tabla-resumen-${(client.legalName || "cliente").replace(/\s+/g, "-").toLowerCase()}.png`;
       link.href = canvas.toDataURL("image/png");
-      // Must be in DOM for Firefox + Safari
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch(err) {
+    } catch (err) {
       console.error("[download]", err);
-      alert("No se pudo generar la imagen: " + err.message);
+      alert("No se pudo generar la imagen: " + (err.message || err));
     } finally {
       setDownloading(false);
     }
