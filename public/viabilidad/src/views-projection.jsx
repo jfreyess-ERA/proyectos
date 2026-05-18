@@ -16,16 +16,24 @@ function ProjectionView({ client }) {
     if (!tableCardRef.current || downloading) return;
     setDownloading(true);
     try {
+      // foreignObjectRendering=true lets the browser resolve CSS variables
       const canvas = await html2canvas(tableCardRef.current, {
         backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
+        foreignObjectRendering: true,
         logging: false,
       });
       const link = document.createElement("a");
       link.download = `tabla-resumen-${(client.legalName || "cliente").replace(/\s+/g, "-").toLowerCase()}.png`;
       link.href = canvas.toDataURL("image/png");
+      // Must be in DOM for Firefox + Safari
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+    } catch(err) {
+      console.error("[download]", err);
+      alert("No se pudo generar la imagen: " + err.message);
     } finally {
       setDownloading(false);
     }
@@ -246,6 +254,53 @@ function ProjectionView({ client }) {
             </tr>
           </tbody>
         </table>
+
+        {/* Retorno cliente — incluido en la descarga */}
+        <div style={{
+          padding: "20px 24px",
+          background: "var(--ink)",
+          color: "var(--on-ink)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 24,
+        }}>
+          <div>
+            <div style={{
+              fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase",
+              color: "var(--champagne)", fontWeight: 700, marginBottom: 4,
+            }}>
+              Retorno cliente {sc.projectionYears} {sc.projectionYears === 1 ? "año" : "años"}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.6 }}>
+              ERA {sc.feePctOnSavings}% × {sc.feeMonths} meses · {client.legalName}
+            </div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 4 }}>Rango cliente</div>
+            <div style={{
+              fontSize: 28, fontWeight: 700, color: "var(--champagne)",
+              fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
+            }}>
+              {fmtMoney(retMin, client.currency)} — {fmtMoney(retMax, client.currency)}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.65, marginTop: 4 }}>
+              medio: {fmtMoney(retAvg, client.currency)}
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 4 }}>Honorarios ERA</div>
+            <div style={{
+              fontSize: 20, fontWeight: 700, color: "rgba(244,241,232,0.85)",
+              fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
+            }}>
+              {fmtMoney(feeMin, client.currency)} — {fmtMoney(feeMax, client.currency)}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.65, marginTop: 4 }}>
+              medio: {fmtMoney(feeAvg, client.currency)}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Edit ranges per expense line */}
