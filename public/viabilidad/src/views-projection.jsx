@@ -42,12 +42,10 @@ function ProjectionView({ client }) {
       const colWidths = thEls.map(th => Math.ceil(th.getBoundingClientRect().width));
       const ROW_H = 36, HEAD_H = 32, TOTALS_H = 36;
 
-      // Header height: only the title row (not the filter chips below it)
-      const titleRowEl = card.querySelector(".row.between");
+      // Full header height (title row + filter chips row)
+      const headerSection = card.querySelector("div");
       const cardTop = card.getBoundingClientRect().top;
-      const headerH = titleRowEl
-        ? Math.ceil(titleRowEl.getBoundingClientRect().bottom - cardTop + 12)
-        : 60;
+      const headerH = Math.ceil(headerSection.getBoundingClientRect().height);
 
       // Retorno bar height
       const retornoBar = card.lastElementChild;
@@ -97,10 +95,58 @@ function ProjectionView({ client }) {
       rect(0, 0, W, headerH, "#ffffff");
       // eyebrow
       ctx.fillStyle = champagne; ctx.font = `700 9px "Trebuchet MS", Arial`;
-      ctx.textBaseline = "middle"; ctx.fillText("TABLA RESUMEN", 20, 18);
+      ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      ctx.fillText("TABLA RESUMEN", 20, 16);
       // title
       ctx.fillStyle = inkColor; ctx.font = `700 14px "Trebuchet MS", Arial`;
-      ctx.fillText("Factibilidad y proyección de ahorros (anuales)", 20, 36);
+      ctx.fillText("Factibilidad y proyección de ahorros (anuales)", 20, 34);
+
+      // Filter chips row (Factibilidad: [1][2][3][4][5])
+      const filterChipsEl = headerSection.querySelector(".row.between + div");
+      const chipBtns = filterChipsEl
+        ? Array.from(filterChipsEl.querySelectorAll("button")).filter(b => /^[1-5]$/.test(b.textContent.trim()))
+        : [];
+      if (chipBtns.length > 0) {
+        const chipMidY = filterChipsEl
+          ? Math.ceil(filterChipsEl.getBoundingClientRect().top + filterChipsEl.getBoundingClientRect().height / 2 - cardTop)
+          : headerH - 18;
+        ctx.fillStyle = textMuted; ctx.font = `600 11px "Trebuchet MS", Arial`;
+        ctx.textBaseline = "middle"; ctx.textAlign = "left";
+        ctx.fillText("Factibilidad:", 20, chipMidY);
+        let cfx = 20 + 88;
+        const DOT_W = 8, DOT_H = 6, DOT_GAP = 2, CHIP_H = 20;
+        chipBtns.forEach(btn => {
+          const v = parseInt(btn.textContent.trim());
+          // Detect selected: selected border is accent (green), unselected is line (gray)
+          const btnBorderColor = getComputedStyle(btn).borderLeftColor;
+          const [br, bg] = (btnBorderColor.match(/\d+/g) || [200, 200]).map(Number);
+          const isSelected = bg > br + 20; // green accent has higher G than R
+          const dotColor = v >= 4 ? "#2f7d63" : "#c8861a";
+          const chipBg  = isSelected ? "#e8f5f0" : "#f0eeeb";
+          const chipBdr = isSelected ? "#2f7d63" : "#d8d5cc";
+          const dotAreaW = v * DOT_W + (v - 1) * DOT_GAP;
+          const chipW = 10 + dotAreaW + 6 + 10 + 8;
+          // bg
+          ctx.fillStyle = chipBg; ctx.beginPath();
+          ctx.roundRect(cfx, chipMidY - CHIP_H / 2, chipW, CHIP_H, 10); ctx.fill();
+          // border
+          ctx.strokeStyle = chipBdr; ctx.lineWidth = 1; ctx.beginPath();
+          ctx.roundRect(cfx, chipMidY - CHIP_H / 2, chipW, CHIP_H, 10); ctx.stroke();
+          // dots
+          let dx = cfx + 8;
+          for (let d = 0; d < v; d++) {
+            ctx.fillStyle = dotColor; ctx.beginPath();
+            ctx.roundRect(dx, chipMidY - DOT_H / 2, DOT_W, DOT_H, 2); ctx.fill();
+            dx += DOT_W + DOT_GAP;
+          }
+          // number
+          ctx.fillStyle = isSelected ? "#2f7d63" : "#6b6860";
+          ctx.font = `600 11px "Trebuchet MS", Arial`;
+          ctx.textAlign = "left"; ctx.textBaseline = "middle";
+          ctx.fillText(String(v), dx + 3, chipMidY);
+          cfx += chipW + 6;
+        });
+      }
       line(headerH, 0, W, lineColor);
 
       // ── 2. Table header row ────────────────────────────────────
@@ -135,14 +181,17 @@ function ProjectionView({ client }) {
           const bold = cs(td).fontWeight >= 600;
           // For feasibility dots col, draw colored squares
           if (i === 5) {
-            // Feasibility dots — FeasDots uses CSS classes "feas-dot on" / "feas-dot high"
+            // Feasibility dots — FeasDots uses CSS classes "feas-dot on" (orange) / "feas-dot high" (green)
             const allDots = td.querySelectorAll(".feas-dot");
-            const filledCount = Array.from(allDots).filter(d => d.classList.contains("on") || d.classList.contains("high")).length;
+            const filledDotEls = Array.from(allDots).filter(d => d.classList.contains("on") || d.classList.contains("high"));
+            const filledCount = filledDotEls.length;
+            const isHighDot = filledDotEls.some(d => d.classList.contains("high"));
+            const dotFillColor = isHighDot ? "#2f7d63" : "#c8861a"; // green for 4-5, orange for 1-3
             const dotW = 10, dotH = 8, gap = 3;
             const total5W = 5 * dotW + 4 * gap;
             let dx = tx + (w - total5W) / 2;
             for (let d = 0; d < 5; d++) {
-              ctx.fillStyle = d < Math.round(filledCount) ? "#1f4f85" : "#d8d5cc";
+              ctx.fillStyle = d < filledCount ? dotFillColor : "#d8d5cc";
               ctx.beginPath(); ctx.roundRect(dx, ty + ROW_H/2 - dotH/2, dotW, dotH, 2); ctx.fill();
               dx += dotW + gap;
             }
