@@ -428,6 +428,7 @@ function ProfilingView({ client }) {
   const total = totalSpend(client);
   const totalSav = totalSavings(client);
   const [drawerCatId, setDrawerCatId] = React.useState(null);
+  const [showLogic, setShowLogic] = React.useState(false);
 
   if (groups.length === 0) {
     return <Empty icon="◯" title={t.profiling.none} hint={t.expenses.lede} />;
@@ -474,6 +475,49 @@ function ProfilingView({ client }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Logic toggle */}
+      <div style={{ marginTop: -8 }}>
+        <button
+          className="btn ghost sm"
+          onClick={() => setShowLogic(v => !v)}
+          style={{ fontSize: 12, color: "var(--text-3)", padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}
+        >
+          <span style={{ display: "inline-block", transition: "transform 0.15s", transform: showLogic ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+          ¿Cómo se clasifica cada categoría?
+        </button>
+        {showLogic && (
+          <div className="card flat" style={{ marginTop: 8, padding: "16px 20px", background: "var(--surface-2)", fontSize: 13 }}>
+            <table style={{ borderCollapse: "collapse", width: "100%" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                  <th style={{ textAlign: "left", padding: "6px 12px 6px 0", fontWeight: 600, fontSize: 12, color: "var(--text-2)" }}>Tier</th>
+                  <th style={{ textAlign: "left", padding: "6px 12px", fontWeight: 600, fontSize: 12, color: "var(--text-2)" }}>Condición</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { tk: "A", cond: "% del gasto ≥ 8%  ·  ahorro estimado ≥ 10%  ·  factibilidad ≥ 4" },
+                  { tk: "B", cond: "% del gasto ≥ 8%  ·  sin cumplir Quick Win" },
+                  { tk: "C", cond: "% del gasto < 8%  ·  ahorro ≥ 10%  ·  factibilidad ≥ 3" },
+                  { tk: "D", cond: "% del gasto < 8%  ·  ahorro < 10%  o  factibilidad < 3" },
+                ].map(({ tk, cond }) => (
+                  <tr key={tk} style={{ borderBottom: "1px solid var(--line)" }}>
+                    <td style={{ padding: "8px 12px 8px 0", whiteSpace: "nowrap" }}>
+                      <span className={"tier " + tk}>{t.profiling[`tier${tk}`]}</span>
+                    </td>
+                    <td style={{ padding: "8px 12px", color: "var(--text-2)", lineHeight: 1.5 }}>{cond}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-3)", lineHeight: 1.5 }}>
+              La <strong>factibilidad</strong> es el promedio ponderado por monto de todos los gastos de la categoría (escala 1–5).
+              El <strong>% del gasto</strong> es la participación de la categoría sobre el total del cliente.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Detail table */}
