@@ -1137,7 +1137,7 @@ function ResourcesPanel({ client, groups, retAvg }) {
             }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: "white", opacity: 0.85,
                 letterSpacing: 0.7, textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                Retorno por HH cliente · rango
+                Retorno por HH {clientName} · rango
               </span>
               <span style={{ fontSize: 22, fontWeight: 800, color: "white",
                 fontVariantNumeric: "tabular-nums", flex: 1, textAlign: "center" }}>
