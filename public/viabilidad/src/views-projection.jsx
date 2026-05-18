@@ -1288,23 +1288,6 @@ function GanttView({ client }) {
                 cursor += d;
               }
 
-              // Bar segment style
-              const barSeg = (color, label, dur, first, last, isDots) => ({
-                flex: dur,
-                background: color,
-                color: "#fff",
-                fontSize: 9,
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "0 3px",
-                borderRadius: first && last ? 3 : first ? "3px 0 0 3px" : last ? "0 3px 3px 0" : 0,
-                marginRight: last ? 0 : 1,
-                letterSpacing: isDots ? 2 : 0.3,
-                minWidth: 0,
-                overflow: "hidden",
-              });
 
               return (
                 <tr key={g.categoryId}>
@@ -1324,56 +1307,52 @@ function GanttView({ client }) {
                   <td className="right tabular" style={{ fontWeight: 700 }}>{total}m</td>
                   <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
                   <td style={{ padding: "4px 8px" }}>
-                    <div style={{ display: "flex", height: 22, alignItems: "stretch" }}>
-                      {/* Start offset */}
-                      {p.start > 0 && <div style={{ flex: p.start, minWidth: 4 }} />}
+                    {/* Grid: cada columna = 1 mes, igual ancho */}
+                    <div style={{ display: "grid", gridTemplateColumns: `repeat(${totalMonths}, 1fr)`, columnGap: 1, height: 22 }}>
+                      {p.start > 0 && <div style={{ gridColumn: `1 / span ${p.start}` }} />}
                       {segments.map((seg, si) => {
+                        const offset = segments.slice(0, si).reduce((s, x) => s + x.dur, 0);
+                        const colStart = p.start + offset + 1;
                         const color = STAGE_COLORS[seg.stage];
                         const label = t.gantt.stagesShort[seg.stage];
                         const isFirst = si === 0;
                         const isLast = si === segments.length - 1;
                         if (seg.stage !== "G" || seg.dur <= 6) {
-                          // Show individual month blocks for all stages except long Seguimiento
-                          return (
-                            <div key={si} style={barSeg(color, label, seg.dur, isFirst, isLast, false)}>
-                              {Array.from({ length: seg.dur }, (_, j) => (
-                                <span key={j} style={{ flex: 1, textAlign: "center" }}>{label}</span>
-                              ))}
-                            </div>
-                          );
+                          return Array.from({ length: seg.dur }, (_, j) => (
+                            <div key={`${si}-${j}`} style={{
+                              gridColumn: String(colStart + j),
+                              background: color, display: "flex", alignItems: "center",
+                              justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
+                              borderRadius: (isFirst && j === 0) ? "3px 0 0 3px" : (isLast && j === seg.dur - 1) ? "0 3px 3px 0" : 0,
+                            }}>{label}</div>
+                          ));
                         }
-                        // Seguimiento largo (>6): 3 bloques | ··· | 3 bloques
-                        const bRadius = (left, right) =>
-                          left && right ? 3 : left ? "3px 0 0 3px" : right ? "0 3px 3px 0" : 0;
-                        const miniBlock = (j, side) => (
-                          <div key={side + j} style={{
-                            flex: 1, background: color, display: "flex", alignItems: "center",
-                            justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700,
-                            borderLeft: side === "e" && j === 0 ? "1px solid rgba(255,255,255,0.35)" : "none",
-                            borderRight: side === "s" && j === 2 ? "1px solid rgba(255,255,255,0.35)" : "none",
-                          }}>{label}</div>
-                        );
+                        // Seguimiento largo (>6): 3 bloques + ··· fijo + 3 bloques
                         return (
                           <div key={si} style={{
-                            flex: seg.dur, display: "flex", alignItems: "stretch", height: "100%",
-                            borderRadius: bRadius(isFirst, isLast),
-                            overflow: "hidden", marginRight: isLast ? 0 : 1,
+                            gridColumn: `${colStart} / span ${seg.dur}`,
+                            display: "flex", alignItems: "stretch",
+                            borderRadius: isFirst ? "3px 0 0 3px" : isLast ? "0 3px 3px 0" : 0,
+                            overflow: "hidden",
                           }}>
-                            {[0,1,2].map(j => miniBlock(j, "s"))}
+                            {[0,1,2].map(j => (
+                              <div key={"s"+j} style={{ flex: 1, background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700, borderRight: j === 2 ? "1px solid rgba(255,255,255,0.3)" : undefined }}>{label}</div>
+                            ))}
                             <div style={{ width: 20, flexShrink: 0, background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.75)", fontSize: 10, letterSpacing: 3 }}>···</div>
-                            {[0,1,2].map(j => miniBlock(j, "e"))}
+                            {[0,1,2].map(j => (
+                              <div key={"e"+j} style={{ flex: 1, background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 700, borderLeft: j === 0 ? "1px solid rgba(255,255,255,0.3)" : undefined }}>{label}</div>
+                            ))}
                           </div>
                         );
                       })}
                     </div>
-                    {/* Month scale: start and end */}
+                    {/* Month scale: M{start+1} … M{end} */}
                     {total > 0 && (
-                      <div style={{ display: "flex", fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
-                        <div style={{ flex: p.start, minWidth: 0 }} />
-                        <div style={{ flex: total, display: "flex", justifyContent: "space-between", padding: "0 1px" }}>
-                          <span>M{p.start + 1}</span>
-                          <span>M{p.start + total}</span>
-                        </div>
+                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${totalMonths}, 1fr)`, columnGap: 1, fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
+                        <span style={{ gridColumn: String(p.start + 1) }}>M{p.start + 1}</span>
+                        {p.start + total > p.start + 1 && (
+                          <span style={{ gridColumn: String(p.start + total), textAlign: "right" }}>M{p.start + total}</span>
+                        )}
                       </div>
                     )}
                   </td>
