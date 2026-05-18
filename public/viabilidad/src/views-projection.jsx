@@ -1371,12 +1371,15 @@ function GanttView({ client }) {
       </div>
 
       {/* Stage descriptions */}
-      <div className="grid cols-5">
+      <div style={{ display: "flex", gap: 8 }}>
         {Object.entries(t.gantt.stagesShort).map(([k, label]) => (
-          <div key={k} className="card" style={{ padding: 14, borderTop: `4px solid ${STAGE_COLORS[k]}` }}>
-            <div style={{ fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", fontWeight: 700, color: STAGE_COLORS[k] }}>{label}</div>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", margin: "2px 0 4px" }}>{t.gantt.stages[k]}</div>
-            <div style={{ fontSize: 11, color: "var(--text-2)", lineHeight: 1.4 }}>{t.gantt.stagesDesc[k]}</div>
+          <div key={k} className="card" style={{
+            flex: 1, padding: "8px 10px",
+            borderTop: `3px solid ${STAGE_COLORS[k]}`,
+          }}>
+            <div style={{ fontSize: 10, letterSpacing: 0.6, textTransform: "uppercase", fontWeight: 700, color: STAGE_COLORS[k] }}>{label}</div>
+            <div style={{ fontWeight: 700, fontSize: 11, color: "var(--ink)", margin: "1px 0 3px" }}>{t.gantt.stages[k]}</div>
+            <div style={{ fontSize: 10, color: "var(--text-2)", lineHeight: 1.3 }}>{t.gantt.stagesDesc[k]}</div>
           </div>
         ))}
       </div>
