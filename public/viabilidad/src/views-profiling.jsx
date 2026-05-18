@@ -641,6 +641,7 @@ function ProfilingMatrix({ groups, total, client, onCategoryClick }) {
   const y = (sav) => H - P - (sav / maxSav) * (H - P * 2);
   const maxTotal = Math.max(...groups.map(g => g.total), 1);
   const r = (spend) => Math.max(6, Math.min(32, 6 + Math.sqrt(spend / maxTotal) * 26));
+  const feasColor = (f) => f >= 4 ? "#2f7d63" : f >= 3 ? "#c8861a" : "#c0392b";
 
   // Label: above if cy > H*0.55 (bubble is in lower part), below if near top
   const labelPos = (cy, radius) => cy > H * 0.55 ? "above" : "below";
@@ -649,7 +650,18 @@ function ProfilingMatrix({ groups, total, client, onCategoryClick }) {
     <div className="card">
       <div className="row between" style={{ marginBottom: 16 }}>
         <h3 className="h3" style={{ margin: 0 }}>Matriz volumen × ahorro</h3>
-        <div style={{ fontSize: 11, color: "var(--text-3)" }}>● tamaño = gasto total · clic para detalle</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, color: "var(--text-3)" }}>
+          <span>● tamaño = gasto total</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            borde:
+            {[{ c: "#2f7d63", label: "fácil (4–5)" }, { c: "#c8861a", label: "media (3)" }, { c: "#c0392b", label: "difícil (1–2)" }].map(({ c, label }) => (
+              <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke={c} strokeWidth="2.5"/></svg>
+                {label}
+              </span>
+            ))}
+          </span>
+        </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
         {/* Quadrant fills */}
@@ -692,12 +704,12 @@ function ProfilingMatrix({ groups, total, client, onCategoryClick }) {
             <circle
               key={"c-" + g.categoryId}
               cx={cx} cy={cy} r={radius}
-              fill={g.category?.color || "#ccc"} fillOpacity="0.80"
-              stroke={g.category?.color || "#ccc"} strokeWidth="1.5"
+              fill={g.category?.color || "#ccc"} fillOpacity="0.75"
+              stroke={feasColor(g.avgFeasibility)} strokeWidth="3"
               style={{ cursor: onCategoryClick ? "pointer" : "default" }}
               onClick={() => onCategoryClick && onCategoryClick(g.categoryId)}
             >
-              <title>{fullName}: {fmtMoney(g.total, client.currency, { compact: true })} · {fmtPct(g.avgSavingsPct)} ahorro</title>
+              <title>{fullName}: {fmtMoney(g.total, client.currency, { compact: true })} · {fmtPct(g.avgSavingsPct)} ahorro · factibilidad {g.avgFeasibility.toFixed(1)}</title>
             </circle>
           );
         })}
