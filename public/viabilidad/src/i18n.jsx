@@ -191,8 +191,8 @@ const STRINGS = {
       tierExplain: {
         A: "Alto volumen · ahorro ≥10% · factibilidad ≥4",
         B: "Alto volumen o bajo ahorro · difícil de ejecutar",
-        C: "Ahorro alto pero volumen bajo",
-        D: "Bajo volumen y bajo ahorro",
+        C: "Bajo volumen · ahorro alto · factibilidad ≥3",
+        D: "Bajo volumen · bajo ahorro o factibilidad <3",
       },
     },
     dashboard: {

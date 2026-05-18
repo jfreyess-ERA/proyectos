@@ -360,9 +360,9 @@ function tierFor(group, totalClient) {
   const highVolume  = sharePct >= 8;
 
   if (highSavings && highVolume && feas >= 4) return "A"; // Quick Win
-  if (highSavings && !highVolume)             return "C"; // Bajo impacto
-  if (!highSavings && !highVolume)            return "D"; // Descartar
-  return "B";                                             // Estratégica (alto vol, bajo ahorro · o alto ahorro/vol con feas baja)
+  if (!highVolume && (!highSavings || feas < 3)) return "D"; // Descartar: bajo volumen + bajo ahorro o muy difícil
+  if (!highVolume)                            return "C"; // Bajo impacto: bajo volumen pero buen ahorro y factibilidad ≥3
+  return "B";                                             // Estratégica: alto volumen sin quick win
 }
 
 const MONTH_LABELS_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
