@@ -920,82 +920,47 @@ function ResourcesPanel({ client, groups, retAvg }) {
       </div>
       <p className="lede" style={{ marginBottom: 20 }}>{t.resources.lede}</p>
 
-      {/* ── TOP: Parameters — 1/3 + 2/3 ──────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 24, marginBottom: 28, alignItems: "start" }}>
-
-        {/* HH ERA / categoría */}
-        <div>
-          <div style={{ ...EYE, marginBottom: 10 }}>HH ERA / Categoría</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-            <input className="input right" type="number" value={r.eraHHPerCat}
-              onChange={e => setR({ eraHHPerCat: +e.target.value || 0 })}
-              style={{ width: 110, fontSize: 15, fontWeight: 600 }} />
-            <span style={{ fontSize: 12, color: "var(--text-3)" }}>HH / cat.</span>
-          </div>
-          <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "14px 16px" }}>
-            <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4 }}>Total ERA estimado</div>
-            <div style={{ fontSize: 30, fontWeight: 800, color: "var(--ink)", lineHeight: 1 }}>
-              {eraHH.toLocaleString("es-CL")}
-              <span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-2)", marginLeft: 5 }}>HH</span>
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 6 }}>{n} cat. × {r.eraHHPerCat} HH</div>
-          </div>
-          <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
-            {[
-              { label: "ERA Group", hh: eraHH, pct: eraPct, color: ERA_ORANGE },
-              { label: clientName,  hh: clientHH, pct: cliPct, color: CLI_BLUE },
-            ].map(({ label, hh, pct, color }) => (
-              <div key={label}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>{label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 800, color, fontVariantNumeric: "tabular-nums" }}>
-                    {hh.toLocaleString("es-CL")}
-                    <span style={{ fontSize: 9, fontWeight: 400, marginLeft: 3, color: "var(--text-3)" }}>HH</span>
-                  </span>
-                </div>
-                <div style={{ background: "var(--line)", borderRadius: 4, height: 14, overflow: "hidden" }}>
-                  <div style={{ width: `${hh / maxHH * 100}%`, background: color, height: "100%", borderRadius: 4, transition: "width 0.4s ease" }} />
-                </div>
-                <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 3 }}>{pct}% del total</div>
-              </div>
-            ))}
-          </div>
+      {/* ── TOP: Parameters (HH ERA + bars only) ─────────────── */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ ...EYE, marginBottom: 10 }}>HH ERA / Categoría</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <input className="input right" type="number" value={r.eraHHPerCat}
+            onChange={e => setR({ eraHHPerCat: +e.target.value || 0 })}
+            style={{ width: 110, fontSize: 15, fontWeight: 600 }} />
+          <span style={{ fontSize: 12, color: "var(--text-3)" }}>HH / cat.</span>
         </div>
-
-        {/* Roles table */}
-        <div>
-          <div className="row between" style={{ marginBottom: 8 }}>
-            <span style={EYE}>Detalle horas por cargo</span>
-            <button className="btn ghost sm" onClick={addRole}>+ cargo</button>
+        <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4 }}>Total ERA estimado</div>
+          <div style={{ fontSize: 30, fontWeight: 800, color: "var(--ink)", lineHeight: 1 }}>
+            {eraHH.toLocaleString("es-CL")}
+            <span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-2)", marginLeft: 5 }}>HH</span>
           </div>
-          <table className="t" style={{ fontSize: 12 }}>
-            <thead><tr>
-              <th style={{ width: 16 }}></th>
-              <th>Cargo</th>
-              <th className="right" style={{ width: 80 }}>HH</th>
-              <th style={{ width: 36 }}></th>
-            </tr></thead>
-            <tbody>
-              {r.roles.map((role, i) => (
-                <tr key={role.id}>
-                  <td><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: ROLE_COLORS[i % ROLE_COLORS.length], verticalAlign: "middle" }} /></td>
-                  <td><input className="input" value={role.title} onChange={e => updRole(i, { title: e.target.value })} /></td>
-                  <td className="right"><input className="input right" type="number" value={role.hours} onChange={e => updRole(i, { hours: +e.target.value || 0 })} /></td>
-                  <td><button className="btn ghost sm danger" onClick={() => removeRole(i)} title="Eliminar">×</button></td>
-                </tr>
-              ))}
-              <tr className="totals">
-                <td></td><td>Total cliente</td>
-                <td className="right tabular">{clientHH} HH</td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
+          <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 6 }}>{n} cat. × {r.eraHHPerCat} HH</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {[
+            { label: "ERA Group", hh: eraHH, pct: eraPct, color: ERA_ORANGE },
+            { label: clientName,  hh: clientHH, pct: cliPct, color: CLI_BLUE },
+          ].map(({ label, hh, pct, color }) => (
+            <div key={label}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color, fontVariantNumeric: "tabular-nums" }}>
+                  {hh.toLocaleString("es-CL")}
+                  <span style={{ fontSize: 9, fontWeight: 400, marginLeft: 3, color: "var(--text-3)" }}>HH</span>
+                </span>
+              </div>
+              <div style={{ background: "var(--line)", borderRadius: 4, height: 14, overflow: "hidden" }}>
+                <div style={{ width: `${hh / maxHH * 100}%`, background: color, height: "100%", borderRadius: 4, transition: "width 0.4s ease" }} />
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-3)", marginTop: 3 }}>{pct}% del total</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* ── BOTTOM: donut | treemap | stats ────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 24, alignItems: "start" }}>
+      {/* ── BOTTOM: donut | treemap | roles table | stats ──────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto auto", gap: 24, alignItems: "start" }}>
 
         {/* Donut */}
         <div>
@@ -1067,6 +1032,37 @@ function ResourcesPanel({ client, groups, retAvg }) {
           ) : (
             <div style={{ color: "var(--text-3)", fontSize: 13 }}>Sin cargos con horas definidas.</div>
           )}
+        </div>
+
+        {/* Roles table */}
+        <div>
+          <div className="row between" style={{ marginBottom: 8 }}>
+            <span style={EYE}>Detalle horas por cargo</span>
+            <button className="btn ghost sm" onClick={addRole}>+ cargo</button>
+          </div>
+          <table className="t" style={{ fontSize: 12 }}>
+            <thead><tr>
+              <th style={{ width: 16 }}></th>
+              <th>Cargo</th>
+              <th className="right" style={{ width: 80 }}>HH</th>
+              <th style={{ width: 36 }}></th>
+            </tr></thead>
+            <tbody>
+              {r.roles.map((role, i) => (
+                <tr key={role.id}>
+                  <td><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: ROLE_COLORS[i % ROLE_COLORS.length], verticalAlign: "middle" }} /></td>
+                  <td><input className="input" value={role.title} onChange={e => updRole(i, { title: e.target.value })} /></td>
+                  <td className="right"><input className="input right" type="number" value={role.hours} onChange={e => updRole(i, { hours: +e.target.value || 0 })} /></td>
+                  <td><button className="btn ghost sm danger" onClick={() => removeRole(i)} title="Eliminar">×</button></td>
+                </tr>
+              ))}
+              <tr className="totals">
+                <td></td><td>Total cliente</td>
+                <td className="right tabular">{clientHH} HH</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         {/* Stat cards */}
