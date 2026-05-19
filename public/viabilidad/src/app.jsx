@@ -253,6 +253,216 @@ function EraAdminView() {
   );
 }
 
+async function sha256(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function ShareModal({ client, tabs, onClose }) {
+  const [selectedTabs, setSelectedTabs] = React.useState(tabs.map(t => t.id));
+  const [password, setPassword] = React.useState("");
+  const [days, setDays] = React.useState(7);
+  const [generatedUrl, setGeneratedUrl] = React.useState(null);
+  const [copied, setCopied] = React.useState(false);
+
+  const toggleTab = (id) => {
+    setSelectedTabs(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleGenerate = async () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", client.id);
+    url.searchParams.set("readonly", "1");
+    if (selectedTabs.length > 0 && selectedTabs.length < tabs.length) {
+      url.searchParams.set("tabs", selectedTabs.join(","));
+    } else {
+      url.searchParams.delete("tabs");
+    }
+    if (password.trim()) {
+      const hash = await sha256(password.trim());
+      url.searchParams.set("pw", hash);
+    } else {
+      url.searchParams.delete("pw");
+    }
+    if (days > 0) {
+      const exp = Math.floor(Date.now() / 1000) + days * 86400;
+      url.searchParams.set("exp", String(exp));
+    } else {
+      url.searchParams.delete("exp");
+    }
+    setGeneratedUrl(url.toString());
+    setCopied(false);
+  };
+
+  const handleCopy = () => {
+    if (!generatedUrl) return;
+    navigator.clipboard.writeText(generatedUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const labelStyle = { fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "var(--text-2)", marginBottom: 8, display: "block" };
+  const inputStyle = { width: "100%", padding: "8px 12px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "var(--surface)", color: "var(--text-1)", boxSizing: "border-box" };
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{ background: "var(--surface)", borderRadius: 12, padding: 28, width: 480, maxWidth: "90vw", boxShadow: "0 8px 40px rgba(0,0,0,0.2)", position: "relative" }}>
+        <button
+          onClick={onClose}
+          style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "var(--text-2)", lineHeight: 1 }}
+        >×</button>
+
+        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 20 }}>🔗 Compartir análisis</div>
+
+        <div style={{ marginBottom: 18 }}>
+          <label style={labelStyle}>Pestañas a incluir</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {tabs.map(tab => (
+              <label key={tab.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", padding: "5px 10px", border: "1px solid var(--line)", borderRadius: 6, background: selectedTabs.includes(tab.id) ? "var(--surface-2)" : "transparent" }}>
+                <input
+                  type="checkbox"
+                  checked={selectedTabs.includes(tab.id)}
+                  onChange={() => toggleTab(tab.id)}
+                  style={{ margin: 0 }}
+                />
+                {tab.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <label style={labelStyle}>Clave de acceso <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(opcional)</span></label>
+          <input
+            type="password"
+            placeholder="Dejar vacío para acceso sin contraseña"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={labelStyle}>Vigencia (días)</label>
+          <input
+            type="number"
+            min="0"
+            value={days}
+            onChange={e => setDays(parseInt(e.target.value, 10) || 0)}
+            style={{ ...inputStyle, width: 120 }}
+          />
+          <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 6 }}>
+            {days === 0 ? "Sin vencimiento" : `Válido por ${days} día${days !== 1 ? "s" : ""}`}
+          </div>
+        </div>
+
+        <button className="btn primary" onClick={handleGenerate} disabled={selectedTabs.length === 0} style={{ marginBottom: generatedUrl ? 16 : 0 }}>
+          Generar enlace
+        </button>
+
+        {generatedUrl && (
+          <div style={{ background: "var(--surface-2)", borderRadius: 8, padding: "10px 12px", display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              readOnly
+              value={generatedUrl}
+              style={{ flex: 1, background: "transparent", border: "none", fontSize: 11, color: "var(--text-2)", outline: "none", minWidth: 0 }}
+              onClick={e => e.target.select()}
+            />
+            <button className="btn ghost sm" onClick={handleCopy} style={{ flexShrink: 0 }}>
+              {copied ? "✓ Copiado" : "Copiar"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PasswordGate({ pwHash, onVerified }) {
+  const [input, setInput] = React.useState("");
+  const [error, setError] = React.useState(false);
+  const [checking, setChecking] = React.useState(false);
+
+  const handleSubmit = async () => {
+    if (!input.trim()) return;
+    setChecking(true);
+    const hash = await sha256(input.trim());
+    if (hash === pwHash) {
+      onVerified();
+    } else {
+      setError(true);
+      setChecking(false);
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 320, padding: 40 }}>
+      <div style={{ textAlign: "center", maxWidth: 340, width: "100%" }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+        <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Enlace protegido</div>
+        <div style={{ fontSize: 14, color: "var(--text-2)", marginBottom: 24 }}>Ingresa la clave de acceso para ver este análisis.</div>
+        <input
+          type="password"
+          placeholder="Clave de acceso"
+          value={input}
+          onChange={e => { setInput(e.target.value); setError(false); }}
+          onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
+          style={{ width: "100%", padding: "10px 14px", border: `1px solid ${error ? "#c00" : "var(--line)"}`, borderRadius: 8, fontSize: 14, background: "var(--surface)", color: "var(--text-1)", boxSizing: "border-box", marginBottom: 8 }}
+          autoFocus
+        />
+        {error && <div style={{ fontSize: 13, color: "#c00", marginBottom: 8 }}>Clave incorrecta. Inténtalo de nuevo.</div>}
+        <button className="btn primary" onClick={handleSubmit} disabled={checking || !input.trim()} style={{ width: "100%" }}>
+          {checking ? "Verificando…" : "Ingresar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ExpiryBanner({ exp }) {
+  const now = Math.floor(Date.now() / 1000);
+  const remaining = exp - now;
+  if (remaining <= 0) return null;
+
+  let timeStr;
+  if (remaining < 3600) {
+    const mins = Math.ceil(remaining / 60);
+    timeStr = `${mins} minuto${mins !== 1 ? "s" : ""}`;
+  } else if (remaining < 86400) {
+    const hrs = Math.ceil(remaining / 3600);
+    timeStr = `${hrs} hora${hrs !== 1 ? "s" : ""}`;
+  } else {
+    const d = Math.ceil(remaining / 86400);
+    timeStr = `${d} día${d !== 1 ? "s" : ""}`;
+  }
+
+  return (
+    <div style={{ background: "oklch(0.95 0.06 85)", border: "1px solid oklch(0.80 0.12 85)", color: "oklch(0.40 0.12 60)", fontSize: 13, fontWeight: 500, padding: "8px 20px" }}>
+      ⏱ Este enlace es válido por {timeStr} más
+    </div>
+  );
+}
+
+function ExpiredLink() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 320, padding: 40 }}>
+      <div style={{ textAlign: "center", maxWidth: 340 }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>⌛</div>
+        <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Enlace expirado</div>
+        <div style={{ fontSize: 14, color: "var(--text-2)" }}>
+          Este enlace de acceso ha vencido. Solicita un nuevo enlace al propietario del análisis.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const { t } = useI18n();
   const store = useStore();
@@ -260,11 +470,16 @@ function App() {
   const [globalTab, setGlobalTab] = React.useState("clients");
   const [readonly, setReadonly] = React.useState(false);
   const [requestedExpensesMode, setRequestedExpensesMode] = React.useState(null);
+  const [showShareModal, setShowShareModal] = React.useState(false);
+  const [shareParams, setShareParams] = React.useState(null);
+  const [pwVerified, setPwVerified] = React.useState(false);
   const eraCategories = store.state.eraCategories || [];
   const saveStatus = store.state.saveStatus || 'idle';
 
   // ── Auth guard ────────────────────────────────────────────────
   React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('readonly') === '1' && params.get('view')) return;
     const { supabaseUrl, supabaseAnon, loginUrl } = window.VIABILITY_CONFIG;
     const sbAuth = supabase.createClient(supabaseUrl, supabaseAnon);
     sbAuth.auth.getSession().then(({ data }) => {
@@ -313,10 +528,18 @@ function App() {
         setSection("expenses");
         if (isReadonly) setReadonly(true);
       }
+      const pwHash = params.get('pw') || null;
+      const expTs = params.get('exp') ? parseInt(params.get('exp'), 10) : null;
+      const tabsParam = params.get('tabs');
+      const allowedTabs = tabsParam ? tabsParam.split(',') : null;
+      if (pwHash || expTs || allowedTabs) setShareParams({ pwHash, expTs, allowedTabs });
       // Clean URL
       const url = new URL(window.location.href);
       url.searchParams.delete("view");
       url.searchParams.delete("readonly");
+      url.searchParams.delete("tabs");
+      url.searchParams.delete("pw");
+      url.searchParams.delete("exp");
       window.history.replaceState({}, "", url.toString());
     }
   }, [store.loading]);
@@ -365,6 +588,34 @@ function App() {
     { id: "scenarios",  label: t.nav.scenarios },
   ];
 
+  const isExpired = shareParams?.expTs && Math.floor(Date.now() / 1000) > shareParams.expTs;
+
+  if (isExpired) {
+    return (
+      <div className="app">
+        <Topbar />
+        <main><ExpiredLink /></main>
+      </div>
+    );
+  }
+
+  if (shareParams?.pwHash && !pwVerified) {
+    return (
+      <div className="app">
+        <Topbar />
+        <main><PasswordGate pwHash={shareParams.pwHash} onVerified={() => setPwVerified(true)} /></main>
+      </div>
+    );
+  }
+
+  const visibleTabs = shareParams?.allowedTabs
+    ? tabs.filter(t => shareParams.allowedTabs.includes(t.id))
+    : tabs;
+
+  if (visibleTabs.length > 0 && !visibleTabs.find(t => t.id === section)) {
+    setSection(visibleTabs[0].id);
+  }
+
   return (
     <div className="app">
       <Topbar>
@@ -374,20 +625,15 @@ function App() {
             ← Sistema de Gestión
           </a>
         )}
-        <button
-          className="btn ghost sm"
-          title="Copiar enlace de solo lectura"
-          onClick={() => {
-            const url = new URL(window.location.href);
-            url.searchParams.set("view", active.id);
-            url.searchParams.set("readonly", "1");
-            navigator.clipboard.writeText(url.toString()).then(() => {
-              alert("Enlace copiado al portapapeles");
-            });
-          }}
-        >
-          🔗 Compartir
-        </button>
+        {!readonly && (
+          <button
+            className="btn ghost sm"
+            title="Compartir análisis"
+            onClick={() => setShowShareModal(true)}
+          >
+            🔗 Compartir
+          </button>
+        )}
       </Topbar>
       <Crumbs items={[
         { label: t.nav.clients, onClick: goToClients },
@@ -403,8 +649,9 @@ function App() {
           <button className="btn ghost sm" onClick={() => setReadonly(false)}>Salir</button>
         </div>
       )}
+      {shareParams?.expTs && !isExpired && <ExpiryBanner exp={shareParams.expTs} />}
       <main>
-        <Tabs tabs={tabs} active={section} onChange={setSection} />
+        <Tabs tabs={visibleTabs} active={section} onChange={setSection} />
         {section === "expenses"   && <ExpensesView client={active} readonly={readonly} requestedMode={requestedExpensesMode} onRequestedModeConsumed={() => setRequestedExpensesMode(null)} />}
         {section === "expenses"   && <ClientDataView client={active} readonly={readonly} />}
         {section === "expenses"   && <SpendSummary client={active} />}
@@ -416,6 +663,7 @@ function App() {
         {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}
       </main>
       <SaveIndicator status={saveStatus} />
+      {showShareModal && <ShareModal client={active} tabs={tabs} onClose={() => setShowShareModal(false)} />}
     </div>
   );
 }
