@@ -1547,6 +1547,8 @@ const IMPORT_FIELDS = [
 
 function autoDetectField(header) {
   const h = (header || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  // subcategory BEFORE category (ya que "subcategoría" contiene "categ")
+  if (/sub.*categ|subcateg/.test(h))             return "subcategory";
   if (/categ/.test(h))                           return "category";
   if (/sub/.test(h))                             return "subcategory";
   if (/prov|supplier|vendor/.test(h))            return "supplier";
