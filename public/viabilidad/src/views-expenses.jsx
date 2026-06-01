@@ -1560,14 +1560,22 @@ function autoDetectField(header) {
   if (/mes.*impl|impl.*mes|month.*impl/.test(h)) return "months";
   if (/nota|note|obs/.test(h))                   return "notes";
   if (/^m\d+$|^mes\s*\d+$|^month\s*\d+$|^period\s*\d+$/.test(h)) return "monthly";
+  // Abreviaturas de mes en español/inglés con año opcional: ene-25, feb-26, jan-25…
+  if (/^(ene|feb|mar|abr|may|jun|jul|ago|sep|sept|oct|nov|dic)(\s*[-_\/]\s*\d{2,4})?$/.test(h)) return "monthly";
+  if (/^(jan|apr|aug|dec)(\s*[-_\/]\s*\d{2,4})?$/.test(h)) return "monthly";
+  // Nombres completos: enero-2025, febrero 25…
+  if (/^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)(\s*[-_\/\s]\s*\d{2,4})?$/.test(h)) return "monthly";
   return "skip";
 }
 
 function parseNum(v) {
   if (v == null || v === "") return 0;
   if (typeof v === "number") return v;
-  // Handle "5%" → 5, "12,5" → 12.5, "1.234,56" → 1234.56
-  let s = String(v).trim().replace(/[^\d.,%,-]/g, "");
+  const raw = String(v).trim();
+  // Guion solitario o "-" = celda vacía → 0
+  if (/^-+$/.test(raw)) return 0;
+  // Handle "5%" → 5, "12,5" → 12.5, "1.234,56" → 1234.56, "- 5,9" → -5.9
+  let s = raw.replace(/\s+/g, "").replace(/[^\d.,%,\-]/g, "");
   const isPct = s.endsWith("%");
   s = s.replace("%", "");
   // European format: 1.234,56 → last separator is comma
@@ -1578,7 +1586,6 @@ function parseNum(v) {
     s = s.replace(",", ".");
   }
   const n = parseFloat(s) || 0;
-  // If value looks like a decimal fraction (0.05) and field expects %, multiply
   return n;
 }
 
