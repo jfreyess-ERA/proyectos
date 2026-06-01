@@ -1567,12 +1567,16 @@ function autoDetectField(header) {
   if (/^(jan|apr|aug|dec)(\s*[-_\/]\s*\d{2,4})?$/.test(h)) return "monthly";
   // Nombres completos: enero-2025, febrero 25…
   if (/^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)(\s*[-_\/\s]\s*\d{2,4})?$/.test(h)) return "monthly";
+  // Número serial de fecha Excel (celdas de fecha en Excel, ej. 45658 = ene-25).
+  // Rango 38000–55000 cubre años ~2004–2050.
+  { const n = parseInt(h, 10); if (!isNaN(n) && n >= 38000 && n <= 55000 && /^\d+$/.test(h)) return "monthly"; }
   return "skip";
 }
 
 function parseNum(v) {
   if (v == null || v === "") return 0;
-  if (typeof v === "number") return v;
+  // Número directo de SheetJS — redondear imprecisión de punto flotante
+  if (typeof v === "number") return Math.round(v * 100) / 100;
   const raw = String(v).trim();
   // Guion solitario o "-" = celda vacía → 0
   if (/^-+$/.test(raw)) return 0;
