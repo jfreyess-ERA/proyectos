@@ -566,6 +566,7 @@ function App() {
           <Tabs
             tabs={[
               { id: "clients", label: t.nav.clients },
+              { id: "fx",      label: (t.fx && t.fx.nav) || "Tipo de cambio" },
               { id: "admin",   label: "⚙ Administración" },
             ]}
             active={globalTab}
@@ -574,7 +575,8 @@ function App() {
           {globalTab === "clients" && (
             <ClientsView onOpen={(id) => { store.setActiveClient(id); setSection("expenses"); }} />
           )}
-          {globalTab === "admin" && <EraAdminView />}
+          {globalTab === "fx"      && <FXView />}
+          {globalTab === "admin"   && <EraAdminView />}
         </main>
         <SaveIndicator status={saveStatus} />
       </div>
@@ -585,7 +587,6 @@ function App() {
     { id: "expenses",   label: t.nav.expenses, count: active.expenses.length },
     { id: "evolution",  label: t.nav.evolution },
     { id: "projection", label: t.nav.projection },
-    { id: "fx",         label: (t.fx && t.fx.nav) || "Tipo de cambio" },
     { id: "scenarios",  label: t.nav.scenarios },
   ];
 
@@ -661,8 +662,7 @@ function App() {
         {section === "projection" && <div style={{ marginTop: 40 }}><HonorariosChart client={active} /></div>}
         {section === "projection" && <div style={{ marginTop: 40 }}><GanttView client={active} readonly={readonly} /></div>}
         {section === "projection" && <div style={{ marginTop: 40 }}><RetornoSummaryCard client={active} /></div>}
-        {section === "fx"         && <FXView />}
-        {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}
+        {section === "scenarios" && <ScenariosView client={active} readonly={readonly} />}
       </main>
       <SaveIndicator status={saveStatus} />
       {showShareModal && <ShareModal client={active} tabs={tabs} onClose={() => setShowShareModal(false)} />}
