@@ -115,11 +115,12 @@ function Tabs({ tabs, active, onChange }) {
   );
 }
 
-function CurrencySelect({ value, onChange }) {
+function CurrencySelect({ value, onChange, disabled }) {
+  const list = (typeof CURRENCIES_LIST !== "undefined" && CURRENCIES_LIST) || Object.values(CURRENCIES);
   return (
-    <select className="select" value={value} onChange={e => onChange(e.target.value)}>
-      {Object.values(CURRENCIES).map(c => (
-        <option key={c.code} value={c.code}>{c.code} {c.symbol}</option>
+    <select className="select" value={value} onChange={e => onChange(e.target.value)} disabled={disabled}>
+      {list.map(c => (
+        <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
       ))}
     </select>
   );

@@ -34,6 +34,47 @@ const DEFAULT_TIER_CONFIG = {
   lowVolFeasMin: 3,
 };
 
+// ── Multi-currency support ─────────────────────────────────────────
+const CURRENCIES_LIST = [
+  { code: "CLP", name: "Peso chileno",     symbol: "$",   country: "Chile" },
+  { code: "ARS", name: "Peso argentino",   symbol: "$",   country: "Argentina" },
+  { code: "COP", name: "Peso colombiano",  symbol: "$",   country: "Colombia" },
+  { code: "UYU", name: "Peso uruguayo",    symbol: "$",   country: "Uruguay" },
+  { code: "PYG", name: "Guaraní",          symbol: "₲",   country: "Paraguay" },
+  { code: "USD", name: "Dólar",            symbol: "US$", country: "Internacional" },
+];
+
+const COUNTRY_CURRENCY_MAP = {
+  "Chile":      "CLP",
+  "Argentina":  "ARS",
+  "Colombia":   "COP",
+  "Uruguay":    "UYU",
+  "Paraguay":   "PYG",
+};
+
+function currencyForCountry(country) {
+  return COUNTRY_CURRENCY_MAP[country] || "CLP";
+}
+
+function formatAmount(value, currency) {
+  if (value == null || isNaN(value)) return "—";
+  const v = Number(value);
+  const fmt = (num, decimals, sep, dec, sym) => {
+    const parts = v.toFixed(decimals).split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, sep);
+    return sym + (decimals > 0 ? parts[0] + dec + parts[1] : parts[0]);
+  };
+  switch (currency) {
+    case "CLP": return fmt(v, 0, ".", "", "$");
+    case "ARS": return fmt(v, 0, ".", "", "$");
+    case "COP": return fmt(v, 0, ".", "", "$");
+    case "UYU": return fmt(v, 2, ".", ",", "$");
+    case "PYG": return fmt(v, 0, ".", "", "₲");
+    case "USD": return fmt(v, 2, ",", ".", "US$");
+    default:    return fmt(v, 0, ".", "", "$");
+  }
+}
+
 // ── Blank objects ──────────────────────────────────────────────────
 function blankClient(name = "") {
   return {
@@ -652,4 +693,5 @@ Object.assign(window, {
   aggregateByCategory, aggregateByEra, totalSpend, totalSavings, savingsRange, tierFor, uid,
   monthlyByCategory, monthlyByEra, monthlyTotals, MONTH_LABELS_ES, MONTH_LABELS_EN,
   periodCount, periodLabels,
+  CURRENCIES_LIST, currencyForCountry, formatAmount,
 });

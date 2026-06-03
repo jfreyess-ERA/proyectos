@@ -233,6 +233,16 @@ const STRINGS = {
       confirmDelete: "¿Eliminar este cliente y todos sus datos? Esta acción no se puede deshacer.",
       noClient: "Selecciona un cliente para empezar.",
     },
+    fx: {
+      title: "Tipo de cambio",
+      subtitle: "Evolución vs. USD",
+      update: "↻ Actualizar",
+      updated: "Actualizado",
+      source: "Fuente: ECB / Frankfurter API",
+      loading: "Cargando tasas…",
+      nav: "Tipo de cambio",
+      vs12m: "vs. hace 12 meses",
+    },
   },
   en: {
     brand: "ERA Group",
@@ -464,6 +474,16 @@ const STRINGS = {
       confirmDelete: "Delete this client and all data? This cannot be undone.",
       noClient: "Select a client to start.",
     },
+    fx: {
+      title: "Exchange rates",
+      subtitle: "Evolution vs. USD",
+      update: "↻ Refresh",
+      updated: "Updated",
+      source: "Source: ECB / Frankfurter API",
+      loading: "Loading rates…",
+      nav: "Exchange rates",
+      vs12m: "vs. 12 months ago",
+    },
   },
 };
 
@@ -478,9 +498,13 @@ var _amountUnit = "full";
 
 // Currency formatting
 const CURRENCIES = {
-  CLP: { code: "CLP", symbol: "$", locale: "es-CL" },
+  CLP: { code: "CLP", symbol: "$",   locale: "es-CL" },
+  ARS: { code: "ARS", symbol: "$",   locale: "es-AR" },
+  COP: { code: "COP", symbol: "$",   locale: "es-CO" },
+  UYU: { code: "UYU", symbol: "$",   locale: "es-UY" },
+  PYG: { code: "PYG", symbol: "₲",  locale: "es-PY" },
   USD: { code: "USD", symbol: "US$", locale: "en-US" },
-  EUR: { code: "EUR", symbol: "€", locale: "es-ES" },
+  EUR: { code: "EUR", symbol: "€",   locale: "es-ES" },
 };
 
 function fmtMoneyFull(amount, currency = "CLP", { compact = false, decimals = 0 } = {}) {

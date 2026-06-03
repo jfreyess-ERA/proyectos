@@ -585,6 +585,7 @@ function App() {
     { id: "expenses",   label: t.nav.expenses, count: active.expenses.length },
     { id: "evolution",  label: t.nav.evolution },
     { id: "projection", label: t.nav.projection },
+    { id: "fx",         label: (t.fx && t.fx.nav) || "Tipo de cambio" },
     { id: "scenarios",  label: t.nav.scenarios },
   ];
 
@@ -660,6 +661,7 @@ function App() {
         {section === "projection" && <div style={{ marginTop: 40 }}><HonorariosChart client={active} /></div>}
         {section === "projection" && <div style={{ marginTop: 40 }}><GanttView client={active} readonly={readonly} /></div>}
         {section === "projection" && <div style={{ marginTop: 40 }}><RetornoSummaryCard client={active} /></div>}
+        {section === "fx"         && <FXView />}
         {section === "scenarios"  && <ScenariosView client={active} readonly={readonly} />}
       </main>
       <SaveIndicator status={saveStatus} />
