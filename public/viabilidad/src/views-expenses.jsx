@@ -1639,6 +1639,7 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
   const [mapping, setMapping] = React.useState({});   // colIndex -> fieldId
   const [fileName, setFileName] = React.useState("");
   const [error, setError]     = React.useState("");
+  const [multiplier, setMultiplier] = React.useState(1); // unidad: 1 | 1000 | 1000000
   // Stable category IDs across mapping changes (reset on new file)
   const catIdCache = React.useRef({}); // normStr(name) → catId
   // ERA mapping: catId → eraId | null (only for new cats)
@@ -1743,7 +1744,7 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
       });
 
       if (seriesCols.length > 0) {
-        const monthly = seriesCols.map(i => parseNum(row[i]));
+        const monthly = seriesCols.map(i => Math.round(parseNum(row[i]) * multiplier * 100) / 100);
         exp.monthly = monthly;
         exp.amount  = monthly.reduce((a, b) => a + b, 0);
       }
@@ -1877,9 +1878,23 @@ function ExcelImport({ client, catLabel, eraCategories = [], onImport }) {
             {rows.length} filas · {Object.values(mapping).filter(f=>f!=="skip").length} columnas mapeadas
           </p>
         </div>
-        <button className="btn ghost" onClick={() => { setStep(1); setHeaders([]); setRows([]); setFileName(""); }}>
-          ← Cambiar archivo
-        </button>
+        <div className="row" style={{ gap: 12, alignItems: "center" }}>
+          <label style={{ fontSize: 13, color: "var(--text-2)", whiteSpace: "nowrap" }}>
+            Unidad de valores:
+            <select
+              value={multiplier}
+              onChange={e => setMultiplier(Number(e.target.value))}
+              style={{ marginLeft: 8, fontSize: 13, padding: "2px 6px", borderRadius: 4, border: "1px solid var(--border)" }}
+            >
+              <option value={1}>CLP (×1)</option>
+              <option value={1000}>Miles CLP (×1.000)</option>
+              <option value={1000000}>MM CLP (×1.000.000)</option>
+            </select>
+          </label>
+          <button className="btn ghost" onClick={() => { setStep(1); setHeaders([]); setRows([]); setFileName(""); }}>
+            ← Cambiar archivo
+          </button>
+        </div>
       </div>
 
       {/* Mapping table */}
