@@ -464,7 +464,7 @@ function ExpiredLink() {
 }
 
 function App() {
-  const { t } = useI18n();
+  const { t, displayCurrencyMode, setDisplayCurrencyMode, setFxRates } = useI18n();
   const store = useStore();
   const [section, setSection] = React.useState("expenses");
   const [globalTab, setGlobalTab] = React.useState("clients");
@@ -475,6 +475,19 @@ function App() {
   const [pwVerified, setPwVerified] = React.useState(false);
   const eraCategories = store.state.eraCategories || [];
   const saveStatus = store.state.saveStatus || 'idle';
+
+  // ── Fetch FX rates once (for currency toggle) ─────────────────
+  React.useEffect(() => {
+    fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json")
+      .then(r => r.json())
+      .then(data => { if (data && data.usd) setFxRates(data.usd); })
+      .catch(() => {});
+  }, []);
+
+  // ── Reset to local currency when switching clients ────────────
+  React.useEffect(() => {
+    setDisplayCurrencyMode("local");
+  }, [store.state.activeClientId]);
 
   // ── Auth guard ────────────────────────────────────────────────
   React.useEffect(() => {
@@ -627,6 +640,16 @@ function App() {
             ← Sistema de Gestión
           </a>
         )}
+        <button
+          className="btn ghost sm"
+          title={displayCurrencyMode === "usd" ? "Mostrar en moneda local" : "Mostrar en USD"}
+          onClick={() => setDisplayCurrencyMode(displayCurrencyMode === "usd" ? "local" : "usd")}
+          style={{ fontWeight: 600, letterSpacing: 0.3,
+            color: displayCurrencyMode === "usd" ? "var(--accent)" : "var(--text-2)",
+            border: displayCurrencyMode === "usd" ? "1.5px solid var(--accent)" : undefined }}
+        >
+          {displayCurrencyMode === "usd" ? "US$" : (active.currency || "CLP")} ⇄ {displayCurrencyMode === "usd" ? (active.currency || "CLP") : "US$"}
+        </button>
         {!readonly && (
           <button
             className="btn ghost sm"

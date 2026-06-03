@@ -496,6 +496,11 @@ const I18nContext = React.createContext({ lang: "es", t: STRINGS.es, amountUnit:
 // so all child fmtMoney() calls always see the current unit — no window override needed.
 var _amountUnit = "full";
 
+// ── Display currency (local vs USD) ───────────────────────────
+// Same synchronous-render pattern as _amountUnit.
+var _displayCurrencyMode = "local"; // "local" | "usd"
+var _fxRates = {};  // { clp: 950.5, ars: 1050.2, ... } — units of local currency per 1 USD
+
 // Currency formatting
 const CURRENCIES = {
   CLP: { code: "CLP", symbol: "$",   locale: "es-CL" },
@@ -525,16 +530,28 @@ function fmtMoneyFull(amount, currency = "CLP", { compact = false, decimals = 0 
 function fmtMoneyMM(amount) {
   if (amount == null || isNaN(amount)) return "—";
   const mm = (amount || 0) / 1000000;
-  // Always show 1 decimal: "$343,0 MM" — clearly distinct from compact "$343 M"
-  return "$ " + mm.toLocaleString("es-CL", {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: 1,
-  }) + " MM";
+  return "$ " + mm.toLocaleString("es-CL", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " MM";
 }
 
 // fmtMoney — single entry point used everywhere.
-// Reads _amountUnit on every call so the unit toggle is always respected.
-function fmtMoney(amount, currency = "CLP", opts = {}) {
+// Reads _amountUnit and _displayCurrencyMode on every call.
+function fmtMoney(amount, currency, opts) {
+  currency = currency || "CLP";
+  opts = opts || {};
+
+  // USD conversion: divide by the FX rate (units of local per 1 USD)
+  if (_displayCurrencyMode === "usd" && currency !== "USD") {
+    const rate = _fxRates[currency.toLowerCase()];
+    if (rate) {
+      const usdAmount = (amount || 0) / rate;
+      if (_amountUnit === "MM") {
+        const mm = usdAmount / 1000000;
+        return "US$ " + mm.toLocaleString("en-US", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " MM";
+      }
+      return fmtMoneyFull(usdAmount, "USD", opts);
+    }
+  }
+
   if (_amountUnit === "MM") return fmtMoneyMM(amount);
   return fmtMoneyFull(amount, currency, opts);
 }
@@ -542,17 +559,23 @@ function fmtMoney(amount, currency = "CLP", opts = {}) {
 function I18nProvider({ children }) {
   const [lang, setLang] = React.useState(() => localStorage.getItem("nci.lang") || "es");
   const [amountUnit, setAmountUnitState] = React.useState(() => localStorage.getItem("nci.amountUnit") || "full");
+  const [displayCurrencyMode, setDisplayCurrencyModeState] = React.useState("local"); // "local" | "usd"
+  const [fxRates, setFxRatesState] = React.useState({});
 
   React.useEffect(() => { localStorage.setItem("nci.lang", lang); }, [lang]);
   React.useEffect(() => { localStorage.setItem("nci.amountUnit", amountUnit); }, [amountUnit]);
 
-  // Update synchronously during render — before children render and call fmtMoney
+  // Update module-level vars synchronously during render — before children render and call fmtMoney
   _amountUnit = amountUnit;
+  _displayCurrencyMode = displayCurrencyMode;
+  _fxRates = fxRates;
 
   const setAmountUnit = (u) => setAmountUnitState(u);
+  const setDisplayCurrencyMode = (m) => setDisplayCurrencyModeState(m);
+  const setFxRates = (r) => setFxRatesState(r);
   const t = STRINGS[lang];
   return (
-    <I18nContext.Provider value={{ lang, setLang, t, amountUnit, setAmountUnit }}>
+    <I18nContext.Provider value={{ lang, setLang, t, amountUnit, setAmountUnit, displayCurrencyMode, setDisplayCurrencyMode, fxRates, setFxRates }}>
       {children}
     </I18nContext.Provider>
   );
