@@ -640,16 +640,30 @@ function App() {
             ← Sistema de Gestión
           </a>
         )}
-        <button
-          className="btn ghost sm"
-          title={displayCurrencyMode === "usd" ? "Mostrar en moneda local" : "Mostrar en USD"}
-          onClick={() => setDisplayCurrencyMode(displayCurrencyMode === "usd" ? "local" : "usd")}
-          style={{ fontWeight: 600, letterSpacing: 0.3,
-            color: displayCurrencyMode === "usd" ? "var(--accent)" : "var(--text-2)",
-            border: displayCurrencyMode === "usd" ? "1.5px solid var(--accent)" : undefined }}
-        >
-          {displayCurrencyMode === "usd" ? "US$" : (active.currency || "CLP")} ⇄ {displayCurrencyMode === "usd" ? (active.currency || "CLP") : "US$"}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 6, padding: "2px 6px" }}>
+          <span style={{ fontSize: 11, color: "var(--text-3)", userSelect: "none" }}>Moneda</span>
+          <select
+            value={active.currency || "CLP"}
+            onChange={e => store.updateClient(active.id, { currency: e.target.value })}
+            disabled={readonly}
+            style={{ fontSize: 13, fontWeight: 600, border: "none", background: "transparent", color: "var(--text-1)", cursor: "pointer", padding: "1px 2px" }}
+          >
+            {(typeof CURRENCIES_LIST !== "undefined" ? CURRENCIES_LIST : [
+              { code: "CLP", name: "Peso chileno" }, { code: "ARS", name: "Peso argentino" },
+              { code: "COP", name: "Peso colombiano" }, { code: "UYU", name: "Peso uruguayo" },
+              { code: "PYG", name: "Guaraní" }, { code: "USD", name: "Dólar" },
+            ]).map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+          </select>
+          <span style={{ color: "var(--border)", fontSize: 14, margin: "0 2px" }}>⇄</span>
+          <button
+            title={displayCurrencyMode === "usd" ? "Volver a moneda local" : "Ver en USD"}
+            onClick={() => setDisplayCurrencyMode(displayCurrencyMode === "usd" ? "local" : "usd")}
+            style={{ fontSize: 13, fontWeight: 600, border: "none", background: "transparent", cursor: "pointer", padding: "1px 4px",
+              color: displayCurrencyMode === "usd" ? "var(--accent)" : "var(--text-3)" }}
+          >
+            US$
+          </button>
+        </div>
         {!readonly && (
           <button
             className="btn ghost sm"
