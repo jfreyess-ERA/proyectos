@@ -7,20 +7,37 @@ function EvolutionView({ client }) {
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
   const n = periodCount(client);
-  const months = periodLabels(n, lang);
-  const groups = monthlyByEra(client, eraCategories);
-  const totals = monthlyTotals(client);
-  const total = totals.reduce((a, b) => a + b, 0);
+  const allMonths = periodLabels(n, lang);
+  const allGroups = monthlyByEra(client, eraCategories);
+  const allTotals = monthlyTotals(client);
 
   const [chartType, setChartType] = React.useState("lines");
   const [selectedCats, setSelectedCats] = React.useState(null); // null => all
   const [trendType, setTrendType] = React.useState("linear"); // none|linear|ma3|exp|poly
   const [showTrendOnTotal, setShowTrendOnTotal] = React.useState(true);
   const [showTrendOnLines, setShowTrendOnLines] = React.useState(false);
+  // Temporal filter: [startIdx, endIdx] (0-based, inclusive)
+  const [rangeStart, setRangeStart] = React.useState(0);
+  const [rangeEnd, setRangeEnd] = React.useState(n - 1);
 
-  if (groups.length === 0) {
+  // Keep rangeEnd in bounds if n changes
+  React.useEffect(() => {
+    setRangeStart(0);
+    setRangeEnd(n - 1);
+  }, [n]);
+
+  if (allGroups.length === 0) {
     return <Empty icon="◯" title={t.dashboard.empty} hint={t.expenses.lede} />;
   }
+
+  // ── Apply temporal filter ──────────────────────────────────────
+  const start = Math.max(0, Math.min(rangeStart, n - 1));
+  const end   = Math.max(start, Math.min(rangeEnd, n - 1));
+  const rangeLen = end - start + 1;
+
+  const months = allMonths.slice(start, end + 1);
+  const totals = allTotals.slice(start, end + 1);
+  const groups = allGroups.map(g => ({ ...g, months: g.months.slice(start, end + 1) }));
 
   const isOn = (id) => selectedCats == null || selectedCats.includes(id);
   const toggleCat = (id) => {
@@ -29,14 +46,22 @@ function EvolutionView({ client }) {
   };
 
   const visibleGroups = groups.filter(g => isOn(g.categoryId));
-  const visibleTotals = months.map((_, m) => visibleGroups.reduce((s, g) => s + g.months[m], 0));
+  const visibleTotals = months.map((_, m) => visibleGroups.reduce((s, g) => s + (g.months[m] || 0), 0));
 
-  const avg = total / 12;
-  const peak = Math.max(...totals);
-  const low = Math.min(...totals);
+  // ── KPIs sobre el rango seleccionado ──────────────────────────
+  const rangeTotal = totals.reduce((a, b) => a + b, 0);
+  const avg = rangeLen > 0 ? rangeTotal / rangeLen : 0;
+  // Proyección anual: si rango < 12, proyectar por promedio mensual
+  const annualProjection = avg * 12;
+  const isProjected = rangeLen < 12;
+
+  const peak = totals.length > 0 ? Math.max(...totals) : 0;
+  const low  = totals.length > 0 ? Math.min(...totals) : 0;
   const peakIdx = totals.indexOf(peak);
-  const lowIdx = totals.indexOf(low);
-  const trend = totals[0] > 0 ? ((totals[totals.length - 1] - totals[0]) / totals[0]) * 100 : 0;
+  const lowIdx  = totals.indexOf(low);
+  const trend = totals.length >= 2 && totals[0] > 0
+    ? ((totals[totals.length - 1] - totals[0]) / totals[0]) * 100
+    : 0;
 
   const catLabel = (cat) => cat ? (cat.label || cat.key) : "—";
 
@@ -53,11 +78,54 @@ function EvolutionView({ client }) {
         </div>
       </div>
 
+      {/* Temporal filter */}
+      <div className="card flat" style={{ background: "var(--surface-2)", padding: "12px 16px" }}>
+        <div className="row wrap" style={{ gap: 12, alignItems: "center" }}>
+          <span style={{ fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--text-3)", fontWeight: 700 }}>
+            Período:
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <label style={{ fontSize: 12, color: "var(--text-2)" }}>Desde</label>
+            <select className="select" style={{ width: 90, fontSize: 12 }}
+              value={rangeStart}
+              onChange={e => { const v = +e.target.value; setRangeStart(v); if (v > rangeEnd) setRangeEnd(v); }}>
+              {allMonths.map((m, i) => <option key={i} value={i}>{m}</option>)}
+            </select>
+            <label style={{ fontSize: 12, color: "var(--text-2)" }}>Hasta</label>
+            <select className="select" style={{ width: 90, fontSize: 12 }}
+              value={rangeEnd}
+              onChange={e => { const v = +e.target.value; setRangeEnd(v); if (v < rangeStart) setRangeStart(v); }}>
+              {allMonths.map((m, i) => <option key={i} value={i}>{m}</option>)}
+            </select>
+            <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+              {rangeLen} período{rangeLen !== 1 ? "s" : ""}
+            </span>
+          </div>
+          {(rangeStart !== 0 || rangeEnd !== n - 1) && (
+            <button className="btn ghost sm" onClick={() => { setRangeStart(0); setRangeEnd(n - 1); }}>
+              ↺ Ver completo ({n}p)
+            </button>
+          )}
+          {isProjected && (
+            <span style={{ fontSize: 11, background: "oklch(0.97 0.04 50)", color: "oklch(0.50 0.15 50)", border: "1px solid oklch(0.88 0.08 50)", borderRadius: 99, padding: "2px 10px" }}>
+              ⚡ Proyectando {rangeLen}p → 12 meses por promedio
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* KPIs */}
       <div className="grid cols-4">
-        <Stat label={t.evolution.avgMonth} value={fmtMoney(avg, client.currency, { compact: true })} sub={`${fmtMoney(total, client.currency, { compact: true })} total`} variant="dark" />
-        <Stat label={t.evolution.peakMonth} value={fmtMoney(peak, client.currency, { compact: true })} sub={months[peakIdx]} />
-        <Stat label={t.evolution.lowMonth} value={fmtMoney(low, client.currency, { compact: true })} sub={months[lowIdx]} />
+        <Stat
+          label={isProjected ? "Total anual proyectado" : "Total anual"}
+          value={fmtMoney(annualProjection, client.currency, { compact: true })}
+          sub={isProjected
+            ? `Promedio ${fmtMoney(avg, client.currency, { compact: true })}/mes × 12`
+            : `${fmtMoney(rangeTotal, client.currency, { compact: true })} en ${rangeLen}p`}
+          variant="dark"
+        />
+        <Stat label={t.evolution.avgMonth} value={fmtMoney(avg, client.currency, { compact: true })} sub={`${rangeLen} período${rangeLen !== 1 ? "s" : ""}`} />
+        <Stat label={t.evolution.peakMonth} value={fmtMoney(peak, client.currency, { compact: true })} sub={months[peakIdx] || "—"} />
         <Stat
           label={t.evolution.yoyTrend}
           value={(trend >= 0 ? "+" : "") + fmtPct(trend, 1)}
