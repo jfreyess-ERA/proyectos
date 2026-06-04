@@ -645,10 +645,21 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
               <td className="right">{fmtPct(sortedGroups.length > 0 ? sortedGroups.reduce((s,g) => s + g.optimizationAmount, 0) / (sortedGroups.reduce((s,g) => s + g.total, 0) || 1) * 100 : 0)}</td>
               <td className="right">{fmtMoney(sortedGroups.reduce((s,g) => s + g.optimizationAmount, 0), client.currency)}</td>
               <td></td>
-              <td></td>
-              <td></td>
-              <td className="right">{fmtMoney(sortedGroups.reduce((s,g) => s + g.minSavings, 0), client.currency)}</td>
-              <td className="right" style={{ color: "var(--positive-2)" }}>{fmtMoney(sortedGroups.reduce((s,g) => s + g.maxSavings, 0), client.currency)}</td>
+              {(() => {
+                const totalScopedAmt = sortedGroups.reduce((s,g) => s + g.optimizationAmount, 0);
+                const totalMinSavings = sortedGroups.reduce((s,g) => s + g.minSavings, 0);
+                const totalMaxSavings = sortedGroups.reduce((s,g) => s + g.maxSavings, 0);
+                const minPct = totalScopedAmt > 0 ? totalMinSavings / totalScopedAmt * 100 : 0;
+                const maxPct = totalScopedAmt > 0 ? totalMaxSavings / totalScopedAmt * 100 : 0;
+                return (
+                  <>
+                    <td className="right tabular" style={{ fontWeight: 600 }}>{fmtPct(minPct)}</td>
+                    <td className="right tabular" style={{ fontWeight: 600, color: "var(--positive-2)" }}>{fmtPct(maxPct)}</td>
+                    <td className="right">{fmtMoney(totalMinSavings, client.currency)}</td>
+                    <td className="right" style={{ color: "var(--positive-2)" }}>{fmtMoney(totalMaxSavings, client.currency)}</td>
+                  </>
+                );
+              })()}
             </tr>
           </tbody>
         </table>
