@@ -422,6 +422,11 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
   const [selected, setSelected] = React.useState(new Set());
   const [bulkCatId, setBulkCatId] = React.useState("");
   const [expandedNotes, setExpandedNotes] = React.useState(new Set());
+  const [showColPicker, setShowColPicker] = React.useState(false);
+  const [visibleCols, setVisibleCols] = React.useState({
+    era: true, subcategory: true, supplier: true, suppliers: true, savings: true,
+  });
+  const toggleCol = (col) => setVisibleCols(v => ({ ...v, [col]: !v[col] }));
 
   const toggleSort = (col) => setSort(s => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
   const SortIcon = ({ col }) => sort.col !== col ? null : (
@@ -512,10 +517,40 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
         )}
         {search && <button className="btn ghost sm" onClick={() => setSearch("")}>✕ Limpiar</button>}
         {eraCategories.length > 0 && (
-          <span style={{ fontSize: 12, color: "var(--text-3)", background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 99, padding: "2px 10px", marginLeft: "auto" }}>
+          <span style={{ fontSize: 12, color: "var(--text-3)", background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 99, padding: "2px 10px" }}>
             {eraWithMapping} / {expenses.length} con ERA
           </span>
         )}
+        <div style={{ marginLeft: "auto", position: "relative" }}>
+          <button
+            className="btn ghost sm"
+            onClick={() => setShowColPicker(v => !v)}
+            title="Elegir columnas"
+            style={{ fontWeight: 500 }}
+          >⊞ Columnas</button>
+          {showColPicker && (
+            <div style={{
+              position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 100,
+              background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10,
+              padding: "10px 14px", minWidth: 170, boxShadow: "0 4px 16px rgba(0,0,0,.12)",
+              display: "flex", flexDirection: "column", gap: 8,
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-3)", marginBottom: 2 }}>MOSTRAR COLUMNAS</div>
+              {[
+                { key: "era",        label: "ERA" },
+                { key: "subcategory",label: "Subcategoría" },
+                { key: "supplier",   label: "Proveedor" },
+                { key: "suppliers",  label: "# Prov." },
+                { key: "savings",    label: "% Ahorro" },
+              ].map(({ key, label }) => (
+                <label key={key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={!!visibleCols[key]} onChange={() => toggleCol(key)} />
+                  {label}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Advanced filter panel */}
@@ -623,13 +658,13 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
                 </th>
               )}
               <th style={{ width: 8 }}></th>
-              {showEra && <th>ERA</th>}
-              <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("category")}>{t.expenses.cols.category} <SortIcon col="category" /></th>
-              <th>{t.expenses.cols.subcategory}</th>
-              <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("supplier")}>{t.expenses.cols.supplier} <SortIcon col="supplier" /></th>
+              {showEra && visibleCols.era && <th>ERA</th>}
+              <th style={{ cursor:"pointer", userSelect:"none", minWidth: 200 }} onClick={() => toggleSort("category")}>{t.expenses.cols.category} <SortIcon col="category" /></th>
+              {visibleCols.subcategory && <th>{t.expenses.cols.subcategory}</th>}
+              {visibleCols.supplier && <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("supplier")}>{t.expenses.cols.supplier} <SortIcon col="supplier" /></th>}
               <th className="right" style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("amount")}>{t.expenses.cols.amount} <SortIcon col="amount" /></th>
-              <th className="right">{t.expenses.cols.suppliers}</th>
-              <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("savings")}>% Ahorro <SortIcon col="savings" /></th>
+              {visibleCols.suppliers && <th className="right">{t.expenses.cols.suppliers}</th>}
+              {visibleCols.savings && <th style={{ cursor:"pointer", userSelect:"none" }} onClick={() => toggleSort("savings")}>% Ahorro <SortIcon col="savings" /></th>}
               <th style={{ width: 80 }}></th>
             </tr>
           </thead>
@@ -675,7 +710,7 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
                       )}
                     </div>
                   </td>
-                  {showEra && (
+                  {showEra && visibleCols.era && (
                     <td onClick={ev => ev.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
                       <select
                         className="select"
@@ -704,24 +739,24 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
                         });
                       }}
                       disabled={readonly || !cat}
-                      style={{ minWidth: 130 }}
+                      style={{ minWidth: 200 }}
                       placeholder="Categoría"
                     />
                   </td>
-                  <td><input className="input" value={e.subcategory} onChange={ev => update(i, { subcategory: ev.target.value })} disabled={readonly} /></td>
-                  <td><input className="input" value={e.supplier} onChange={ev => update(i, { supplier: ev.target.value })} disabled={readonly} /></td>
+                  {visibleCols.subcategory && <td><input className="input" value={e.subcategory} onChange={ev => update(i, { subcategory: ev.target.value })} disabled={readonly} /></td>}
+                  {visibleCols.supplier && <td><input className="input" value={e.supplier} onChange={ev => update(i, { supplier: ev.target.value })} disabled={readonly} /></td>}
                   <td className="right">
                     <MoneyInput value={e.amount} onChange={v => update(i, { amount: v })} disabled={readonly} style={{ width: 120 }} />
                     {e.expenseCurrency && e.expenseCurrency !== client.currency && (
                       <span style={{fontSize:10, color:"var(--text-3)", marginLeft:3}}>{e.expenseCurrency}</span>
                     )}
                   </td>
-                  <td className="right">
+                  {visibleCols.suppliers && <td className="right">
                     <input className="input right" type="number" value={e.suppliers} onChange={ev => update(i, { suppliers: +ev.target.value || 0 })} style={{ width: 60 }} disabled={readonly} />
-                  </td>
-                  <td onClick={openDrawer} style={{ textAlign:"right", fontSize:12, color: e.savingsPct > 0 ? "var(--text-1)" : "var(--text-3)", ...clickableStyle }}>
+                  </td>}
+                  {visibleCols.savings && <td onClick={openDrawer} style={{ textAlign:"right", fontSize:12, color: e.savingsPct > 0 ? "var(--text-1)" : "var(--text-3)", ...clickableStyle }}>
                     {e.savingsPct > 0 ? e.savingsPct.toFixed(1) + "%" : "—"}
-                  </td>
+                  </td>}
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                     <span
                       title={`Completitud: ${completeness}%`}
@@ -738,12 +773,18 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
             })}
             {!search && (
               <tr className="totals">
-                <td colSpan={readonly ? (showEra ? 2 : 1) : (showEra ? 3 : 2)}></td>
-                <td colSpan={2}>{t.expenses.total}</td>
-                <td></td>
+                <td colSpan={
+                  (!readonly ? 1 : 0) +                           // checkbox
+                  1 +                                              // swatch
+                  (showEra && visibleCols.era ? 1 : 0) +          // ERA
+                  1 +                                              // Categoría
+                  (visibleCols.subcategory ? 1 : 0) +             // Subcategoría
+                  (visibleCols.supplier ? 1 : 0)                  // Proveedor
+                }></td>
+                <td>{t.expenses.total}</td>
                 <td className="right">{fmtMoney(total, client.currency)}</td>
-                <td className="right">{expenses.reduce((s, e) => s + (+e.suppliers || 0), 0)}</td>
-                <td></td>
+                {visibleCols.suppliers && <td className="right">{expenses.reduce((s, e) => s + (+e.suppliers || 0), 0)}</td>}
+                {visibleCols.savings && <td></td>}
                 <td></td>
               </tr>
             )}
