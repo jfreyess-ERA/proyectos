@@ -15,8 +15,32 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
   const [editing, setEditing] = React.useState(false);
   const [showLogic, setShowLogic] = React.useState(false);
   const [activeTier, setActiveTier] = React.useState(null);
-  // editDraft: { [categoryId]: { scopePct, feasibility, savingsMinPct, savingsMaxPct } }
+  // editDraft: { [categoryId]: { scopePct, feasibility } }
   const [editDraft, setEditDraft] = React.useState({});
+
+  // Period filter (same logic as EvolutionView)
+  const nPeriods = periodCount(client);
+  const allPeriodLabels = periodLabels(nPeriods);
+  const [rangeStart, setRangeStart] = React.useState(0);
+  const [rangeEnd, setRangeEnd] = React.useState(nPeriods - 1);
+  React.useEffect(() => { setRangeStart(0); setRangeEnd(nPeriods - 1); }, [nPeriods]);
+
+  // Build a version of the client where each expense.amount = projected annual
+  // from the selected period range (rangeTotal / rangeLen * 12)
+  const clientForRange = React.useMemo(() => {
+    const start = Math.max(0, rangeStart);
+    const end   = Math.min(nPeriods - 1, rangeEnd);
+    const rLen  = end - start + 1;
+    if (rLen === nPeriods && nPeriods >= 12) return client; // full range, no projection needed
+    const expenses = client.expenses.map(e => {
+      const monthly = getMonthly(e, nPeriods);
+      const slice = monthly.slice(start, end + 1);
+      const rangeTotal = slice.reduce((a, b) => a + b, 0);
+      const projectedAmount = rLen > 0 ? (rangeTotal / rLen) * 12 : 0;
+      return { ...e, amount: Math.round(projectedAmount) };
+    });
+    return { ...client, expenses };
+  }, [client, rangeStart, rangeEnd, nPeriods]);
 
   const startEdit = () => {
     // Seed draft with current aggregated values per category
@@ -330,8 +354,8 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
   };
   const tierConfig = store.state.tierConfig || DEFAULT_TIER_CONFIG;
   const sc = { feePct: 30, feePctOnSavings: 50, feeMonths: 36, projectionYears: 5, includedCategories: null, ...(client.scenario || {}) };
-  const groups = aggregateByEra(client, eraCategories);
-  const total = totalSpend(client);
+  const groups = aggregateByEra(clientForRange, eraCategories);
+  const total = totalSpend(clientForRange);
 
   const toggleSort = (col) => setSort(s => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
   const SI = ({ col }) => sort.col !== col ? <span style={{ opacity: 0.3, marginLeft: 3 }}>↕</span> : (
@@ -439,6 +463,33 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
       <div ref={tableCardRef} className="card flat" style={{ padding: 0, overflow: "hidden" }}>
         {/* Header + filtros */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)" }}>
+          {/* Period filter */}
+          {nPeriods > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--text-3)", fontWeight: 700 }}>Período:</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <label style={{ fontSize: 12, color: "var(--text-2)" }}>Desde</label>
+                <select className="select" style={{ width: 90, fontSize: 12 }} value={rangeStart}
+                  onChange={e => { const v = +e.target.value; setRangeStart(v); if (v > rangeEnd) setRangeEnd(v); }}>
+                  {allPeriodLabels.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                </select>
+                <label style={{ fontSize: 12, color: "var(--text-2)" }}>Hasta</label>
+                <select className="select" style={{ width: 90, fontSize: 12 }} value={rangeEnd}
+                  onChange={e => { const v = +e.target.value; setRangeEnd(v); if (v < rangeStart) setRangeStart(v); }}>
+                  {allPeriodLabels.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                </select>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>{rangeEnd - rangeStart + 1}p</span>
+              </div>
+              {(rangeEnd - rangeStart + 1) < 12 && (
+                <span style={{ fontSize: 11, background: "oklch(0.97 0.04 50)", color: "oklch(0.50 0.15 50)", border: "1px solid oklch(0.88 0.08 50)", borderRadius: 99, padding: "2px 10px" }}>
+                  ⚡ Proyectando {rangeEnd - rangeStart + 1}p → 12 meses por promedio
+                </span>
+              )}
+              {(rangeStart !== 0 || rangeEnd !== nPeriods - 1) && (
+                <button className="btn ghost sm" onClick={() => { setRangeStart(0); setRangeEnd(nPeriods - 1); }}>↺ Ver completo</button>
+              )}
+            </div>
+          )}
           <div className="row between" style={{ marginBottom: 10 }}>
             <div>
               <div className="eyebrow">Tabla resumen</div>
@@ -509,8 +560,8 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
               <th className="right" style={thSort} onClick={() => toggleSort("scope")}>Alcance %<SI col="scope"/></th>
               <th className="right" style={{ color: "var(--text-3)", fontSize: 11 }}>Monto en alcance</th>
               <th className="right" style={thSort} onClick={() => toggleSort("feas")}>Factib.<SI col="feas"/></th>
-              <th className="right" style={{ color: "var(--text-2)", fontSize: 11 }}>% Ahorr. mín<br/><span style={{ fontSize: 10, fontWeight: 400 }}>(desde Rangos)</span></th>
-              <th className="right" style={{ color: "var(--text-2)", fontSize: 11 }}>% Ahorr. máx<br/><span style={{ fontSize: 10, fontWeight: 400 }}>(desde Rangos)</span></th>
+              <th className="right" style={{ color: "var(--text-2)" }}>% Ahorro mín</th>
+              <th className="right" style={{ color: "var(--text-2)" }}>% Ahorro máx</th>
               <th className="right" style={thSort} onClick={() => toggleSort("min")}>Ahorro mín $<SI col="min"/></th>
               <th className="right" style={{ ...thSort, color: "var(--positive-2)" }} onClick={() => toggleSort("max")}>Ahorro máx $<SI col="max"/></th>
             </tr>
