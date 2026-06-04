@@ -527,6 +527,12 @@ function fmtMoneyFull(amount, currency = "CLP", { compact = false, decimals = 0 
   return new Intl.NumberFormat(c.locale, opts).format(amount);
 }
 
+function fmtMoneyK(amount) {
+  if (amount == null || isNaN(amount)) return "—";
+  const k = (amount || 0) / 1000;
+  return "$ " + k.toLocaleString("es-CL", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " M";
+}
+
 function fmtMoneyMM(amount) {
   if (amount == null || isNaN(amount)) return "—";
   const mm = (amount || 0) / 1000000;
@@ -548,11 +554,16 @@ function fmtMoney(amount, currency, opts) {
         const mm = usdAmount / 1000000;
         return "US$ " + mm.toLocaleString("en-US", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " MM";
       }
+      if (_amountUnit === "K") {
+        const k = usdAmount / 1000;
+        return "US$ " + k.toLocaleString("en-US", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " M";
+      }
       return fmtMoneyFull(usdAmount, "USD", opts);
     }
   }
 
   if (_amountUnit === "MM") return fmtMoneyMM(amount);
+  if (_amountUnit === "K")  return fmtMoneyK(amount);
   return fmtMoneyFull(amount, currency, opts);
 }
 

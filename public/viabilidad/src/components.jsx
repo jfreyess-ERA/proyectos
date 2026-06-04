@@ -16,6 +16,7 @@ function Topbar({ children }) {
         {children}
         <div className="lang-switch" title="Unidad de moneda">
           <button className={amountUnit === "full" ? "on" : ""} onClick={() => setAmountUnit("full")}>$</button>
+          <button className={amountUnit === "K" ? "on" : ""} onClick={() => setAmountUnit("K")}>M$</button>
           <button className={amountUnit === "MM" ? "on" : ""} onClick={() => setAmountUnit("MM")}>MM$</button>
         </div>
         <div className="lang-switch">
