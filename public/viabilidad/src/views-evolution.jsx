@@ -270,7 +270,7 @@ function EvolutionView({ client }) {
         <table className="t">
           <thead><tr>
             <th>{t.expenses.cols.category}</th>
-            <th>12 meses</th>
+            <th>{rangeLen} período{rangeLen !== 1 ? "s" : ""}</th>
             <th className="right">{t.evolution.avgMonth}</th>
             <th className="right">{t.evolution.peakMonth}</th>
             <th className="right">{t.evolution.yoyTrend}</th>
@@ -278,10 +278,11 @@ function EvolutionView({ client }) {
           </tr></thead>
           <tbody>
             {groups.map(g => {
-              const gAvg = g.total / 12;
+              const gLen = g.months.length || 1;
+              const gAvg = g.total / gLen;
               const gPeak = Math.max(...g.months);
               const gPeakIdx = g.months.indexOf(gPeak);
-              const gTrend = g.months[0] > 0 ? ((g.months[11] - g.months[0]) / g.months[0]) * 100 : 0;
+              const gTrend = g.months[0] > 0 ? ((g.months[gLen - 1] - g.months[0]) / g.months[0]) * 100 : 0;
               return (
                 <tr key={g.categoryId}>
                   <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
@@ -313,7 +314,8 @@ function LineChart({ months, series, currency = "EUR", showLegend = false }) {
   const max = Math.max(...allVals, 1);
   const min = 0;
 
-  const x = (i) => P.l + (i / 11) * innerW;
+  const nPts = Math.max(1, months.length - 1); // dynamic — works for any number of periods
+  const x = (i) => P.l + (i / nPts) * innerW;
   const y = (v) => P.t + innerH - ((v - min) / (max - min)) * innerH;
 
   const ticks = 5;
@@ -481,16 +483,18 @@ function StackedAreaChart({ months, groups, currency, catLabel }) {
   });
 
   const max = Math.max(...stacks.map(layer => layer.length > 0 ? layer[layer.length - 1].hi : 0), 1);
-  const x = (i) => P.l + (i / 11) * innerW;
+  const nPts = Math.max(1, months.length - 1); // dynamic
+  const x = (i) => P.l + (i / nPts) * innerW;
   const y = (v) => P.t + innerH - (v / max) * innerH;
 
   const ticks = 5;
   const tickVals = Array.from({ length: ticks + 1 }, (_, i) => (max / ticks) * i);
 
   // Each group's path: top edge forward then bottom edge backward
+  const last = months.length - 1;
   const groupPaths = groups.map((g, gi) => {
     const top = stacks.map((layer, m) => `${m === 0 ? "M" : "L"}${x(m).toFixed(1)},${y(layer[gi].hi).toFixed(1)}`).join(" ");
-    const bottom = stacks.map((layer, m) => `L${x(11 - m).toFixed(1)},${y(stacks[11 - m][gi].lo).toFixed(1)}`).join(" ");
+    const bottom = stacks.map((layer, m) => `L${x(last - m).toFixed(1)},${y(stacks[last - m][gi].lo).toFixed(1)}`).join(" ");
     return top + " " + bottom + " Z";
   });
 
