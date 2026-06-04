@@ -111,7 +111,7 @@ function RangesTab({ client, readonly = false }) {
       <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--line)", background: "var(--surface-2)" }}>
         <h3 className="h3" style={{ margin: 0 }}>Rangos por línea de gasto · ajuste consultor</h3>
         <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>
-          Ahorro $ = Monto en alcance (Monto × Alcance %) × Ahorro %. La proyección usa estos rangos.
+          Define los % de ahorro estimado por línea. El Alcance % y los $ resultantes se calculan en Proyección.
         </div>
       </div>
       <div style={{ overflow: "auto" }}>
@@ -122,12 +122,8 @@ function RangesTab({ client, readonly = false }) {
               <th>ERA</th>
               <th>Subcategoría / Proveedor</th>
               <th className="right">Monto</th>
-              <th className="right">Alcance %</th>
-              <th className="right" style={{ color: "var(--text-3)", fontSize: 11 }}>Monto en alcance</th>
               <th className="right">Ahorro mín %</th>
-              <th className="right" style={{ color: "var(--positive-2)", fontSize: 11 }}>Ahorro mín $</th>
               <th className="right">Ahorro máx %</th>
-              <th className="right" style={{ color: "var(--positive-2)", fontSize: 11 }}>Ahorro máx $</th>
               <th className="right">Factibilidad</th>
             </tr>
           </thead>
@@ -135,11 +131,6 @@ function RangesTab({ client, readonly = false }) {
             {client.expenses.map((e, i) => {
               const cat = client.categories.find(c => c.id === e.categoryId);
               const era = eraCategories.find(ec => ec.id === cat?.eraId);
-              const scope = e.scopePct == null ? 100 : +e.scopePct;
-              const amt = +e.amount || 0;
-              const scopedAmt = amt * scope / 100;
-              const savingsMin = scopedAmt * (+e.savingsMinPct || 0) / 100;
-              const savingsMax = scopedAmt * (+e.savingsMaxPct || 0) / 100;
               return (
                 <tr key={e.id || i}>
                   <td style={{ fontSize: 12 }}>{catLabel(e.categoryId)}</td>
@@ -152,32 +143,18 @@ function RangesTab({ client, readonly = false }) {
                     ) : <span style={{ color: "var(--text-3)" }}>—</span>}
                   </td>
                   <td style={{ fontSize: 12, color: "var(--text-2)" }}>{e.subcategory || e.supplier || "—"}</td>
-                  <td className="right tabular">{fmtMoney(amt, client.currency)}</td>
-                  <td className="right">
-                    <input className="input right" type="number" min="0" max="100" value={scope}
-                      onChange={ev => update(i, { scopePct: +ev.target.value || 0 })}
-                      style={{ width: 70 }} disabled={readonly} />
-                  </td>
-                  <td className="right tabular" style={{ color: "var(--text-3)", fontSize: 12 }}>
-                    {fmtMoney(scopedAmt, client.currency)}
-                  </td>
+                  <td className="right tabular">{fmtMoney(+e.amount || 0, client.currency)}</td>
                   <td className="right">
                     <input className="input right" type="number" min="0" max="100" step="0.1"
                       value={e.savingsMinPct || 0}
                       onChange={ev => update(i, { savingsMinPct: +ev.target.value || 0 })}
                       style={{ width: 70 }} disabled={readonly} />
                   </td>
-                  <td className="right tabular" style={{ color: "var(--positive-2)", fontSize: 12, fontWeight: 600 }}>
-                    {savingsMin > 0 ? fmtMoney(savingsMin, client.currency) : <span style={{ color: "var(--text-3)" }}>—</span>}
-                  </td>
                   <td className="right">
                     <input className="input right" type="number" min="0" max="100" step="0.1"
                       value={e.savingsMaxPct || 0}
                       onChange={ev => update(i, { savingsMaxPct: +ev.target.value || 0 })}
                       style={{ width: 70 }} disabled={readonly} />
-                  </td>
-                  <td className="right tabular" style={{ color: "var(--positive-2)", fontSize: 12, fontWeight: 600 }}>
-                    {savingsMax > 0 ? fmtMoney(savingsMax, client.currency) : <span style={{ color: "var(--text-3)" }}>—</span>}
                   </td>
                   <td className="right">
                     <select className="select" value={e.feasibility || 0}

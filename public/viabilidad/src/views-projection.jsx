@@ -40,17 +40,15 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
     const catToEra = {};
     (client.categories || []).forEach(c => { catToEra[c.id] = c.eraId || "__unassigned__"; });
     const expenses = client.expenses;
+    // Only scopePct and feasibility are editable here; savings % come from Rangos
     const next = expenses.map(e => {
       const eraId = catToEra[e.categoryId] || "__unassigned__";
       const d = editDraft[eraId];
       if (!d) return e;
       return {
         ...e,
-        scopePct:     d.scopePct,
-        feasibility:  d.feasibility,
-        savingsMinPct: d.savingsMinPct,
-        savingsMaxPct: d.savingsMaxPct,
-        savingsPct:   parseFloat(((d.savingsMinPct + d.savingsMaxPct) / 2).toFixed(1)),
+        scopePct:    d.scopePct != null ? d.scopePct : e.scopePct,
+        feasibility: d.feasibility != null ? d.feasibility : e.feasibility,
       };
     });
     store.setExpenses(client.id, next);
@@ -505,22 +503,20 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
         <table className="t">
           <thead>
             <tr>
-              <th></th>
+              <th style={{ width: 32 }}></th>
               <th style={thSort} onClick={() => toggleSort("name")}>{t.projection.cuentas}<SI col="name"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("total")}>Spend under review<SI col="total"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("scope")}>% alcance<SI col="scope"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("scopeAmt")}>$MM alcance<SI col="scopeAmt"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("total")}>Gasto total<SI col="total"/></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("scope")}>Alcance %<SI col="scope"/></th>
+              <th className="right" style={{ color: "var(--text-3)", fontSize: 11 }}>Monto en alcance</th>
               <th className="right" style={thSort} onClick={() => toggleSort("feas")}>Factib.<SI col="feas"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("minPct")}>% ahorr_min<SI col="minPct"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("maxPct")}>% ahorr_max<SI col="maxPct"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("min")}>MM$ ahorr_min<SI col="min"/></th>
-              <th className="right" style={thSort} onClick={() => toggleSort("max")}>MM$ ahorr_max<SI col="max"/></th>
+              <th className="right" style={{ color: "var(--text-2)", fontSize: 11 }}>% Ahorr. mín<br/><span style={{ fontSize: 10, fontWeight: 400 }}>(desde Rangos)</span></th>
+              <th className="right" style={{ color: "var(--text-2)", fontSize: 11 }}>% Ahorr. máx<br/><span style={{ fontSize: 10, fontWeight: 400 }}>(desde Rangos)</span></th>
+              <th className="right" style={thSort} onClick={() => toggleSort("min")}>Ahorro mín $<SI col="min"/></th>
+              <th className="right" style={{ ...thSort, color: "var(--positive-2)" }} onClick={() => toggleSort("max")}>Ahorro máx $<SI col="max"/></th>
             </tr>
           </thead>
           <tbody>
             {(() => {
-              // Bars: track fills available column space, fill = value% of track (0-100 absolute)
-              // value is already 0–100 (e.g. 8.5 for 8.5%), so use directly as CSS %
               const PctBar = ({ value }) => (
                 <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", paddingRight: 4 }}>
                   <div style={{ flex: 1, height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden", minWidth: 20 }}>
@@ -530,86 +526,76 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
                 </div>
               );
               return sortedGroups.map(g => {
-              const included = isIncluded(g.categoryId);
-              return (
-                <tr key={g.categoryId} style={{ opacity: included ? 1 : 0.45, cursor: "pointer" }}
-                    onClick={(ev) => { if (ev.target.tagName === "INPUT") return; setDrawerCatId(g.categoryId); }}>
-                  <td style={{ paddingLeft: 16 }}>
-                    <input type="checkbox" checked={included} onChange={() => {
-                      const cur = sc.includedCategories == null ? groups.map(x => x.categoryId) : sc.includedCategories;
-                      const next = cur.includes(g.categoryId) ? cur.filter(c => c !== g.categoryId) : [...cur, g.categoryId];
-                      set({ includedCategories: next });
-                    }} />
-                  </td>
-                  <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
-                  <td className="right tabular" style={{ fontWeight: 700 }}>{fmtMoney(g.total, client.currency)}</td>
-                  {editing ? (
-                    <td className="right" style={{ padding: "4px 8px" }}>
-                      <input type="number" min="0" max="100" step="1"
-                        value={editDraft[g.categoryId]?.scopePct ?? Math.round(g.avgScopePct)}
-                        onChange={e => patchDraft(g.categoryId, { scopePct: Math.min(100, Math.max(0, +e.target.value)) })}
-                        onClick={ev => ev.stopPropagation()}
-                        className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
+                const included = isIncluded(g.categoryId);
+                // Alcance editable desde el draft; % ahorro vienen de Rangos (read-only aquí)
+                const scopePct = editing
+                  ? (editDraft[g.categoryId]?.scopePct ?? Math.round(g.avgScopePct))
+                  : g.avgScopePct;
+                const scopedAmt = g.total * scopePct / 100;
+                // Recalculate savings with the draft scope (% from Rangos stays fixed)
+                const savingsMinAmt = scopedAmt * g.avgMinPct / 100;
+                const savingsMaxAmt = scopedAmt * g.avgMaxPct / 100;
+                return (
+                  <tr key={g.categoryId} style={{ opacity: included ? 1 : 0.45, cursor: "pointer" }}
+                      onClick={(ev) => { if (ev.target.tagName === "INPUT") return; setDrawerCatId(g.categoryId); }}>
+                    <td style={{ paddingLeft: 16 }}>
+                      <input type="checkbox" checked={included} onChange={() => {
+                        const cur = sc.includedCategories == null ? groups.map(x => x.categoryId) : sc.includedCategories;
+                        const next = cur.includes(g.categoryId) ? cur.filter(c => c !== g.categoryId) : [...cur, g.categoryId];
+                        set({ includedCategories: next });
+                      }} />
                     </td>
-                  ) : (
-                    <td className="right tabular">{fmtPct(g.avgScopePct)}</td>
-                  )}
-                  <td className="right tabular">{fmtMoney(g.optimizationAmount, client.currency)}</td>
-                  {editing ? (
-                    <td className="right" style={{ padding: "4px 8px" }}>
-                      <div style={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
-                        {[1,2,3,4,5].map(v => {
-                          const cur = editDraft[g.categoryId]?.feasibility ?? Math.round(g.avgFeasibility);
-                          return (
-                            <span key={v}
-                              onClick={ev => { ev.stopPropagation(); patchDraft(g.categoryId, { feasibility: v }); }}
-                              style={{ width: 14, height: 14, borderRadius: 2, cursor: "pointer", flexShrink: 0,
-                                background: v <= cur ? (cur >= 4 ? "var(--positive-2)" : cur >= 3 ? "var(--champagne)" : "#c0392b") : "var(--line)" }}
-                            />
-                          );
-                        })}
-                      </div>
+                    <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
+                    <td className="right tabular" style={{ fontWeight: 700 }}>{fmtMoney(g.total, client.currency)}</td>
+                    {editing ? (
+                      <td className="right" style={{ padding: "4px 8px" }}>
+                        <input type="number" min="0" max="100" step="1"
+                          value={editDraft[g.categoryId]?.scopePct ?? Math.round(g.avgScopePct)}
+                          onChange={e => patchDraft(g.categoryId, { scopePct: Math.min(100, Math.max(0, +e.target.value)) })}
+                          onClick={ev => ev.stopPropagation()}
+                          className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
+                      </td>
+                    ) : (
+                      <td className="right tabular">{fmtPct(g.avgScopePct)}</td>
+                    )}
+                    <td className="right tabular" style={{ color: "var(--text-3)", fontSize: 12 }}>
+                      {fmtMoney(scopedAmt, client.currency)}
                     </td>
-                  ) : (
-                    <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
-                  )}
-                  {editing ? (
-                    <td style={{ padding: "4px 8px" }}>
-                      <input type="number" min="0" max="100" step="0.5"
-                        value={editDraft[g.categoryId]?.savingsMinPct ?? parseFloat(g.avgMinPct.toFixed(1))}
-                        onChange={e => patchDraft(g.categoryId, { savingsMinPct: Math.min(100, Math.max(0, +e.target.value)) })}
-                        onClick={ev => ev.stopPropagation()}
-                        className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
-                    </td>
-                  ) : (
+                    {editing ? (
+                      <td className="right" style={{ padding: "4px 8px" }}>
+                        <div style={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
+                          {[1,2,3,4,5].map(v => {
+                            const cur = editDraft[g.categoryId]?.feasibility ?? Math.round(g.avgFeasibility);
+                            return (
+                              <span key={v}
+                                onClick={ev => { ev.stopPropagation(); patchDraft(g.categoryId, { feasibility: v }); }}
+                                style={{ width: 14, height: 14, borderRadius: 2, cursor: "pointer", flexShrink: 0,
+                                  background: v <= cur ? (cur >= 4 ? "var(--positive-2)" : cur >= 3 ? "var(--champagne)" : "#c0392b") : "var(--line)" }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </td>
+                    ) : (
+                      <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
+                    )}
                     <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} /></td>
-                  )}
-                  {editing ? (
-                    <td style={{ padding: "4px 8px" }}>
-                      <input type="number" min="0" max="100" step="0.5"
-                        value={editDraft[g.categoryId]?.savingsMaxPct ?? parseFloat(g.avgMaxPct.toFixed(1))}
-                        onChange={e => patchDraft(g.categoryId, { savingsMaxPct: Math.min(100, Math.max(0, +e.target.value)) })}
-                        onClick={ev => ev.stopPropagation()}
-                        className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
-                    </td>
-                  ) : (
                     <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} /></td>
-                  )}
-                  <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(g.minSavings, client.currency)}</td>
-                  <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(g.maxSavings, client.currency)}</td>
-                </tr>
-              );
-            });
-          })()}
+                    <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(savingsMinAmt, client.currency)}</td>
+                    <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(savingsMaxAmt, client.currency)}</td>
+                  </tr>
+                );
+              });
+            })()}
             <tr className="totals">
               <td></td>
               <td>{t.expenses.total}</td>
               <td className="right">{fmtMoney(total, client.currency)}</td>
               <td className="right">{fmtPct(sortedGroups.length > 0 ? sortedGroups.reduce((s,g) => s + g.optimizationAmount, 0) / (sortedGroups.reduce((s,g) => s + g.total, 0) || 1) * 100 : 0)}</td>
               <td className="right">{fmtMoney(sortedGroups.reduce((s,g) => s + g.optimizationAmount, 0), client.currency)}</td>
-              <td className="right">—</td>
-              <td className="right">{fmtPct(sortedGroups.length > 0 ? sortedGroups.reduce((s,g) => s + g.avgMinPct * g.total, 0) / (sortedGroups.reduce((s,g) => s + g.total, 0) || 1) : 0)}</td>
-              <td className="right">{fmtPct(sortedGroups.length > 0 ? sortedGroups.reduce((s,g) => s + g.avgMaxPct * g.total, 0) / (sortedGroups.reduce((s,g) => s + g.total, 0) || 1) : 0)}</td>
+              <td></td>
+              <td></td>
+              <td></td>
               <td className="right">{fmtMoney(sortedGroups.reduce((s,g) => s + g.minSavings, 0), client.currency)}</td>
               <td className="right" style={{ color: "var(--positive-2)" }}>{fmtMoney(sortedGroups.reduce((s,g) => s + g.maxSavings, 0), client.currency)}</td>
             </tr>
