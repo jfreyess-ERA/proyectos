@@ -119,6 +119,7 @@ function blankExpense(categoryId = "energy") {
     subcategory: "",
     supplier: "",
     amount: 0,
+    expenseCurrency: null,
     suppliers: 1,
     savingsPct: 0,
     savingsMinPct: 0,
@@ -193,6 +194,7 @@ function expRowToExpense(row) {
     subcategory: row.subcategory || "",
     supplier: row.supplier || "",
     amount: row.amount || 0,
+    expenseCurrency: row.expense_currency || null,
     suppliers: row.suppliers || 1,
     savingsPct: row.savings_pct || 0,
     savingsMinPct: row.savings_min_pct || 0,
@@ -214,6 +216,7 @@ function expenseToRow(expense, analysisId) {
     subcategory: expense.subcategory,
     supplier: expense.supplier,
     amount: expense.amount,
+    expense_currency: expense.expenseCurrency || null,
     suppliers: expense.suppliers,
     savings_pct: expense.savingsPct,
     savings_min_pct: expense.savingsMinPct,
@@ -243,6 +246,20 @@ function genMonthly(annualAmount, opts = {}) {
   const sum = months.reduce((a, b) => a + b, 0);
   const k = sum > 0 ? annualAmount / sum : 1;
   return months.map(v => Math.round(v * k));
+}
+
+// Convierte un monto de una moneda a otra usando las tasas FX globales.
+// fxRates: { clp: 950, ars: 1050, ... } — unidades locales por 1 USD
+function convertCurrency(amount, fromCurrency, toCurrency, fxRates) {
+  if (!amount) return 0;
+  const from = (fromCurrency || "CLP").toUpperCase();
+  const to = (toCurrency || "CLP").toUpperCase();
+  if (from === to) return amount;
+  const rates = fxRates || {};
+  const fromRate = from === "USD" ? 1 : (rates[from.toLowerCase()] || 0);
+  const toRate   = to   === "USD" ? 1 : (rates[to.toLowerCase()]   || 0);
+  if (!fromRate || !toRate) return amount; // sin tasa, devuelve original
+  return (amount / fromRate) * toRate;
 }
 
 function getMonthly(expense, fallbackLen = 12) {
@@ -310,7 +327,10 @@ function aggregateByCategory(client) {
   const map = new Map();
   for (const e of client.expenses) {
     const cur = map.get(e.categoryId) || { categoryId: e.categoryId, total: 0, suppliers: 0, lines: 0, weightedScope: 0, weightedSavings: 0, weightedMin: 0, weightedMax: 0, weightedFeas: 0, maxMonths: 0 };
-    const amt = +e.amount || 0;
+    const rawAmt = +e.amount || 0;
+    const fromCur = e.expenseCurrency || client.currency || "CLP";
+    const toCur = client.currency || "CLP";
+    const amt = convertCurrency(rawAmt, fromCur, toCur, window._fxRates || {});
     cur.total += amt;
     cur.suppliers += +e.suppliers || 0;
     cur.lines += 1;
@@ -379,19 +399,34 @@ function aggregateByEra(client, eraCategories = []) {
 
 function totalSpend(client) {
   if (!client) return 0;
-  return client.expenses.reduce((s, e) => s + (+e.amount || 0), 0);
+  return client.expenses.reduce((s, e) => {
+    const rawAmt = +e.amount || 0;
+    const fromCur = e.expenseCurrency || client.currency || "CLP";
+    const toCur = client.currency || "CLP";
+    const amt = convertCurrency(rawAmt, fromCur, toCur, window._fxRates || {});
+    return s + amt;
+  }, 0);
 }
 
 function totalSavings(client) {
   if (!client) return 0;
-  return client.expenses.reduce((s, e) => s + (+e.amount || 0) * (+e.savingsPct || 0) / 100, 0);
+  return client.expenses.reduce((s, e) => {
+    const rawAmt = +e.amount || 0;
+    const fromCur = e.expenseCurrency || client.currency || "CLP";
+    const toCur = client.currency || "CLP";
+    const amt = convertCurrency(rawAmt, fromCur, toCur, window._fxRates || {});
+    return s + amt * (+e.savingsPct || 0) / 100;
+  }, 0);
 }
 
 function savingsRange(client) {
   if (!client) return { min: 0, max: 0 };
   let min = 0, max = 0;
   client.expenses.forEach(e => {
-    const amt = +e.amount || 0;
+    const rawAmt = +e.amount || 0;
+    const fromCur = e.expenseCurrency || client.currency || "CLP";
+    const toCur = client.currency || "CLP";
+    const amt = convertCurrency(rawAmt, fromCur, toCur, window._fxRates || {});
     const scope = (e.scopePct == null ? 100 : +e.scopePct) / 100;
     min += amt * scope * ((+e.savingsMinPct || 0) / 100);
     max += amt * scope * ((+e.savingsMaxPct || 0) / 100);
@@ -424,7 +459,12 @@ function monthlyByCategory(client) {
   for (const e of client.expenses) {
     const months = getMonthly(e, n);
     const cur = map.get(e.categoryId) || { categoryId: e.categoryId, months: Array(n).fill(0) };
-    for (let m = 0; m < n; m++) cur.months[m] += months[m] || 0;
+    const fromCur = e.expenseCurrency || client.currency || "CLP";
+    const toCur = client.currency || "CLP";
+    for (let m = 0; m < n; m++) {
+      const rawAmt = months[m] || 0;
+      cur.months[m] += convertCurrency(rawAmt, fromCur, toCur, window._fxRates || {});
+    }
     map.set(e.categoryId, cur);
   }
   return Array.from(map.values()).map(g => ({ ...g, category: client.categories.find(c => c.id === g.categoryId), total: g.months.reduce((a, b) => a + b, 0) })).sort((a, b) => b.total - a.total);
@@ -694,4 +734,5 @@ Object.assign(window, {
   monthlyByCategory, monthlyByEra, monthlyTotals, MONTH_LABELS_ES, MONTH_LABELS_EN,
   periodCount, periodLabels,
   CURRENCIES_LIST, currencyForCountry, formatAmount,
+  convertCurrency,
 });

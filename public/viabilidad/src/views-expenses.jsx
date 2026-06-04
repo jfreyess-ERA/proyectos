@@ -703,6 +703,9 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
                   <td><input className="input" value={e.supplier} onChange={ev => update(i, { supplier: ev.target.value })} disabled={readonly} /></td>
                   <td className="right">
                     <MoneyInput value={e.amount} onChange={v => update(i, { amount: v })} disabled={readonly} style={{ width: 120 }} />
+                    {e.expenseCurrency && e.expenseCurrency !== client.currency && (
+                      <span style={{fontSize:10, color:"var(--text-3)", marginLeft:3}}>{e.expenseCurrency}</span>
+                    )}
                   </td>
                   <td className="right">
                     <input className="input right" type="number" value={e.suppliers} onChange={ev => update(i, { suppliers: +ev.target.value || 0 })} style={{ width: 60 }} disabled={readonly} />
@@ -864,8 +867,21 @@ function ExpenseDrawer({ open, expense, client, catLabel, eraCategories, update,
               <input className="input" list="suppliers-list" value={expense.supplier || ""} onChange={e => update({ supplier: e.target.value })} readOnly={readonly} />
             </Field>
 
-            <Field label={`${t.expenses.cols.amount} (${client.currency})`}>
-              <MoneyInput value={expense.amount || 0} onChange={v => update({ amount: v })} disabled={readonly} />
+            <Field label={t.expenses.cols.amount}>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <MoneyInput value={expense.amount || 0} onChange={v => update({ amount: v })} disabled={readonly} />
+                <select
+                  className="select"
+                  style={{ width: 80, flexShrink: 0 }}
+                  value={expense.expenseCurrency || client.currency || "CLP"}
+                  onChange={e => update({ expenseCurrency: e.target.value === client.currency ? null : e.target.value })}
+                  disabled={readonly}
+                >
+                  {(typeof CURRENCIES_LIST !== "undefined" ? CURRENCIES_LIST : [
+                    {code:"CLP"},{code:"ARS"},{code:"COP"},{code:"UYU"},{code:"PYG"},{code:"USD"}
+                  ]).map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+                </select>
+              </div>
             </Field>
 
             <Field label={t.expenses.cols.suppliers}>
@@ -951,8 +967,20 @@ function ManualEntry({ client, catLabel, onAdd }) {
         <Field label={t.expenses.cols.supplier} span={2}>
           <input className="input" value={exp.supplier} onChange={e => set({ supplier: e.target.value })} />
         </Field>
-        <Field label={`${t.expenses.cols.amount} (${client.currency})`}>
-          <MoneyInput value={exp.amount} onChange={v => set({ amount: v })} />
+        <Field label={t.expenses.cols.amount}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <MoneyInput value={exp.amount} onChange={v => set({ amount: v })} />
+            <select
+              className="select"
+              style={{ width: 80, flexShrink: 0 }}
+              value={exp.expenseCurrency || client.currency || "CLP"}
+              onChange={e => set({ expenseCurrency: e.target.value === client.currency ? null : e.target.value })}
+            >
+              {(typeof CURRENCIES_LIST !== "undefined" ? CURRENCIES_LIST : [
+                {code:"CLP"},{code:"ARS"},{code:"COP"},{code:"UYU"},{code:"PYG"},{code:"USD"}
+              ]).map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+            </select>
+          </div>
         </Field>
         <Field label={t.expenses.cols.suppliers}>
           <input className="input right" type="number" value={exp.suppliers} onChange={e => set({ suppliers: +e.target.value || 0 })} />

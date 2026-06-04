@@ -569,6 +569,7 @@ function I18nProvider({ children }) {
   _amountUnit = amountUnit;
   _displayCurrencyMode = displayCurrencyMode;
   _fxRates = fxRates;
+  window._fxRates = fxRates;
 
   const setAmountUnit = (u) => setAmountUnitState(u);
   const setDisplayCurrencyMode = (m) => setDisplayCurrencyModeState(m);
