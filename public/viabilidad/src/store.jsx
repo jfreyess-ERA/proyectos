@@ -152,7 +152,13 @@ function rowToClient(row, expenseRows = []) {
     notes: row.notes || "",
     stage: row.stage || 1,
     categories: row.categories || DEFAULT_CATEGORIES.map(c => ({ ...c })),
-    expenses: expenseRows.map(expRowToExpense),
+    expenses: expenseRows.map(r => {
+      const exp = expRowToExpense(r);
+      // expenseCurrencies is stored in scenario.expenseCurrencies as {expenseId: currencyCode}
+      const ec = (row.scenario || {}).expenseCurrencies || {};
+      exp.expenseCurrency = ec[exp.id] || null;
+      return exp;
+    }),
     scenario: row.scenario || { feePct: 30, feePctOnSavings: 50, feeMonths: 36, projectionYears: 5, includedCategories: null },
     resources: row.resources || { clientHHPerCat: 30, eraHHPerCat: 200 },
     prospectId: row.prospect_id,
@@ -640,6 +646,25 @@ function StoreProvider({ children }) {
 
     setExpenses: (clientId, expenses) => {
       setClients(prev => prev.map(c => c.id === clientId ? { ...c, expenses, updatedAt: Date.now() } : c));
+      schedSave(clientId);
+    },
+
+    // Store expenseCurrency inside scenario.expenseCurrencies (no extra DB column needed)
+    setExpenseCurrency: (clientId, expenseId, currency) => {
+      setClients(prev => prev.map(c => {
+        if (c.id !== clientId) return c;
+        const ec = { ...(c.scenario?.expenseCurrencies || {}) };
+        if (currency && currency !== c.currency) {
+          ec[expenseId] = currency;
+        } else {
+          delete ec[expenseId]; // remove if same as client currency
+        }
+        const scenario = { ...c.scenario, expenseCurrencies: ec };
+        const expenses = c.expenses.map(e =>
+          e.id === expenseId ? { ...e, expenseCurrency: currency || null } : e
+        );
+        return { ...c, scenario, expenses, updatedAt: Date.now() };
+      }));
       schedSave(clientId);
     },
 

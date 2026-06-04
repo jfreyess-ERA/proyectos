@@ -214,6 +214,10 @@ function ExpensesView({ client, readonly = false, requestedMode = null, onReques
 
   const update = (idx, patch) => {
     store.setExpenses(client.id, expenses.map((e, i) => i === idx ? { ...e, ...patch } : e));
+    // Persist expenseCurrency inside scenario.expenseCurrencies (no extra DB column needed)
+    if ("expenseCurrency" in patch && expenses[idx]) {
+      store.setExpenseCurrency(client.id, expenses[idx].id, patch.expenseCurrency);
+    }
   };
   const remove = (idx) => store.setExpenses(client.id, expenses.filter((_, i) => i !== idx));
   const duplicate = (idx) => {
@@ -370,7 +374,12 @@ function ExpensesView({ client, readonly = false, requestedMode = null, onReques
             }}
           />
           {/* ── 2. Manual ── */}
-          <ManualEntry client={client} catLabel={catLabel} onAdd={(exp) => store.addExpense(client.id, exp)} />
+          <ManualEntry client={client} catLabel={catLabel} onAdd={(exp) => {
+            store.addExpense(client.id, exp);
+            if (exp.expenseCurrency && exp.expenseCurrency !== client.currency) {
+              store.setExpenseCurrency(client.id, exp.id, exp.expenseCurrency);
+            }
+          }} />
           {/* ── 3. CSV ── */}
           <PasteImport client={client} catLabel={catLabel} onImport={(rows) => {
             store.setExpenses(client.id, [...expenses, ...rows]);
