@@ -216,7 +216,6 @@ function expenseToRow(expense, analysisId) {
     subcategory: expense.subcategory,
     supplier: expense.supplier,
     amount: expense.amount,
-    expense_currency: expense.expenseCurrency || null,
     suppliers: expense.suppliers,
     savings_pct: expense.savingsPct,
     savings_min_pct: expense.savingsMinPct,
