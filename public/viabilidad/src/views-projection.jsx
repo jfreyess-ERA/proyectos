@@ -2,7 +2,89 @@
    Projection (Lámina 7) + Resources (Lámina 8) + Gantt (Lámina 9)
    ============================================================ */
 
-function ProjectionView({ client, readonly = false, onGoToRangos }) {
+// ── ProjectionSection — wrapper que comparte draft entre componentes ──
+// Mantiene el state de editing/editDraft/range arriba para que ProjectionView,
+// HonorariosChart y RetornoSummaryCard reaccionen en vivo cuando se edita.
+function ProjectionSection({ client, readonly = false, onGoToRangos }) {
+  const [editing, setEditing] = React.useState(false);
+  const [editDraft, setEditDraft] = React.useState({});
+
+  const nPeriods = periodCount(client);
+  const [rangeStart, setRangeStart] = React.useState(0);
+  const [rangeEnd, setRangeEnd] = React.useState(nPeriods - 1);
+  React.useEffect(() => { setRangeStart(0); setRangeEnd(nPeriods - 1); }, [nPeriods]);
+
+  // Composite client: período (proyección 12m si rango < 12p) + draft scope/feas si editing
+  const clientLive = React.useMemo(() => {
+    const start = Math.max(0, rangeStart);
+    const end   = Math.min(nPeriods - 1, rangeEnd);
+    const rLen  = end - start + 1;
+    const projectionNeeded = !(rLen === nPeriods && nPeriods >= 12);
+    const hasDraft = editing && Object.keys(editDraft).length > 0;
+
+    if (!projectionNeeded && !hasDraft) return client;
+
+    const catToEra = {};
+    if (hasDraft) {
+      (client.categories || []).forEach(c => { catToEra[c.id] = c.eraId || "__unassigned__"; });
+    }
+
+    const expenses = client.expenses.map(e => {
+      let next = e;
+      if (projectionNeeded) {
+        const monthly = getMonthly(e, nPeriods);
+        const slice = monthly.slice(start, end + 1);
+        const rangeTotal = slice.reduce((a, b) => a + b, 0);
+        const projectedAmount = rLen > 0 ? (rangeTotal / rLen) * 12 : 0;
+        next = { ...next, amount: Math.round(projectedAmount) };
+      }
+      if (hasDraft) {
+        const eraId = catToEra[e.categoryId] || "__unassigned__";
+        const d = editDraft[eraId];
+        if (d) {
+          next = {
+            ...next,
+            scopePct:    d.scopePct    != null ? d.scopePct    : next.scopePct,
+            feasibility: d.feasibility != null ? d.feasibility : next.feasibility,
+          };
+        }
+      }
+      return next;
+    });
+    return { ...client, expenses };
+  }, [client, rangeStart, rangeEnd, nPeriods, editing, editDraft]);
+
+  return (
+    <>
+      <ProjectionView
+        client={client}
+        clientLive={clientLive}
+        nPeriods={nPeriods}
+        rangeStart={rangeStart} setRangeStart={setRangeStart}
+        rangeEnd={rangeEnd} setRangeEnd={setRangeEnd}
+        editing={editing} setEditing={setEditing}
+        editDraft={editDraft} setEditDraft={setEditDraft}
+        readonly={readonly}
+        onGoToRangos={onGoToRangos}
+      />
+      <div style={{ marginTop: 40 }}><HonorariosChart client={clientLive} /></div>
+      <div style={{ marginTop: 40 }}><GanttView client={client} readonly={readonly} /></div>
+      <div style={{ marginTop: 40 }}><RetornoSummaryCard client={clientLive} /></div>
+    </>
+  );
+}
+
+function ProjectionView({
+  client,
+  clientLive,
+  nPeriods,
+  rangeStart, setRangeStart,
+  rangeEnd, setRangeEnd,
+  editing, setEditing,
+  editDraft, setEditDraft,
+  readonly = false,
+  onGoToRangos,
+}) {
   const { t } = useI18n();
   const store = useStore();
   const eraCategories = store.state.eraCategories || [];
@@ -12,35 +94,14 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
   const tableCardRef = React.useRef(null);
   const [downloading, setDownloading] = React.useState(false);
   const [showRangos, setShowRangos] = React.useState(false);
-  const [editing, setEditing] = React.useState(false);
   const [showLogic, setShowLogic] = React.useState(false);
   const [activeTier, setActiveTier] = React.useState(null);
-  // editDraft: { [categoryId]: { scopePct, feasibility } }
-  const [editDraft, setEditDraft] = React.useState({});
 
-  // Period filter (same logic as EvolutionView)
-  const nPeriods = periodCount(client);
+  // Period labels (state lives in parent)
   const allPeriodLabels = periodLabels(nPeriods);
-  const [rangeStart, setRangeStart] = React.useState(0);
-  const [rangeEnd, setRangeEnd] = React.useState(nPeriods - 1);
-  React.useEffect(() => { setRangeStart(0); setRangeEnd(nPeriods - 1); }, [nPeriods]);
-
-  // Build a version of the client where each expense.amount = projected annual
-  // from the selected period range (rangeTotal / rangeLen * 12)
-  const clientForRange = React.useMemo(() => {
-    const start = Math.max(0, rangeStart);
-    const end   = Math.min(nPeriods - 1, rangeEnd);
-    const rLen  = end - start + 1;
-    if (rLen === nPeriods && nPeriods >= 12) return client; // full range, no projection needed
-    const expenses = client.expenses.map(e => {
-      const monthly = getMonthly(e, nPeriods);
-      const slice = monthly.slice(start, end + 1);
-      const rangeTotal = slice.reduce((a, b) => a + b, 0);
-      const projectedAmount = rLen > 0 ? (rangeTotal / rLen) * 12 : 0;
-      return { ...e, amount: Math.round(projectedAmount) };
-    });
-    return { ...client, expenses };
-  }, [client, rangeStart, rangeEnd, nPeriods]);
+  // Use the live client (period projection + draft) for all derived calculations.
+  // When not editing and full range, clientLive === client.
+  const clientForRange = clientLive;
 
   const startEdit = () => {
     // Seed draft with current aggregated values per category
@@ -577,22 +638,14 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
                 </div>
               );
 
-              // Pre-compute per-row values so totals use exactly the same numbers.
-              // IMPORTANT: g.avgMinPct/avgMaxPct already bake in the saved scopePct,
-              // so we must use the RAW savings % (without scope) for the draft calculation:
-              // rawMinPct = minSavings / optimizationAmount * 100  =  pure savingsMinPct weighted avg
-              const rowData = sortedGroups.map(g => {
-                const scopePct = editing
-                  ? (editDraft[g.categoryId]?.scopePct ?? Math.round(g.avgScopePct))
-                  : g.avgScopePct;
-                const scopedAmt = g.total * scopePct / 100;
-                // Raw savings % = savings $ / scoped $ (removes the saved-scope factor)
-                const rawMinPct = g.optimizationAmount > 0 ? g.minSavings / g.optimizationAmount * 100 : 0;
-                const rawMaxPct = g.optimizationAmount > 0 ? g.maxSavings / g.optimizationAmount * 100 : 0;
-                const savingsMinAmt = scopedAmt * rawMinPct / 100;
-                const savingsMaxAmt = scopedAmt * rawMaxPct / 100;
-                return { g, scopePct, scopedAmt, savingsMinAmt, savingsMaxAmt, rawMinPct, rawMaxPct };
-              });
+              // clientLive already includes the draft scopePct, so g.* values are live.
+              const rowData = sortedGroups.map(g => ({
+                g,
+                scopePct:      g.avgScopePct,
+                scopedAmt:     g.optimizationAmount,
+                savingsMinAmt: g.minSavings,
+                savingsMaxAmt: g.maxSavings,
+              }));
 
               // Totals from visible rows only
               const totGasto     = rowData.reduce((s, r) => s + r.g.total, 0);
@@ -1604,4 +1657,4 @@ function RetornoSummaryCard({ client }) {
   );
 }
 
-Object.assign(window, { ProjectionView, GanttView, ResourcesPanel, HonorariosChart, RetornoSummaryCard });
+Object.assign(window, { ProjectionSection, ProjectionView, GanttView, ResourcesPanel, HonorariosChart, RetornoSummaryCard });
