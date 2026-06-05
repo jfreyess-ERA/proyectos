@@ -576,91 +576,97 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
                   <span style={{ fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "right", flexShrink: 0 }}>{fmtPct(value)}</span>
                 </div>
               );
-              return sortedGroups.map(g => {
-                const included = isIncluded(g.categoryId);
-                // Alcance editable desde el draft; % ahorro vienen de Rangos (read-only aquí)
+
+              // Pre-compute per-row values so totals use exactly the same numbers
+              const rowData = sortedGroups.map(g => {
                 const scopePct = editing
                   ? (editDraft[g.categoryId]?.scopePct ?? Math.round(g.avgScopePct))
                   : g.avgScopePct;
-                const scopedAmt = g.total * scopePct / 100;
-                // Recalculate savings with the draft scope (% from Rangos stays fixed)
+                const scopedAmt    = g.total * scopePct / 100;
                 const savingsMinAmt = scopedAmt * g.avgMinPct / 100;
                 const savingsMaxAmt = scopedAmt * g.avgMaxPct / 100;
-                return (
-                  <tr key={g.categoryId} style={{ opacity: included ? 1 : 0.45, cursor: "pointer" }}
-                      onClick={(ev) => { if (ev.target.tagName === "INPUT") return; setDrawerCatId(g.categoryId); }}>
-                    <td style={{ paddingLeft: 16 }}>
-                      <input type="checkbox" checked={included} onChange={() => {
-                        const cur = sc.includedCategories == null ? groups.map(x => x.categoryId) : sc.includedCategories;
-                        const next = cur.includes(g.categoryId) ? cur.filter(c => c !== g.categoryId) : [...cur, g.categoryId];
-                        set({ includedCategories: next });
-                      }} />
-                    </td>
-                    <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
-                    <td className="right tabular" style={{ fontWeight: 700 }}>{fmtMoney(g.total, client.currency)}</td>
-                    {editing ? (
-                      <td className="right" style={{ padding: "4px 8px" }}>
-                        <input type="number" min="0" max="100" step="1"
-                          value={editDraft[g.categoryId]?.scopePct ?? Math.round(g.avgScopePct)}
-                          onChange={e => patchDraft(g.categoryId, { scopePct: Math.min(100, Math.max(0, +e.target.value)) })}
-                          onClick={ev => ev.stopPropagation()}
-                          className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
-                      </td>
-                    ) : (
-                      <td className="right tabular">{fmtPct(g.avgScopePct)}</td>
-                    )}
-                    <td className="right tabular" style={{ color: "var(--text-3)", fontSize: 12 }}>
-                      {fmtMoney(scopedAmt, client.currency)}
-                    </td>
-                    {editing ? (
-                      <td className="right" style={{ padding: "4px 8px" }}>
-                        <div style={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
-                          {[1,2,3,4,5].map(v => {
-                            const cur = editDraft[g.categoryId]?.feasibility ?? Math.round(g.avgFeasibility);
-                            return (
-                              <span key={v}
-                                onClick={ev => { ev.stopPropagation(); patchDraft(g.categoryId, { feasibility: v }); }}
-                                style={{ width: 14, height: 14, borderRadius: 2, cursor: "pointer", flexShrink: 0,
-                                  background: v <= cur ? (cur >= 4 ? "var(--positive-2)" : cur >= 3 ? "var(--champagne)" : "#c0392b") : "var(--line)" }}
-                              />
-                            );
-                          })}
-                        </div>
-                      </td>
-                    ) : (
-                      <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
-                    )}
-                    <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} /></td>
-                    <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} /></td>
-                    <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(savingsMinAmt, client.currency)}</td>
-                    <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(savingsMaxAmt, client.currency)}</td>
-                  </tr>
-                );
+                return { g, scopePct, scopedAmt, savingsMinAmt, savingsMaxAmt };
               });
+
+              // Totals from visible rows only
+              const totGasto     = rowData.reduce((s, r) => s + r.g.total, 0);
+              const totScopedAmt = rowData.reduce((s, r) => s + r.scopedAmt, 0);
+              const totMinSav    = rowData.reduce((s, r) => s + r.savingsMinAmt, 0);
+              const totMaxSav    = rowData.reduce((s, r) => s + r.savingsMaxAmt, 0);
+              const totMinPct    = totScopedAmt > 0 ? totMinSav / totScopedAmt * 100 : 0;
+              const totMaxPct    = totScopedAmt > 0 ? totMaxSav / totScopedAmt * 100 : 0;
+              const totScopePct  = totGasto > 0 ? totScopedAmt / totGasto * 100 : 0;
+
+              return (
+                <>
+                  {rowData.map(({ g, scopePct, scopedAmt, savingsMinAmt, savingsMaxAmt }) => {
+                    const included = isIncluded(g.categoryId);
+                    return (
+                      <tr key={g.categoryId} style={{ opacity: included ? 1 : 0.45, cursor: "pointer" }}
+                          onClick={(ev) => { if (ev.target.tagName === "INPUT") return; setDrawerCatId(g.categoryId); }}>
+                        <td style={{ paddingLeft: 16 }}>
+                          <input type="checkbox" checked={included} onChange={() => {
+                            const cur = sc.includedCategories == null ? groups.map(x => x.categoryId) : sc.includedCategories;
+                            const next = cur.includes(g.categoryId) ? cur.filter(c => c !== g.categoryId) : [...cur, g.categoryId];
+                            set({ includedCategories: next });
+                          }} />
+                        </td>
+                        <td><CategorySwatch color={g.category?.color || "#ccc"} label={catLabel(g.category)} /></td>
+                        <td className="right tabular" style={{ fontWeight: 700 }}>{fmtMoney(g.total, client.currency)}</td>
+                        {editing ? (
+                          <td className="right" style={{ padding: "4px 8px" }}>
+                            <input type="number" min="0" max="100" step="1"
+                              value={editDraft[g.categoryId]?.scopePct ?? Math.round(g.avgScopePct)}
+                              onChange={e => patchDraft(g.categoryId, { scopePct: Math.min(100, Math.max(0, +e.target.value)) })}
+                              onClick={ev => ev.stopPropagation()}
+                              className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
+                          </td>
+                        ) : (
+                          <td className="right tabular">{fmtPct(scopePct)}</td>
+                        )}
+                        <td className="right tabular" style={{ color: "var(--text-3)", fontSize: 12 }}>
+                          {fmtMoney(scopedAmt, client.currency)}
+                        </td>
+                        {editing ? (
+                          <td className="right" style={{ padding: "4px 8px" }}>
+                            <div style={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
+                              {[1,2,3,4,5].map(v => {
+                                const cur = editDraft[g.categoryId]?.feasibility ?? Math.round(g.avgFeasibility);
+                                return (
+                                  <span key={v}
+                                    onClick={ev => { ev.stopPropagation(); patchDraft(g.categoryId, { feasibility: v }); }}
+                                    style={{ width: 14, height: 14, borderRadius: 2, cursor: "pointer", flexShrink: 0,
+                                      background: v <= cur ? (cur >= 4 ? "var(--positive-2)" : cur >= 3 ? "var(--champagne)" : "#c0392b") : "var(--line)" }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </td>
+                        ) : (
+                          <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
+                        )}
+                        <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} /></td>
+                        <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} /></td>
+                        <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(savingsMinAmt, client.currency)}</td>
+                        <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(savingsMaxAmt, client.currency)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="totals">
+                    <td></td>
+                    <td>{t.expenses.total}</td>
+                    <td className="right">{fmtMoney(totGasto, client.currency)}</td>
+                    <td className="right">{fmtPct(totScopePct)}</td>
+                    <td className="right">{fmtMoney(totScopedAmt, client.currency)}</td>
+                    <td></td>
+                    <td className="right tabular" style={{ fontWeight: 600 }}>{fmtPct(totMinPct)}</td>
+                    <td className="right tabular" style={{ fontWeight: 600, color: "var(--positive-2)" }}>{fmtPct(totMaxPct)}</td>
+                    <td className="right">{fmtMoney(totMinSav, client.currency)}</td>
+                    <td className="right" style={{ color: "var(--positive-2)" }}>{fmtMoney(totMaxSav, client.currency)}</td>
+                  </tr>
+                </>
+              );
             })()}
-            <tr className="totals">
-              <td></td>
-              <td>{t.expenses.total}</td>
-              <td className="right">{fmtMoney(total, client.currency)}</td>
-              <td className="right">{fmtPct(sortedGroups.length > 0 ? sortedGroups.reduce((s,g) => s + g.optimizationAmount, 0) / (sortedGroups.reduce((s,g) => s + g.total, 0) || 1) * 100 : 0)}</td>
-              <td className="right">{fmtMoney(sortedGroups.reduce((s,g) => s + g.optimizationAmount, 0), client.currency)}</td>
-              <td></td>
-              {(() => {
-                const totalScopedAmt = sortedGroups.reduce((s,g) => s + g.optimizationAmount, 0);
-                const totalMinSavings = sortedGroups.reduce((s,g) => s + g.minSavings, 0);
-                const totalMaxSavings = sortedGroups.reduce((s,g) => s + g.maxSavings, 0);
-                const minPct = totalScopedAmt > 0 ? totalMinSavings / totalScopedAmt * 100 : 0;
-                const maxPct = totalScopedAmt > 0 ? totalMaxSavings / totalScopedAmt * 100 : 0;
-                return (
-                  <>
-                    <td className="right tabular" style={{ fontWeight: 600 }}>{fmtPct(minPct)}</td>
-                    <td className="right tabular" style={{ fontWeight: 600, color: "var(--positive-2)" }}>{fmtPct(maxPct)}</td>
-                    <td className="right">{fmtMoney(totalMinSavings, client.currency)}</td>
-                    <td className="right" style={{ color: "var(--positive-2)" }}>{fmtMoney(totalMaxSavings, client.currency)}</td>
-                  </>
-                );
-              })()}
-            </tr>
           </tbody>
         </table>
 
