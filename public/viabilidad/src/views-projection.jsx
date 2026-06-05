@@ -577,15 +577,21 @@ function ProjectionView({ client, readonly = false, onGoToRangos }) {
                 </div>
               );
 
-              // Pre-compute per-row values so totals use exactly the same numbers
+              // Pre-compute per-row values so totals use exactly the same numbers.
+              // IMPORTANT: g.avgMinPct/avgMaxPct already bake in the saved scopePct,
+              // so we must use the RAW savings % (without scope) for the draft calculation:
+              // rawMinPct = minSavings / optimizationAmount * 100  =  pure savingsMinPct weighted avg
               const rowData = sortedGroups.map(g => {
                 const scopePct = editing
                   ? (editDraft[g.categoryId]?.scopePct ?? Math.round(g.avgScopePct))
                   : g.avgScopePct;
-                const scopedAmt    = g.total * scopePct / 100;
-                const savingsMinAmt = scopedAmt * g.avgMinPct / 100;
-                const savingsMaxAmt = scopedAmt * g.avgMaxPct / 100;
-                return { g, scopePct, scopedAmt, savingsMinAmt, savingsMaxAmt };
+                const scopedAmt = g.total * scopePct / 100;
+                // Raw savings % = savings $ / scoped $ (removes the saved-scope factor)
+                const rawMinPct = g.optimizationAmount > 0 ? g.minSavings / g.optimizationAmount * 100 : 0;
+                const rawMaxPct = g.optimizationAmount > 0 ? g.maxSavings / g.optimizationAmount * 100 : 0;
+                const savingsMinAmt = scopedAmt * rawMinPct / 100;
+                const savingsMaxAmt = scopedAmt * rawMaxPct / 100;
+                return { g, scopePct, scopedAmt, savingsMinAmt, savingsMaxAmt, rawMinPct, rawMaxPct };
               });
 
               // Totals from visible rows only
