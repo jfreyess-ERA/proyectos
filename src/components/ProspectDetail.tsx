@@ -10,7 +10,7 @@ import {
 import type {
   Prospect, ProspectStatus, ProspectStage, ProspectPriority,
   CrmInteraction, CrmTask, CrmTrigger, InteractionChannel, InteractionOutcome,
-  CrmTaskType, CrmTaskStatus, TriggerType,
+  CrmTaskType, CrmTaskStatus, TriggerType, ResponseType,
 } from '@/lib/types';
 import { PRIORITY_STYLE, STATUS_STYLE, STAGE_STYLE } from './ProspectsView';
 
@@ -22,6 +22,22 @@ const OUTCOMES: InteractionOutcome[] = ['No response', 'Positive', 'Interested',
 const TASK_TYPES: CrmTaskType[] = ['Follow-up', 'Research', 'Send case study', 'Call', 'Meeting', 'Reconnect', 'Proposal'];
 const TASK_STATUSES: CrmTaskStatus[] = ['Pending', 'In Progress', 'Waiting', 'Done', 'Deferred', 'Cancelled'];
 const TRIGGER_TYPES: TriggerType[] = ['News', 'Hiring', 'Expansion', 'Regulation', 'Leadership change', 'Earnings', 'Results'];
+
+// Tipos de respuesta que activan el motor de cadencia (playbook)
+const RESPONSE_TYPES: { value: ResponseType; label: string }[] = [
+  { value: 'acepta_reunion', label: 'Acepta reunión' },
+  { value: 'mas_adelante',   label: 'Más adelante' },
+  { value: 'deriva',         label: 'Deriva a otra persona' },
+  { value: 'objecion',       label: 'Objeción' },
+  { value: 'sin_respuesta',  label: 'Sin respuesta' },
+];
+const POSTPONE_REASONS = ['Reestructuración interna', 'Proceso de consultoría vigente', 'Contingencia del mercado', 'Motivos internacionales', 'Otro'];
+const OBJECTION_REASONS = ['Sin presupuesto', 'Prioridades distintas', 'Ya lo hacen internamente', 'Proveedor actual', 'No ve valor', 'Otro'];
+// Motivo/detalle contextual según el tipo de respuesta
+const REASONS_BY_RESPONSE: Partial<Record<ResponseType, string[]>> = {
+  mas_adelante: POSTPONE_REASONS,
+  objecion: OBJECTION_REASONS,
+};
 
 import type { Project } from '@/lib/types';
 
@@ -116,6 +132,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
   // New interaction form
   const [newIntForm, setNewIntForm] = useState(false);
   const [intDraft, setIntDraft] = useState<Partial<CrmInteraction>>({ date: new Date().toISOString().slice(0, 10) });
+  const [playbookHint, setPlaybookHint] = useState<string | null>(null);
 
   // New task form
   const [newTaskForm, setNewTaskForm] = useState(false);
@@ -171,7 +188,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
 
   async function submitInteraction() {
     if (!prospect || !intDraft.date) return;
-    const created = await insertInteraction({
+    await insertInteraction({
       prospect_id: prospect.id,
       date: intDraft.date,
       channel: intDraft.channel,
@@ -182,10 +199,18 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
       next_step: intDraft.next_step,
       follow_up_due: intDraft.follow_up_due,
       trigger_mentioned: intDraft.trigger_mentioned ?? false,
+      response_type: intDraft.response_type,
+      response_detail: intDraft.response_detail,
     });
-    setInteractions(prev => [created, ...prev]);
     setNewIntForm(false);
     setIntDraft({ date: new Date().toISOString().slice(0, 10) });
+    // Recargar: si hubo tipo de respuesta, el trigger ya creó la próxima tarea
+    // y actualizó el prospecto, así que refrescamos interacciones + tareas.
+    await reload(prospect.id);
+    if (intDraft.response_type) {
+      setPlaybookHint('Se registró la respuesta y el sistema generó la próxima tarea según la cadencia. Mirá la pestaña Tareas.');
+      setTimeout(() => setPlaybookHint(null), 6000);
+    }
   }
 
   async function submitTask() {
@@ -509,6 +534,33 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                       </select>
                     </div>
                   </div>
+                  <div className="mb-3 p-2.5 rounded-[8px]" style={{ background: 'var(--bg-3)', border: '1px dashed var(--line)' }}>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Tipo de respuesta (cadencia)</label>
+                        <select value={intDraft.response_type ?? ''} onChange={e => setIntDraft(d => ({ ...d, response_type: (e.target.value || undefined) as ResponseType | undefined, response_detail: undefined }))}
+                          className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
+                          style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
+                          <option value="">— Sin cadencia —</option>
+                          {RESPONSE_TYPES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                        </select>
+                      </div>
+                      {intDraft.response_type && REASONS_BY_RESPONSE[intDraft.response_type] && (
+                        <div>
+                          <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Motivo</label>
+                          <select value={intDraft.response_detail ?? ''} onChange={e => setIntDraft(d => ({ ...d, response_detail: e.target.value || undefined }))}
+                            className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
+                            style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
+                            <option value="">— Motivo —</option>
+                            {REASONS_BY_RESPONSE[intDraft.response_type]!.map(m => <option key={m} value={m}>{m}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10.5px] mt-1.5" style={{ color: 'var(--ink-4)' }}>
+                      Al elegir un tipo de respuesta, el sistema crea automáticamente la próxima tarea con su fecha según la cadencia de seguimiento.
+                    </p>
+                  </div>
                   <div className="mb-3">
                     <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Resumen</label>
                     <textarea value={intDraft.summary ?? ''} onChange={e => setIntDraft(d => ({ ...d, summary: e.target.value }))}
@@ -543,6 +595,13 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                       Cancelar
                     </button>
                   </div>
+                </div>
+              )}
+
+              {playbookHint && (
+                <div className="mb-3 px-3 py-2 rounded-[8px] text-[12px]"
+                  style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
+                  ✓ {playbookHint}
                 </div>
               )}
 

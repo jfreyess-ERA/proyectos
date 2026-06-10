@@ -108,6 +108,9 @@ export type ProspectPriority = 'High' | 'Medium' | 'Low' | 'Strategic' | 'Watchl
 export type ProspectStatus   = 'Active' | 'Warm' | 'Paused' | 'Nurture' | 'Closed Won' | 'Closed Lost' | 'Dormant';
 export type ProspectStage    = 'New' | 'Contacted' | 'Meeting Requested' | 'Meeting Held' | 'Proposal' | 'Negotiation' | 'Won';
 
+// Tipo de respuesta del prospecto — alimenta el motor de cadencia (playbook).
+export type ResponseType = 'acepta_reunion' | 'mas_adelante' | 'deriva' | 'objecion' | 'sin_respuesta';
+
 export interface Prospect {
   id: string;
   company: string;
@@ -132,6 +135,8 @@ export interface Prospect {
   reconnect_month?: string;
   notes?: string;
   project_id?: string;
+  response_type?: ResponseType;   // última respuesta registrada (playbook)
+  playbook_step?: number;         // posición en la cadencia
   created_at: string;
   updated_at?: string;
 }
@@ -153,6 +158,8 @@ export interface CrmInteraction {
   trigger_mentioned?: boolean;
   template_used?: string;
   owner_id?: string;
+  response_type?: ResponseType;   // dispara el motor de cadencia (playbook)
+  response_detail?: string;       // motivo de postergación / objeción / info de interés
   created_at: string;
 }
 
