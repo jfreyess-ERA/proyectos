@@ -357,12 +357,25 @@ function aggregateByCategory(client) {
   }).sort((a, b) => b.total - a.total);
 }
 
+// Valor centinela para "forzar sin categoría ERA" en una línea puntual,
+// distinto de no haberla tocado (lo que hereda el ERA de la categoría).
+const ERA_NONE = "__none__";
+
+// ERA efectivo de una línea de gasto: la línea manda; si no fue tocada,
+// hereda el de su categoría de cliente; ERA_NONE fuerza "sin ERA".
+function effectiveEraId(expense, cat) {
+  if (!expense) return null;
+  if (expense.eraId === ERA_NONE) return null;
+  if (expense.eraId) return expense.eraId;
+  return cat?.eraId || null;
+}
+
 function aggregateByEra(client, eraCategories = []) {
   if (!client) return [];
   const map = new Map();
   for (const e of client.expenses) {
     const cat = client.categories.find(c => c.id === e.categoryId);
-    const eraId = e.eraId || cat?.eraId || "__unassigned__";
+    const eraId = effectiveEraId(e, cat) || "__unassigned__";
     const cur = map.get(eraId) || {
       categoryId: eraId, eraId, total: 0, suppliers: 0, lines: 0,
       weightedScope: 0, weightedSavings: 0, weightedMin: 0, weightedMax: 0, weightedFeas: 0, maxMonths: 0,
@@ -483,7 +496,7 @@ function monthlyByEra(client, eraCategories = []) {
   const map = new Map();
   for (const e of client.expenses) {
     const cat = client.categories.find(c => c.id === e.categoryId);
-    const eraId = e.eraId || cat?.eraId || "__unassigned__";
+    const eraId = effectiveEraId(e, cat) || "__unassigned__";
     const months = getMonthly(e, n);
     const cur = map.get(eraId) || { categoryId: eraId, eraId, months: Array(n).fill(0) };
     for (let m = 0; m < n; m++) cur.months[m] += months[m] || 0;

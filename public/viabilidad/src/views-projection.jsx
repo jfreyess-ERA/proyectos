@@ -24,10 +24,7 @@ function ProjectionSection({ client, readonly = false, onGoToRangos }) {
 
     if (!projectionNeeded && !hasDraft) return client;
 
-    const catToEra = {};
-    if (hasDraft) {
-      (client.categories || []).forEach(c => { catToEra[c.id] = c.eraId || "__unassigned__"; });
-    }
+    const catById = new Map((client.categories || []).map(c => [c.id, c]));
 
     const expenses = client.expenses.map(e => {
       let next = e;
@@ -39,7 +36,7 @@ function ProjectionSection({ client, readonly = false, onGoToRangos }) {
         next = { ...next, amount: Math.round(projectedAmount) };
       }
       if (hasDraft) {
-        const eraId = e.eraId || catToEra[e.categoryId] || "__unassigned__";
+        const eraId = effectiveEraId(e, catById.get(e.categoryId)) || "__unassigned__";
         const d = editDraft[eraId];
         if (d) {
           next = {
@@ -121,13 +118,11 @@ function ProjectionView({
   const cancelEdit = () => { setEditing(false); setEditDraft({}); };
 
   const saveEdit = () => {
-    // Build a lookup: clientCategoryId → eraId
-    const catToEra = {};
-    (client.categories || []).forEach(c => { catToEra[c.id] = c.eraId || "__unassigned__"; });
+    const catById = new Map((client.categories || []).map(c => [c.id, c]));
     const expenses = client.expenses;
     // Only scopePct and feasibility are editable here; savings % come from Rangos
     const next = expenses.map(e => {
-      const eraId = catToEra[e.categoryId] || "__unassigned__";
+      const eraId = effectiveEraId(e, catById.get(e.categoryId)) || "__unassigned__";
       const d = editDraft[eraId];
       if (!d) return e;
       return {
