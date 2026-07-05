@@ -39,7 +39,7 @@ function ProjectionSection({ client, readonly = false, onGoToRangos }) {
         next = { ...next, amount: Math.round(projectedAmount) };
       }
       if (hasDraft) {
-        const eraId = catToEra[e.categoryId] || "__unassigned__";
+        const eraId = e.eraId || catToEra[e.categoryId] || "__unassigned__";
         const d = editDraft[eraId];
         if (d) {
           next = {

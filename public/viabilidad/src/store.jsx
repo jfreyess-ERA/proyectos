@@ -197,6 +197,7 @@ function expRowToExpense(row) {
   return {
     id: row.id,
     categoryId: row.category_id || "",
+    eraId: row.era_id || null,
     subcategory: row.subcategory || "",
     supplier: row.supplier || "",
     amount: row.amount || 0,
@@ -219,6 +220,7 @@ function expenseToRow(expense, analysisId) {
     // id omitted — Supabase auto-generates UUID; local ids may be non-UUID strings
     analysis_id: analysisId,
     category_id: expense.categoryId,
+    era_id: expense.eraId || null,
     subcategory: expense.subcategory,
     supplier: expense.supplier,
     amount: expense.amount,
@@ -360,7 +362,7 @@ function aggregateByEra(client, eraCategories = []) {
   const map = new Map();
   for (const e of client.expenses) {
     const cat = client.categories.find(c => c.id === e.categoryId);
-    const eraId = cat?.eraId || "__unassigned__";
+    const eraId = e.eraId || cat?.eraId || "__unassigned__";
     const cur = map.get(eraId) || {
       categoryId: eraId, eraId, total: 0, suppliers: 0, lines: 0,
       weightedScope: 0, weightedSavings: 0, weightedMin: 0, weightedMax: 0, weightedFeas: 0, maxMonths: 0,
@@ -481,7 +483,7 @@ function monthlyByEra(client, eraCategories = []) {
   const map = new Map();
   for (const e of client.expenses) {
     const cat = client.categories.find(c => c.id === e.categoryId);
-    const eraId = cat?.eraId || "__unassigned__";
+    const eraId = e.eraId || cat?.eraId || "__unassigned__";
     const months = getMonthly(e, n);
     const cur = map.get(eraId) || { categoryId: eraId, eraId, months: Array(n).fill(0) };
     for (let m = 0; m < n; m++) cur.months[m] += months[m] || 0;

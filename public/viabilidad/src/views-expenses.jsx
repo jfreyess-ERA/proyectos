@@ -55,7 +55,7 @@ const PIPELINE_STATES = [
 function exportToExcel(client, catLabel, eraCategories) {
   const rows = client.expenses.map(e => {
     const cat = client.categories.find(c => c.id === e.categoryId);
-    const era = eraCategories.find(er => er.id === cat?.eraId);
+    const era = eraCategories.find(er => er.id === (e.eraId || cat?.eraId));
     const row = {
       "Categoría ERA":      era?.label || "",
       "Categoría cliente":  catLabel(cat),
@@ -130,7 +130,7 @@ function RangesTab({ client, readonly = false }) {
           <tbody>
             {client.expenses.map((e, i) => {
               const cat = client.categories.find(c => c.id === e.categoryId);
-              const era = eraCategories.find(ec => ec.id === cat?.eraId);
+              const era = eraCategories.find(ec => ec.id === (e.eraId || cat?.eraId));
               return (
                 <tr key={e.id || i}>
                   <td style={{ fontSize: 12 }}>{catLabel(e.categoryId)}</td>
@@ -442,7 +442,7 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
   if (q) {
     rows = rows.filter(({ e }) => {
       const cat = client.categories.find(c => c.id === e.categoryId);
-      const era = eraCategories.find(er => er.id === cat?.eraId);
+      const era = eraCategories.find(er => er.id === (e.eraId || cat?.eraId));
       return (
         (catLabel(cat) || "").toLowerCase().includes(q) ||
         (era?.label || "").toLowerCase().includes(q) ||
@@ -457,7 +457,7 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
   if (filters.eraId) {
     rows = rows.filter(({ e }) => {
       const cat = client.categories.find(c => c.id === e.categoryId);
-      return cat?.eraId === filters.eraId;
+      return (e.eraId || cat?.eraId) === filters.eraId;
     });
   }
   if (filters.feasMin > 0) {
@@ -487,7 +487,7 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
   // ERA coverage info
   const eraWithMapping = expenses.filter(e => {
     const cat = client.categories.find(c => c.id === e.categoryId);
-    return cat?.eraId;
+    return e.eraId || cat?.eraId;
   }).length;
 
   const activeFilterCount = [filters.eraId, filters.feasMin > 0, filters.amountMin > 0, filters.amountMax > 0].filter(Boolean).length;
@@ -664,7 +664,7 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
           <tbody>
             {rows.map(({ e, i }) => {
               const cat = client.categories.find(c => c.id === e.categoryId);
-              const era = eraCategories.find(er => er.id === cat?.eraId);
+              const era = eraCategories.find(er => er.id === (e.eraId || cat?.eraId));
               const isSelected = selected.has(e.id);
               const isActive = activeIdx === i;
               const warnings = validateExpense(e);
@@ -707,10 +707,10 @@ function ExpenseTable({ client, expenses, eraCategories = [], update, remove, du
                     <td onClick={ev => ev.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
                       <select
                         className="select"
-                        value={cat?.eraId || ""}
-                        onChange={ev => store.setCategoryMapping(client.id, cat?.id, ev.target.value || null)}
+                        value={e.eraId || cat?.eraId || ""}
+                        onChange={ev => update(i, { eraId: ev.target.value || null })}
                         style={{ minWidth: 140, fontSize: 12 }}
-                        disabled={readonly || !cat}
+                        disabled={readonly}
                       >
                         <option value="">— Sin ERA —</option>
                         {eraCategories.map(er => (
@@ -794,7 +794,7 @@ function ExpenseDrawer({ open, expense, client, catLabel, eraCategories, update,
   if (!open || !expense) return null;
 
   const cat = client.categories.find(c => c.id === expense.categoryId);
-  const era = eraCategories.find(e => e.id === cat?.eraId);
+  const era = eraCategories.find(e => e.id === (expense.eraId || cat?.eraId));
 
   const savingsAbs = expense.amount > 0 && expense.savingsPct > 0
     ? expense.amount * (expense.savingsPct / 100) : 0;
@@ -1319,7 +1319,7 @@ function ChartsView({ client, eraCategories, catLabel }) {
   const eraGroups = {};
   expenses.forEach(e => {
     const cat = client.categories.find(c => c.id === e.categoryId);
-    const era = eraCategories.find(er => er.id === cat?.eraId);
+    const era = eraCategories.find(er => er.id === (e.eraId || cat?.eraId));
     const key = era ? era.id : "__none__";
     const label = era ? era.label : "Sin ERA";
     const color = era ? era.color : "var(--line)";
@@ -1345,7 +1345,7 @@ function ChartsView({ client, eraCategories, catLabel }) {
 
   const scatterPoints = expenses.map((e, i) => {
     const cat = client.categories.find(c => c.id === e.categoryId);
-    const era = eraCategories.find(er => er.id === cat?.eraId);
+    const era = eraCategories.find(er => er.id === (e.eraId || cat?.eraId));
     const minPct = +e.savingsMinPct || 0;
     const maxPct = +e.savingsMaxPct || 0;
     const midPct = (minPct + maxPct) / 2;

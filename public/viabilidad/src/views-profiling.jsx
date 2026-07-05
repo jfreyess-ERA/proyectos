@@ -253,7 +253,7 @@ function CategoryDrawer({ open, categoryId, client, eraCategories = [], onClose 
   const expenses = isEraMode
     ? client.expenses.filter(e => {
         const cc = client.categories.find(c => c.id === e.categoryId);
-        return cc?.eraId === categoryId;
+        return (e.eraId || cc?.eraId) === categoryId;
       })
     : client.expenses.filter(e => e.categoryId === categoryId);
   const total = expenses.reduce((s, e) => s + (+e.amount || 0), 0);
