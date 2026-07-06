@@ -41,8 +41,10 @@ function ProjectionSection({ client, readonly = false, onGoToRangos }) {
         if (d) {
           next = {
             ...next,
-            scopePct:    d.scopePct    != null ? d.scopePct    : next.scopePct,
-            feasibility: d.feasibility != null ? d.feasibility : next.feasibility,
+            scopePct:      d.scopePct      != null ? d.scopePct      : next.scopePct,
+            feasibility:   d.feasibility   != null ? d.feasibility   : next.feasibility,
+            savingsMinPct: d.savingsMinPct != null ? d.savingsMinPct : next.savingsMinPct,
+            savingsMaxPct: d.savingsMaxPct != null ? d.savingsMaxPct : next.savingsMaxPct,
           };
         }
       }
@@ -120,15 +122,16 @@ function ProjectionView({
   const saveEdit = () => {
     const catById = new Map((client.categories || []).map(c => [c.id, c]));
     const expenses = client.expenses;
-    // Only scopePct and feasibility are editable here; savings % come from Rangos
     const next = expenses.map(e => {
       const eraId = effectiveEraId(e, catById.get(e.categoryId)) || "__unassigned__";
       const d = editDraft[eraId];
       if (!d) return e;
       return {
         ...e,
-        scopePct:    d.scopePct != null ? d.scopePct : e.scopePct,
-        feasibility: d.feasibility != null ? d.feasibility : e.feasibility,
+        scopePct:      d.scopePct      != null ? d.scopePct      : e.scopePct,
+        feasibility:   d.feasibility   != null ? d.feasibility   : e.feasibility,
+        savingsMinPct: d.savingsMinPct != null ? d.savingsMinPct : e.savingsMinPct,
+        savingsMaxPct: d.savingsMaxPct != null ? d.savingsMaxPct : e.savingsMaxPct,
       };
     });
     store.setExpenses(client.id, next);
@@ -699,8 +702,28 @@ function ProjectionView({
                         ) : (
                           <td className="right"><FeasDots value={Math.round(g.avgFeasibility)} /></td>
                         )}
-                        <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} /></td>
-                        <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} /></td>
+                        {editing ? (
+                          <td className="right" style={{ padding: "4px 8px" }}>
+                            <input type="number" min="0" max="100" step="0.1"
+                              value={editDraft[g.categoryId]?.savingsMinPct ?? parseFloat(g.avgMinPct.toFixed(1))}
+                              onChange={e => patchDraft(g.categoryId, { savingsMinPct: Math.min(100, Math.max(0, +e.target.value)) })}
+                              onClick={ev => ev.stopPropagation()}
+                              className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
+                          </td>
+                        ) : (
+                          <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} /></td>
+                        )}
+                        {editing ? (
+                          <td className="right" style={{ padding: "4px 8px" }}>
+                            <input type="number" min="0" max="100" step="0.1"
+                              value={editDraft[g.categoryId]?.savingsMaxPct ?? parseFloat(g.avgMaxPct.toFixed(1))}
+                              onChange={e => patchDraft(g.categoryId, { savingsMaxPct: Math.min(100, Math.max(0, +e.target.value)) })}
+                              onClick={ev => ev.stopPropagation()}
+                              className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
+                          </td>
+                        ) : (
+                          <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} /></td>
+                        )}
                         <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(savingsMinAmt, client.currency)}</td>
                         <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(savingsMaxAmt, client.currency)}</td>
                       </tr>
