@@ -406,6 +406,11 @@ function aggregateByEra(client, eraCategories = []) {
       avgSavingsPct: g.total > 0 ? ((g.weightedMin + g.weightedMax) / 2 / g.total) * 100 : 0,
       avgMinPct:     g.total > 0 ? (g.weightedMin / g.total) * 100 : 0,
       avgMaxPct:     g.total > 0 ? (g.weightedMax / g.total) * 100 : 0,
+      // % de ahorro sobre el Monto en alcance (no sobre el gasto total): es
+      // el % que, multiplicado por optimizationAmount, da exactamente
+      // minSavings/maxSavings. Es lo que se edita y muestra en Proyección.
+      avgMinPctOfScope: g.weightedScope > 0 ? (g.weightedMin / g.weightedScope) * 100 : 0,
+      avgMaxPctOfScope: g.weightedScope > 0 ? (g.weightedMax / g.weightedScope) * 100 : 0,
       avgFeasibility: g.total > 0 ? g.weightedFeas / g.total : 3,
       potentialSavings: (g.weightedMin + g.weightedMax) / 2,
       minSavings:    g.weightedMin,

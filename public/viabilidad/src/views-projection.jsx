@@ -109,8 +109,8 @@ function ProjectionView({
       draft[g.categoryId] = {
         scopePct:     Math.round(g.avgScopePct),
         feasibility:  Math.round(g.avgFeasibility),
-        savingsMinPct: parseFloat(g.avgMinPct.toFixed(1)),
-        savingsMaxPct: parseFloat(g.avgMaxPct.toFixed(1)),
+        savingsMinPct: parseFloat(g.avgMinPctOfScope.toFixed(1)),
+        savingsMaxPct: parseFloat(g.avgMaxPctOfScope.toFixed(1)),
       };
     });
     setEditDraft(draft);
@@ -705,24 +705,24 @@ function ProjectionView({
                         {editing ? (
                           <td className="right" style={{ padding: "4px 8px" }}>
                             <input type="number" min="0" max="100" step="0.1"
-                              value={editDraft[g.categoryId]?.savingsMinPct ?? parseFloat(g.avgMinPct.toFixed(1))}
+                              value={editDraft[g.categoryId]?.savingsMinPct ?? parseFloat(g.avgMinPctOfScope.toFixed(1))}
                               onChange={e => patchDraft(g.categoryId, { savingsMinPct: Math.min(100, Math.max(0, +e.target.value)) })}
                               onClick={ev => ev.stopPropagation()}
                               className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
                           </td>
                         ) : (
-                          <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPct} /></td>
+                          <td style={{ paddingRight: 8 }}><PctBar value={g.avgMinPctOfScope} /></td>
                         )}
                         {editing ? (
                           <td className="right" style={{ padding: "4px 8px" }}>
                             <input type="number" min="0" max="100" step="0.1"
-                              value={editDraft[g.categoryId]?.savingsMaxPct ?? parseFloat(g.avgMaxPct.toFixed(1))}
+                              value={editDraft[g.categoryId]?.savingsMaxPct ?? parseFloat(g.avgMaxPctOfScope.toFixed(1))}
                               onChange={e => patchDraft(g.categoryId, { savingsMaxPct: Math.min(100, Math.max(0, +e.target.value)) })}
                               onClick={ev => ev.stopPropagation()}
                               className="input right" style={{ width: 64, padding: "2px 6px", fontSize: 12 }} />
                           </td>
                         ) : (
-                          <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPct} /></td>
+                          <td style={{ paddingRight: 8 }}><PctBar value={g.avgMaxPctOfScope} /></td>
                         )}
                         <td className="right tabular" style={{ color: "var(--text-2)" }}>{fmtMoney(savingsMinAmt, client.currency)}</td>
                         <td className="right tabular" style={{ color: "var(--positive-2)", fontWeight: 700 }}>{fmtMoney(savingsMaxAmt, client.currency)}</td>
