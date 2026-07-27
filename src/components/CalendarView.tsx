@@ -2,12 +2,16 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProjects } from '@/lib/projects-context';
+import { useUsers } from '@/lib/users-context';
+import { avatarBg } from '@/lib/data';
 import type { Task } from '@/lib/types';
 
 interface Props {
   tasks: Task[];
   onOpenTask: (task: Task) => void;
   viewMode?: 'month' | 'week';
+  /** Show assignee initials on each task chip — useful in team-wide calendars. */
+  showAssignees?: boolean;
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -27,8 +31,9 @@ function startOfWeekMon(d: Date): Date {
   return date;
 }
 
-export function CalendarView({ tasks, onOpenTask, viewMode = 'month' }: Props) {
+export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssignees = false }: Props) {
   const projects = useProjects();
+  const users = useUsers();
   const todayBase = new Date(); todayBase.setHours(0, 0, 0, 0);
   const [cursor, setCursor] = useState(() =>
     viewMode === 'week' ? startOfWeekMon(todayBase) : new Date(todayBase.getFullYear(), todayBase.getMonth(), 1)
@@ -212,6 +217,29 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month' }: Props) {
                       style={{ background: PRIORITY_COLORS[t.priority] }}
                     />
                     <span className="flex-1 min-w-0 truncate">{t.title}</span>
+                    {showAssignees && t.assignees.length > 0 && (
+                      <span className="inline-flex flex-shrink-0">
+                        {t.assignees.slice(0, 2).map((id, ix) => {
+                          const u = users.find(x => x.id === id);
+                          if (!u) return null;
+                          return (
+                            <span
+                              key={id}
+                              className="w-[14px] h-[14px] rounded-full inline-flex items-center justify-center font-semibold text-white flex-shrink-0 border-[1.5px]"
+                              style={{
+                                background: avatarBg(u.hue),
+                                borderColor: 'var(--bg-2)',
+                                fontSize: 7.5,
+                                marginLeft: ix > 0 ? -5 : 0,
+                              }}
+                              title={u.name}
+                            >
+                              {u.initials}
+                            </span>
+                          );
+                        })}
+                      </span>
+                    )}
                   </button>
                 );
               })}
