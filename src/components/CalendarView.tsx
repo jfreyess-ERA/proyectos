@@ -141,6 +141,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
           className="grid"
           style={{
             gridTemplateColumns: 'repeat(7, 1fr)',
+            gridTemplateRows: 'auto',
             gridAutoRows: viewMode === 'week' ? 'minmax(400px, 1fr)' : 'minmax(110px, 1fr)',
           }}
         >
