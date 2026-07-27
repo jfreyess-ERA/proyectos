@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { avatarBg } from '@/lib/data';
 import { CalendarView } from './CalendarView';
+import { TaskFilterBar, applyTaskFilters, EMPTY_FILTERS, type TaskFilterState } from './TaskFilterBar';
 import type { Task, Project, User } from '@/lib/types';
 
 interface Props {
@@ -17,18 +18,21 @@ type ViewMode = 'cards' | 'calendar-week' | 'calendar-month';
 export function PeopleView({ tasks, projects, users, onOpenTask, onOpenProject }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [personFilter, setPersonFilter] = useState<string>('all');
+  const [filters, setFilters] = useState<TaskFilterState>(EMPTY_FILTERS);
 
   const isCalendar = viewMode !== 'cards';
+
+  const filtered = applyTaskFilters(tasks, projects, filters);
 
   const visibleUsers = personFilter === 'all' ? users : users.filter(u => u.id === personFilter);
 
   // Tasks shown in calendar modes: all team tasks, or one person's when filtered.
   const calendarTasks = personFilter === 'all'
-    ? tasks
-    : tasks.filter(t => t.assignees.includes(personFilter));
+    ? filtered
+    : filtered.filter(t => t.assignees.includes(personFilter));
 
   const stats = visibleUsers.map(u => {
-    const assigned = tasks.filter(t => t.assignees.includes(u.id));
+    const assigned = filtered.filter(t => t.assignees.includes(u.id));
     const active = assigned.filter(t => t.status !== 'done');
     const done = assigned.filter(t => t.status === 'done').length;
 
@@ -83,6 +87,16 @@ export function PeopleView({ tasks, projects, users, onOpenTask, onOpenProject }
             <ViewTab active={viewMode === 'calendar-month'}  onClick={() => setViewMode('calendar-month')} border>Calendario · Mes</ViewTab>
           </div>
         </div>
+      </div>
+
+      {/* Filters */}
+      <div className={isCalendar ? 'px-6 pb-3' : 'mb-5'}>
+        <TaskFilterBar
+          filters={filters}
+          onChange={setFilters}
+          projects={projects}
+          show={['client', 'project', 'status', 'priority']}
+        />
       </div>
 
       {isCalendar && (

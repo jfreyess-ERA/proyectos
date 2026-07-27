@@ -5,6 +5,7 @@ import { STATUSES, PEOPLE, fmtDate, dueClass } from '@/lib/data';
 import { useAuth } from '@/lib/auth-context';
 import { updateTaskStatus } from '@/lib/db';
 import { CalendarView } from './CalendarView';
+import { TaskFilterBar, applyTaskFilters, EMPTY_FILTERS, filtersActive, type TaskFilterState } from './TaskFilterBar';
 import type { Task, Project } from '@/lib/types';
 
 interface Props {
@@ -27,6 +28,7 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
   const me = profile ?? PEOPLE[0];
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [statusOverrides, setStatusOverrides] = useState<Record<string, Task['status']>>({});
+  const [filters, setFilters] = useState<TaskFilterState>(EMPTY_FILTERS);
 
   function effectiveStatus(t: Task): Task['status'] {
     return statusOverrides[t.id] ?? t.status;
@@ -38,13 +40,14 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
   }
 
   const myTasks = tasks.filter(t => t.assignees.includes(me.id));
+  const filtered = applyTaskFilters(myTasks, projects, filters);
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const overdue = myTasks.filter(t => t.due && effectiveStatus(t) !== 'done' && new Date(t.due + 'T00:00:00') < today);
+  const overdue = filtered.filter(t => t.due && effectiveStatus(t) !== 'done' && new Date(t.due + 'T00:00:00') < today);
 
   const grouped = STATUSES.map(s => ({
     ...s,
-    items: myTasks.filter(t => effectiveStatus(t) === s.id),
+    items: filtered.filter(t => effectiveStatus(t) === s.id),
   })).filter(g => g.items.length > 0);
 
   const isCalendar = viewMode !== 'list';
@@ -58,11 +61,14 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
             Mis tareas
           </h1>
           <p className="text-[14px] mt-1" style={{ color: 'var(--ink-3)' }}>
-            {myTasks.filter(t => effectiveStatus(t) !== 'done').length} activas
+            {filtered.filter(t => effectiveStatus(t) !== 'done').length} activas
             {overdue.length > 0 && (
               <span className="ml-2 font-medium" style={{ color: 'var(--danger)' }}>
                 · {overdue.length} atrasada{overdue.length > 1 ? 's' : ''}
               </span>
+            )}
+            {filtersActive(filters) && (
+              <span className="ml-1" style={{ color: 'var(--ink-4)' }}>· filtrado</span>
             )}
           </p>
         </div>
@@ -75,14 +81,24 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className={isCalendar ? 'px-6 pb-3' : 'mb-5'}>
+        <TaskFilterBar
+          filters={filters}
+          onChange={setFilters}
+          projects={projects}
+          show={['client', 'project', 'priority']}
+        />
+      </div>
+
       {viewMode === 'calendar-week' && (
         <div className="flex-1 min-h-0">
-          <CalendarView tasks={myTasks} onOpenTask={onOpenTask} viewMode="week" />
+          <CalendarView tasks={filtered} onOpenTask={onOpenTask} viewMode="week" />
         </div>
       )}
       {viewMode === 'calendar-month' && (
         <div className="flex-1 min-h-0">
-          <CalendarView tasks={myTasks} onOpenTask={onOpenTask} viewMode="month" />
+          <CalendarView tasks={filtered} onOpenTask={onOpenTask} viewMode="month" />
         </div>
       )}
 
@@ -173,10 +189,12 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
             </section>
           ))}
 
-          {myTasks.length === 0 && (
+          {filtered.length === 0 && (
             <div className="py-16 text-center" style={{ color: 'var(--ink-4)' }}>
               <div className="text-[32px] mb-2">✓</div>
-              <div className="text-[14px]">Sin tareas asignadas</div>
+              <div className="text-[14px]">
+                {myTasks.length === 0 ? 'Sin tareas asignadas' : 'Ninguna tarea coincide con los filtros'}
+              </div>
             </div>
           )}
         </div>

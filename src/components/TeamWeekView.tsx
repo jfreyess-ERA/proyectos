@@ -2,6 +2,8 @@
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, Clock, Flag } from 'lucide-react';
 import { avatarBg, fmtDate, dueClass } from '@/lib/data';
+import { CalendarView } from './CalendarView';
+import { TaskFilterBar, applyTaskFilters, EMPTY_FILTERS, type TaskFilterState } from './TaskFilterBar';
 import type { Task, Project, User } from '@/lib/types';
 
 interface Props {
@@ -83,30 +85,36 @@ function computeBuckets(taskList: Task[], weekStartISO: string, weekEndISO: stri
 }
 
 type GroupBy = 'person' | 'project';
+type ViewMode = 'panel' | 'calendar-week' | 'calendar-month';
 
 export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [showEmpty, setShowEmpty] = useState(false);
   const [groupBy, setGroupBy]     = useState<GroupBy>('person');
+  const [viewMode, setViewMode]   = useState<ViewMode>('panel');
+  const [filters, setFilters]     = useState<TaskFilterState>(EMPTY_FILTERS);
+
+  const filteredTasks = useMemo(() => applyTaskFilters(tasks, projects, filters), [tasks, projects, filters]);
 
   const weekEnd = addDays(weekStart, 6);
   const weekStartISO = isoDate(weekStart);
   const weekEndISO = isoDate(weekEnd);
   const todayISO = isoDate(new Date());
+  const isCalendar = viewMode !== 'panel';
 
   // ── Person rows ─────────────────────────────────────────────────
   const personRows = useMemo(() => {
     return users.map(u => {
-      const mine = tasks.filter(t => t.assignees.includes(u.id));
+      const mine = filteredTasks.filter(t => t.assignees.includes(u.id));
       return { user: u, ...computeBuckets(mine, weekStartISO, weekEndISO) };
     });
-  }, [users, tasks, weekStartISO, weekEndISO]);
+  }, [users, filteredTasks, weekStartISO, weekEndISO]);
 
   // ── Project rows (grouped by client) ────────────────────────────
   const clientSections = useMemo(() => {
     const projRows = projects.map(p => {
-      const pt = tasks.filter(t => t.project === p.id);
+      const pt = filteredTasks.filter(t => t.project === p.id);
       return { project: p, ...computeBuckets(pt, weekStartISO, weekEndISO) };
     });
     const byClient = new Map<string, typeof projRows>();
@@ -120,7 +128,7 @@ export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject
     return [...byClient.entries()]
       .map(([client, rows]) => ({ client, rows }))
       .sort((a, b) => a.client.localeCompare(b.client));
-  }, [projects, tasks, weekStartISO, weekEndISO]);
+  }, [projects, filteredTasks, weekStartISO, weekEndISO]);
 
   // ── Totals ──────────────────────────────────────────────────────
   const totalActive = groupBy === 'person'
@@ -139,9 +147,9 @@ export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject
     : [];
 
   return (
-    <div className="p-6 max-w-[1200px]">
+    <div className={isCalendar ? 'flex flex-col h-full' : 'p-6 max-w-[1200px]'}>
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
+      <div className={isCalendar ? 'px-6 pt-6 pb-3 flex items-start justify-between flex-wrap gap-4' : 'mb-6 flex items-start justify-between flex-wrap gap-4'}>
         <div>
           <h1 className="text-[24px] font-bold tracking-tight" style={{ color: 'var(--ink)' }}>
             Panel del equipo
@@ -156,88 +164,119 @@ export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject
           </p>
         </div>
 
-        {/* Week picker */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setWeekStart(w => addDays(w, -7))}
-            className="w-8 h-8 flex items-center justify-center rounded-[7px] border transition-colors"
-            style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
-            aria-label="Semana anterior"
-          >
-            <ChevronLeft size={15} />
-          </button>
-          <div
-            className="h-8 px-3 flex items-center rounded-[7px] border text-[12.5px] font-medium"
-            style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink)', minWidth: 220, justifyContent: 'center' }}
-          >
-            {fmtRange(weekStart)}
+        {/* Week picker — panel mode only (calendar has its own nav) */}
+        {!isCalendar && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setWeekStart(w => addDays(w, -7))}
+              className="w-8 h-8 flex items-center justify-center rounded-[7px] border transition-colors"
+              style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <div
+              className="h-8 px-3 flex items-center rounded-[7px] border text-[12.5px] font-medium"
+              style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink)', minWidth: 220, justifyContent: 'center' }}
+            >
+              {fmtRange(weekStart)}
+            </div>
+            <button
+              onClick={() => setWeekStart(w => addDays(w, 7))}
+              className="w-8 h-8 flex items-center justify-center rounded-[7px] border transition-colors"
+              style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
+              aria-label="Semana siguiente"
+            >
+              <ChevronRight size={15} />
+            </button>
+            <input
+              type="date"
+              value={weekStartISO}
+              onChange={e => e.target.value && setWeekStart(startOfWeek(new Date(e.target.value + 'T00:00:00')))}
+              className="h-8 px-2 rounded-[7px] border text-[12px] outline-none"
+              style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
+            />
+            <button
+              onClick={() => setWeekStart(startOfWeek(new Date()))}
+              className="h-8 px-3 rounded-[7px] border text-[12.5px] font-medium transition-colors"
+              style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
+            >
+              Hoy
+            </button>
           </div>
-          <button
-            onClick={() => setWeekStart(w => addDays(w, 7))}
-            className="w-8 h-8 flex items-center justify-center rounded-[7px] border transition-colors"
-            style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
-            aria-label="Semana siguiente"
-          >
-            <ChevronRight size={15} />
-          </button>
-          <input
-            type="date"
-            value={weekStartISO}
-            onChange={e => e.target.value && setWeekStart(startOfWeek(new Date(e.target.value + 'T00:00:00')))}
-            className="h-8 px-2 rounded-[7px] border text-[12px] outline-none"
-            style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
-          />
-          <button
-            onClick={() => setWeekStart(startOfWeek(new Date()))}
-            className="h-8 px-3 rounded-[7px] border text-[12.5px] font-medium transition-colors"
-            style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
-          >
-            Hoy
-          </button>
-        </div>
+        )}
       </div>
 
-      {/* Controls */}
-      <div className="mb-4 flex items-center gap-4 flex-wrap">
-        {/* Group by toggle */}
+      {/* View toggle */}
+      <div className={isCalendar ? 'px-6 pb-3' : 'mb-4'}>
         <div className="inline-flex rounded-[8px] border overflow-hidden" style={{ borderColor: 'var(--line)' }}>
-          <button
-            onClick={() => setGroupBy('person')}
-            className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
-            style={{
-              background: groupBy === 'person' ? 'var(--surface)' : 'transparent',
-              color: groupBy === 'person' ? 'var(--ink)' : 'var(--ink-3)',
-              boxShadow: groupBy === 'person' ? 'var(--shadow-1)' : 'none',
-            }}
-          >
-            Persona
-          </button>
-          <button
-            onClick={() => setGroupBy('project')}
-            className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
-            style={{
-              background: groupBy === 'project' ? 'var(--surface)' : 'transparent',
-              color: groupBy === 'project' ? 'var(--ink)' : 'var(--ink-3)',
-              boxShadow: groupBy === 'project' ? 'var(--shadow-1)' : 'none',
-              borderLeft: '1px solid var(--line)',
-            }}
-          >
-            Cliente → Proyecto
-          </button>
+          <ViewTab active={viewMode === 'panel'}           onClick={() => setViewMode('panel')}>Panel</ViewTab>
+          <ViewTab active={viewMode === 'calendar-week'}   onClick={() => setViewMode('calendar-week')} border>Calendario · Semana</ViewTab>
+          <ViewTab active={viewMode === 'calendar-month'}  onClick={() => setViewMode('calendar-month')} border>Calendario · Mes</ViewTab>
         </div>
-
-        <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--ink-3)' }}>
-          <input
-            type="checkbox"
-            checked={showEmpty}
-            onChange={e => setShowEmpty(e.target.checked)}
-          />
-          Mostrar {groupBy === 'person' ? 'personas' : 'proyectos'} sin tareas activas
-        </label>
       </div>
+
+      {/* Filters */}
+      <div className={isCalendar ? 'px-6 pb-3' : 'mb-4'}>
+        <TaskFilterBar
+          filters={filters}
+          onChange={setFilters}
+          projects={projects}
+          users={users}
+          trailing={!isCalendar ? (
+            <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--ink-3)' }}>
+              <input type="checkbox" checked={showEmpty} onChange={e => setShowEmpty(e.target.checked)} />
+              Mostrar {groupBy === 'person' ? 'personas' : 'proyectos'} sin tareas activas
+            </label>
+          ) : undefined}
+        />
+      </div>
+
+      {/* Calendar modes */}
+      {isCalendar && (
+        <div className="flex-1 min-h-0">
+          <CalendarView
+            tasks={filteredTasks}
+            onOpenTask={onOpenTask}
+            viewMode={viewMode === 'calendar-week' ? 'week' : 'month'}
+            showAssignees
+          />
+        </div>
+      )}
+
+      {/* Panel: group-by toggle */}
+      {!isCalendar && (
+        <div className="mb-4">
+          <div className="inline-flex rounded-[8px] border overflow-hidden" style={{ borderColor: 'var(--line)' }}>
+            <button
+              onClick={() => setGroupBy('person')}
+              className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
+              style={{
+                background: groupBy === 'person' ? 'var(--surface)' : 'transparent',
+                color: groupBy === 'person' ? 'var(--ink)' : 'var(--ink-3)',
+                boxShadow: groupBy === 'person' ? 'var(--shadow-1)' : 'none',
+              }}
+            >
+              Persona
+            </button>
+            <button
+              onClick={() => setGroupBy('project')}
+              className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
+              style={{
+                background: groupBy === 'project' ? 'var(--surface)' : 'transparent',
+                color: groupBy === 'project' ? 'var(--ink)' : 'var(--ink-3)',
+                boxShadow: groupBy === 'project' ? 'var(--shadow-1)' : 'none',
+                borderLeft: '1px solid var(--line)',
+              }}
+            >
+              Cliente → Proyecto
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Body */}
-      {groupBy === 'person' && (
+      {!isCalendar && groupBy === 'person' && (
         <div className="flex flex-col gap-3">
           {visiblePersons.map(row => (
             <EntityCard
@@ -261,7 +300,7 @@ export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject
         </div>
       )}
 
-      {groupBy === 'project' && (
+      {!isCalendar && groupBy === 'project' && (
         <div className="flex flex-col gap-6">
           {visibleClientSections.map(sec => (
             <section key={sec.client}>
@@ -537,5 +576,22 @@ function Pill({ label, color, bg }: { label: string; color: string; bg: string }
     <span className="text-[11px] font-medium px-2 py-[3px] rounded-full tabular-nums" style={{ color, background: bg }}>
       {label}
     </span>
+  );
+}
+
+function ViewTab({ active, onClick, children, border }: { active: boolean; onClick: () => void; children: React.ReactNode; border?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
+      style={{
+        background: active ? 'var(--surface)' : 'transparent',
+        color: active ? 'var(--ink)' : 'var(--ink-3)',
+        boxShadow: active ? 'var(--shadow-1)' : 'none',
+        borderLeft: border ? '1px solid var(--line)' : undefined,
+      }}
+    >
+      {children}
+    </button>
   );
 }
