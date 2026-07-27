@@ -7,7 +7,7 @@ import {
 import { useLabels } from '@/lib/labels-context';
 import { useProjects } from '@/lib/projects-context';
 import {
-  updateTask, fetchComments, insertComment,
+  updateTask, deleteTask, fetchComments, insertComment,
   logActivity, fetchActivity,
   fetchAttachments, uploadAttachment, deleteAttachment,
   fetchSubtasks, insertSubtask, toggleSubtask, deleteSubtask,
@@ -24,9 +24,10 @@ interface Props {
   sprints?: Sprint[];
   onClose: () => void;
   onUpdated?: (t: Task) => void;
+  onDeleted?: (id: string) => void;
 }
 
-export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated }: Props) {
+export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated, onDeleted }: Props) {
   const { profile } = useAuth();
   const allLabels = useLabels();
   const allProjects = useProjects();
@@ -46,7 +47,12 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
   const [newSubtask, setNewSubtask] = useState('');
   const [addingSubtask, setAddingSubtask] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
+  const [showMenu, setShowMenu]     = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting]     = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const labelPickerRef = useRef<HTMLDivElement>(null);
+  const menuRef         = useRef<HTMLDivElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
 
   // ── Timer ──────────────────────────────────────────────────────────
@@ -60,17 +66,23 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
     setEditingTitle(false);
     setEditingDesc(false);
     setShowLabelPicker(false);
+    setShowMenu(false);
+    setConfirmingDelete(false);
+    setDeleteError(null);
     fetchComments(task.id).then(setComments).catch(() => {});
     fetchActivity(task.id).then(setActivity).catch(() => {});
     fetchAttachments(task.id).then(setAttachments).catch(() => {});
     fetchSubtasks(task.id).then(setSubtasks).catch(() => {});
   }, [task?.id]);
 
-  // Close label picker on outside click
+  // Close label picker / task menu on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (labelPickerRef.current && !labelPickerRef.current.contains(e.target as Node)) {
         setShowLabelPicker(false);
+      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
       }
     }
     document.addEventListener('mousedown', handler);
@@ -128,6 +140,20 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
       console.error(e);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!task) return;
+    setDeleting(true);
+    try {
+      await deleteTask(task.id);
+      onDeleted?.(task.id);
+      onClose();
+    } catch (e) {
+      console.error(e);
+      setDeleteError('No se pudo eliminar la tarea.');
+      setDeleting(false);
     }
   }
 
@@ -263,6 +289,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
   }
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 grid place-items-center"
       style={{ background: 'rgba(20,18,12,.32)', backdropFilter: 'blur(2px)' }}
@@ -289,7 +316,26 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
           <div className="flex items-center gap-1">
             <IconBtn onClick={() => fileInputRef.current?.click()}><Paperclip size={15} /></IconBtn>
             <IconBtn><Archive size={15} /></IconBtn>
-            <IconBtn><MoreHorizontal size={15} /></IconBtn>
+            <div className="relative" ref={menuRef}>
+              <IconBtn onClick={() => setShowMenu(o => !o)}><MoreHorizontal size={15} /></IconBtn>
+              {showMenu && (
+                <div
+                  className="absolute right-0 top-[calc(100%+4px)] z-10 rounded-[10px] overflow-hidden flex flex-col py-1"
+                  style={{ width: 180, background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-pop)' }}
+                >
+                  <button
+                    onClick={() => { setShowMenu(false); setDeleteError(null); setConfirmingDelete(true); }}
+                    className="flex items-center gap-2 px-3 py-[7px] text-left text-[12.5px] border-0 bg-transparent transition-colors"
+                    style={{ color: 'var(--danger)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--danger-bg)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <Trash2 size={13} />
+                    Eliminar tarea
+                  </button>
+                </div>
+              )}
+            </div>
             <IconBtn onClick={onClose}><X size={15} /></IconBtn>
           </div>
         </div>
@@ -781,6 +827,53 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
         </div>
       </div>
     </div>
+
+    {confirmingDelete && (
+      <div
+        className="fixed inset-0 z-[60] grid place-items-center"
+        style={{ background: 'rgba(20,18,12,.32)', backdropFilter: 'blur(2px)' }}
+        onClick={() => !deleting && setConfirmingDelete(false)}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          className="flex flex-col gap-4 p-5"
+          style={{
+            width: 340, background: 'var(--surface)', border: '1px solid var(--line)',
+            borderRadius: 14, boxShadow: 'var(--shadow-pop)',
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Trash2 size={16} style={{ color: 'var(--danger)' }} />
+            <h3 className="text-[14.5px] font-semibold" style={{ color: 'var(--ink)' }}>Eliminar tarea</h3>
+          </div>
+          <p className="text-[13px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>
+            ¿Eliminar &quot;{task.title}&quot;? Esta acción no se puede deshacer.
+          </p>
+          {deleteError && (
+            <p className="text-[12px]" style={{ color: 'var(--danger)' }}>{deleteError}</p>
+          )}
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => setConfirmingDelete(false)}
+              disabled={deleting}
+              className="h-8 px-3 rounded-[7px] text-[13px] font-medium border-0 disabled:opacity-50"
+              style={{ background: 'var(--bg-2)', color: 'var(--ink-2)' }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="h-8 px-3 rounded-[7px] text-[13px] font-medium border-0 text-white disabled:opacity-50"
+              style={{ background: 'var(--danger)' }}
+            >
+              {deleting ? 'Eliminando…' : 'Eliminar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

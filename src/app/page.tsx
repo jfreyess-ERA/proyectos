@@ -334,6 +334,7 @@ export default function Home() {
         sprints={localSprints.filter(s => selectedTask ? s.project_id === selectedTask.project : false)}
         onClose={() => setSelectedTask(null)}
         onUpdated={updated => { setSelectedTask(updated); refetch(); }}
+        onDeleted={() => { setSelectedTask(null); refetch(); }}
       />
 
       <CommandPalette

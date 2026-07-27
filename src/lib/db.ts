@@ -97,6 +97,11 @@ export async function updateTaskStatus(taskId: string, status: Task['status']) {
   if (error) throw error;
 }
 
+export async function deleteTask(id: string): Promise<void> {
+  const { error } = await supabase.from('tasks').delete().eq('id', id);
+  if (error) throw error;
+}
+
 export interface NewTaskInput {
   title: string;
   project_id: string;
