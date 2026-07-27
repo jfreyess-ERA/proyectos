@@ -131,7 +131,12 @@ export function PeopleView({ tasks, projects, users, onOpenProject }: Props) {
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                     >
                       <span className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0" style={{ background: p.color }} />
-                      <span className="text-[12px] flex-1 truncate" style={{ color: 'var(--ink-2)' }}>{p.name}</span>
+                      <span className="text-[12px] flex-1 truncate">
+                        {p.client && (
+                          <span style={{ color: 'var(--ink-4)' }}>{p.client} · </span>
+                        )}
+                        <span style={{ color: 'var(--ink-2)' }}>{p.name}</span>
+                      </span>
                       <span className="text-[11px] tabular-nums" style={{ color: 'var(--ink-4)' }}>
                         {pTasks.length} tarea{pTasks.length > 1 ? 's' : ''}
                       </span>
