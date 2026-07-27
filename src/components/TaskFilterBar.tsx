@@ -8,6 +8,8 @@ export interface TaskFilterState {
   assignee: string;
   status: string;
   priority: string;
+  /** Only active (not done) tasks whose due date is in the past. */
+  overdueOnly: boolean;
 }
 
 export const EMPTY_FILTERS: TaskFilterState = {
@@ -16,27 +18,35 @@ export const EMPTY_FILTERS: TaskFilterState = {
   assignee: 'all',
   status: 'all',
   priority: 'all',
+  overdueOnly: false,
 };
 
 export function filtersActive(f: TaskFilterState): boolean {
-  return f.client !== 'all' || f.project !== 'all' || f.assignee !== 'all' || f.status !== 'all' || f.priority !== 'all';
+  return f.client !== 'all' || f.project !== 'all' || f.assignee !== 'all' || f.status !== 'all' || f.priority !== 'all' || f.overdueOnly;
+}
+
+function todayISO(): string {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
 }
 
 /** Apply the active filters to a task list. */
 export function applyTaskFilters(tasks: Task[], projects: Project[], f: TaskFilterState): Task[] {
   const projectClient: Record<string, string | undefined> = {};
   for (const p of projects) projectClient[p.id] = p.client;
+  const iso = todayISO();
   return tasks.filter(t => {
     if (f.client !== 'all' && projectClient[t.project] !== f.client) return false;
     if (f.project !== 'all' && t.project !== f.project) return false;
     if (f.assignee !== 'all' && !t.assignees.includes(f.assignee)) return false;
     if (f.status !== 'all' && t.status !== f.status) return false;
     if (f.priority !== 'all' && t.priority !== f.priority) return false;
+    if (f.overdueOnly && !(t.status !== 'done' && t.due && t.due < iso)) return false;
     return true;
   });
 }
 
-type FilterKey = keyof TaskFilterState;
+type DropdownKey = 'client' | 'project' | 'assignee' | 'status' | 'priority';
 
 interface Props {
   filters: TaskFilterState;
@@ -44,7 +54,9 @@ interface Props {
   projects: Project[];
   users?: User[];
   /** Which filter dropdowns to render, in order. Defaults to all. */
-  show?: FilterKey[];
+  show?: DropdownKey[];
+  /** Whether to render the "Solo atrasadas" toggle. Defaults to true. */
+  showOverdue?: boolean;
   /** Extra content rendered before the filters (e.g. a view toggle). */
   children?: React.ReactNode;
   /** Content rendered pushed to the right (e.g. checkboxes). */
@@ -57,6 +69,7 @@ export function TaskFilterBar({
   projects,
   users = [],
   show = ['client', 'project', 'assignee', 'status', 'priority'],
+  showOverdue = true,
   children,
   trailing,
 }: Props) {
@@ -71,7 +84,7 @@ export function TaskFilterBar({
     return ca !== 0 ? ca : a.name.localeCompare(b.name);
   });
 
-  function set(key: FilterKey, value: string) {
+  function set(key: DropdownKey, value: string) {
     const next = { ...filters, [key]: value };
     // if client changes and the selected project no longer belongs to it, reset project
     if (key === 'client' && value !== 'all') {
@@ -117,6 +130,20 @@ export function TaskFilterBar({
           <option value="all">Todas</option>
           {PRIORITIES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
         </Select>
+      )}
+      {showOverdue && (
+        <button
+          onClick={() => onChange({ ...filters, overdueOnly: !filters.overdueOnly })}
+          className="h-8 px-3 text-[12px] font-medium rounded-[7px] border transition-colors"
+          style={
+            filters.overdueOnly
+              ? { background: 'var(--danger-bg)', borderColor: 'var(--danger)', color: 'var(--danger)' }
+              : { background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink-3)' }
+          }
+          aria-pressed={filters.overdueOnly}
+        >
+          Solo atrasadas
+        </button>
       )}
       {filtersActive(filters) && (
         <button
