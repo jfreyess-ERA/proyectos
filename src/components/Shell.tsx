@@ -26,7 +26,7 @@ interface ShellProps {
   loading?: boolean;
   inboxCount?: number;
   myTasksCount?: number;
-  currentUser?: { name: string; role: string; id: string; initials: string; hue: number };
+  currentUser?: { name: string; role: string; id: string; initials: string; hue: number; is_admin?: boolean };
   onNavChange?: (id: NavId) => void;
   onViewChange?: (id: ViewId) => void;
   onOpenCmdk?: () => void;
@@ -161,6 +161,38 @@ export function Shell({
               </button>
             ))}
           </div>
+
+          {/* Admin section */}
+          {me.is_admin && (
+            <div className="px-2 pt-3 pb-1">
+              {!collapsed && (
+                <div className="px-2 pb-1.5 text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+                  Administración
+                </div>
+              )}
+              {[
+                { id: 'admin:team-week', icon: <CalendarDays size={16} />, label: 'Panel del equipo' },
+                { id: 'admin:stats',     icon: <PieChart size={16} />,     label: 'Estadísticas' },
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => { onNavChange?.(item.id); setMobileOpen(false); }}
+                  className="flex items-center gap-[10px] w-full text-left px-[10px] py-[6px] rounded-[6px] text-[13px] border-0 transition-colors"
+                  style={{
+                    color: activeNav === item.id ? 'var(--ink)' : 'var(--ink-2)',
+                    background: activeNav === item.id ? 'var(--surface)' : 'transparent',
+                    boxShadow: activeNav === item.id ? 'var(--shadow-1)' : 'none',
+                    fontWeight: activeNav === item.id ? 500 : 400,
+                  }}
+                >
+                  <span style={{ color: activeNav === item.id ? 'var(--accent)' : 'var(--ink-3)', flexShrink: 0 }}>
+                    {item.icon}
+                  </span>
+                  {!collapsed && <span>{item.label}</span>}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Proyectos agrupados por cliente */}
           <ProjectsSection

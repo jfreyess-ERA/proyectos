@@ -14,6 +14,8 @@ import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { MyTasksView } from '@/components/MyTasksView';
 import { InboxView } from '@/components/InboxView';
 import { PeopleView } from '@/components/PeopleView';
+import { TeamWeekView } from '@/components/TeamWeekView';
+import { StatsView } from '@/components/StatsView';
 import { ReportsView } from '@/components/ReportsView';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProjectModal } from '@/components/ProjectModal';
@@ -42,7 +44,7 @@ import { useAuth } from '@/lib/auth-context';
 import { getOrCreateShare } from '@/lib/db';
 import type { Task, Project, Sprint, Prospect } from '@/lib/types';
 
-type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
+type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | 'admin:team-week' | 'admin:stats' | string;
 type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
 
 export default function Home() {
@@ -96,12 +98,19 @@ export default function Home() {
     'crm:reports': 'Reportes CRM',
   };
 
+  const ADMIN_LABELS: Record<string, string> = {
+    'admin:team-week': 'Panel del equipo',
+    'admin:stats':     'Estadísticas',
+  };
+
   const crumbs = isProjectView && project
     ? ['ERA Group', project.name]
     : isSprintView && activeSprint
     ? ['ERA Group', activeSprint.name]
     : isCrmView
     ? ['ERA Group', 'CRM', CRM_LABELS[activeNav] ?? 'CRM']
+    : ADMIN_LABELS[activeNav]
+    ? ['ERA Group', 'Administración', ADMIN_LABELS[activeNav]]
     : ['ERA Group', 'Inicio'];
 
   // Keyboard shortcuts
@@ -199,6 +208,14 @@ export default function Home() {
         case 'inbox':   return <InboxView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
         case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
         case 'people':  return <PeopleView tasks={tasks} projects={projects} users={users} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />;
+        case 'admin:team-week':
+          return profile?.is_admin
+            ? <TeamWeekView tasks={tasks} projects={projects} users={users} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />
+            : <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
+        case 'admin:stats':
+          return profile?.is_admin
+            ? <StatsView tasks={tasks} projects={projects} users={users} onOpenProject={id => handleNav('project:' + id)} />
+            : <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
         case 'reports': return <ReportsView tasks={tasks} projects={projects} users={users} />;
         case 'crm:dashboard': return (
           <CrmDashboard
