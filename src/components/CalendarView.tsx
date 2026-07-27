@@ -130,30 +130,24 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month' }: Props) {
         </span>
       </div>
 
-      {/* Day-of-week header */}
-      <div
-        className="grid border-b flex-shrink-0"
-        style={{ gridTemplateColumns: 'repeat(7, 1fr)', borderColor: 'var(--line)' }}
-      >
+      {/* Day-of-week header + grid share one scroll container so columns always line up */}
+      <div className="flex-1 min-h-0 overflow-auto">
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: 'repeat(7, 1fr)',
+            gridAutoRows: viewMode === 'week' ? 'minmax(400px, 1fr)' : 'minmax(110px, 1fr)',
+          }}
+        >
         {DOW.map(d => (
           <div
             key={d}
-            className="px-3 py-2 text-[11px] font-semibold tracking-wider uppercase border-r last:border-r-0"
-            style={{ color: 'var(--ink-4)', borderColor: 'var(--line-2)' }}
+            className="sticky top-0 z-10 px-3 py-2 text-[11px] font-semibold tracking-wider uppercase border-r border-b last:border-r-0"
+            style={{ color: 'var(--ink-4)', borderColor: 'var(--line-2)', background: 'var(--bg)' }}
           >
             {d}
           </div>
         ))}
-      </div>
-
-      {/* Grid */}
-      <div
-        className="flex-1 min-h-0 overflow-auto grid"
-        style={{
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          gridAutoRows: viewMode === 'week' ? 'minmax(400px, 1fr)' : '1fr',
-        }}
-      >
         {cells.map((d, i) => {
           const inMonth = viewMode === 'week' ? true : d.getMonth() === normalisedCursor.getMonth();
           const isToday = d.getTime() === todayBase.getTime();
@@ -163,7 +157,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month' }: Props) {
           return (
             <div
               key={i}
-              className="border-r border-b last:border-r-0 min-h-[110px] p-[6px] flex flex-col gap-[3px]"
+              className="min-w-0 border-r border-b last:border-r-0 min-h-[110px] p-[6px] flex flex-col gap-[3px]"
               style={{
                 borderColor: 'var(--line-2)',
                 background: isToday
@@ -202,7 +196,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month' }: Props) {
                   <button
                     key={t.id}
                     onClick={() => onOpenTask(t)}
-                    className="flex items-center gap-[6px] text-left rounded-[4px] px-[6px] py-[3px] border-0 border-l-[3px] text-[11.5px] transition-colors w-full"
+                    className="min-w-0 flex items-center gap-[6px] text-left rounded-[4px] px-[6px] py-[3px] border-0 border-l-[3px] text-[11.5px] transition-colors w-full"
                     style={{
                       borderLeftColor: proj?.color ?? 'var(--ink-3)',
                       borderLeftStyle: 'solid',
@@ -217,7 +211,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month' }: Props) {
                       className="w-[6px] h-[6px] rounded-full flex-shrink-0"
                       style={{ background: PRIORITY_COLORS[t.priority] }}
                     />
-                    <span className="truncate">{t.title}</span>
+                    <span className="flex-1 min-w-0 truncate">{t.title}</span>
                   </button>
                 );
               })}
@@ -232,6 +226,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month' }: Props) {
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );
