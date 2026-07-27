@@ -19,6 +19,7 @@ interface TaskRow {
   spent: number;
   subtasks_done: number;
   subtasks_total: number;
+  subtasks_overdue?: number;
   sprint_id?: string;
   project_stage?: string;
 }
@@ -44,7 +45,7 @@ function rowToTask(row: TaskRow): Task {
     due:           row.due_date,
     estimate:      row.estimate,
     spent:         row.spent,
-    subtasks:      { done: row.subtasks_done, total: row.subtasks_total },
+    subtasks:      { done: row.subtasks_done, total: row.subtasks_total, overdue: row.subtasks_overdue ?? 0 },
     sprint_id:     row.sprint_id,
     project_stage: row.project_stage as Task['project_stage'],
   };
@@ -305,11 +306,23 @@ export async function fetchSubtasks(taskId: string): Promise<SubtaskItem[]> {
 async function syncSubtaskCounts(taskId: string): Promise<void> {
   const { data } = await supabase
     .from('task_subtasks')
-    .select('done')
+    .select('done, due_date')
     .eq('task_id', taskId);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayISO = today.toISOString().slice(0, 10);
   const total = data?.length ?? 0;
   const done  = data?.filter(s => s.done).length ?? 0;
-  await supabase.from('tasks').update({ subtasks_done: done, subtasks_total: total }).eq('id', taskId);
+  const overdue = data?.filter(s => !s.done && s.due_date && s.due_date < todayISO).length ?? 0;
+  await supabase.from('tasks').update({ subtasks_done: done, subtasks_total: total, subtasks_overdue: overdue }).eq('id', taskId);
+}
+
+export async function updateSubtask(
+  subtaskId: string,
+  taskId: string,
+  fields: Partial<{ title: string; due_date: string | null; assignee: string | null }>,
+): Promise<void> {
+  await supabase.from('task_subtasks').update(fields).eq('id', subtaskId);
+  await syncSubtaskCounts(taskId);
 }
 
 export async function insertSubtask(taskId: string, title: string): Promise<SubtaskItem> {

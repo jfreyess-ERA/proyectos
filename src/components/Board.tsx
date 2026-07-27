@@ -455,6 +455,11 @@ function TaskCard({
           <span className="text-[11px] tabular-nums" style={{ color: 'var(--ink-3)' }}>
             {task.subtasks.done}/{task.subtasks.total}
           </span>
+          {(task.subtasks.overdue ?? 0) > 0 && (
+            <span className="text-[10px] font-medium px-[6px] py-px rounded-full flex-shrink-0" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>
+              {task.subtasks.overdue}⚠
+            </span>
+          )}
         </div>
       )}
 

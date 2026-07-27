@@ -30,6 +30,7 @@ export interface Project {
 export interface Subtasks {
   done: number;
   total: number;
+  overdue?: number;
 }
 
 export interface Task {
@@ -98,6 +99,8 @@ export interface SubtaskItem {
   done: boolean;
   position: number;
   created_at: string;
+  due_date?: string | null;
+  assignee?: string | null;
 }
 
 export interface Comment {

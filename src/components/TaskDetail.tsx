@@ -10,7 +10,7 @@ import {
   updateTask, deleteTask, fetchComments, insertComment,
   logActivity, fetchActivity,
   fetchAttachments, uploadAttachment, deleteAttachment,
-  fetchSubtasks, insertSubtask, toggleSubtask, deleteSubtask,
+  fetchSubtasks, insertSubtask, toggleSubtask, deleteSubtask, updateSubtask,
 } from '@/lib/db';
 import { useAuth } from '@/lib/auth-context';
 import { assignTaskToSprint } from '@/lib/db';
@@ -202,6 +202,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
       setNewSubtask('');
       // Update local task summary
       setEdited(prev => prev ? { ...prev, subtasks: { done: prev.subtasks.done, total: prev.subtasks.total + 1 } } : prev);
+      if (task) onUpdated?.(task); // refresh parent rollup (subtask counts) in the app
     } catch (e) { console.error(e); } finally { setAddingSubtask(false); }
   }
 
@@ -214,6 +215,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
       return { ...prev, subtasks: { done: prev.subtasks.done + delta, total: prev.subtasks.total } };
     });
     await toggleSubtask(sub.id, next, taskId);
+    if (task) onUpdated?.(task);
   }
 
   async function handleDeleteSubtask(sub: SubtaskItem) {
@@ -223,6 +225,13 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
       return { ...prev, subtasks: { done: sub.done ? prev.subtasks.done - 1 : prev.subtasks.done, total: prev.subtasks.total - 1 } };
     });
     await deleteSubtask(sub.id, taskId);
+    if (task) onUpdated?.(task);
+  }
+
+  async function handleSubtaskField(sub: SubtaskItem, fields: Partial<{ due_date: string | null; assignee: string | null }>) {
+    setSubtasks(prev => prev.map(s => s.id === sub.id ? { ...s, ...fields } : s));
+    await updateSubtask(sub.id, taskId, fields);
+    if (task) onUpdated?.(task);
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -392,40 +401,82 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
             <Section
               title="Subtareas"
               right={
-                <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
-                  {subtasks.filter(s => s.done).length}/{subtasks.length}
-                </span>
+                (() => {
+                  const todayISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+                  const overdue = subtasks.filter(s => !s.done && s.due_date && s.due_date < todayISO).length;
+                  return (
+                    <div className="flex items-center gap-2">
+                      {overdue > 0 && (
+                        <span className="text-[11px] font-medium px-2 py-[1px] rounded-full" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>
+                          {overdue} atrasada{overdue > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+                        {subtasks.filter(s => s.done).length}/{subtasks.length}
+                      </span>
+                    </div>
+                  );
+                })()
               }
             >
-              <div className="flex flex-col gap-[6px]">
-                {subtasks.map(sub => (
-                  <div key={sub.id} className="flex items-center gap-3 group">
-                    <button
-                      onClick={() => handleToggleSubtask(sub)}
-                      className="w-4 h-4 rounded-[4px] border flex items-center justify-center flex-shrink-0 transition-colors"
-                      style={{
-                        background: sub.done ? 'var(--accent)' : 'transparent',
-                        borderColor: sub.done ? 'var(--accent)' : 'var(--line)',
-                        color: 'white',
-                      }}
-                    >
-                      {sub.done && <Check size={10} />}
-                    </button>
-                    <span
-                      className="text-[13px] flex-1"
-                      style={{ color: sub.done ? 'var(--ink-3)' : 'var(--ink)', textDecoration: sub.done ? 'line-through' : 'none' }}
-                    >
-                      {sub.title}
-                    </span>
-                    <button
-                      onClick={() => handleDeleteSubtask(sub)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity border-0 bg-transparent"
-                      style={{ color: 'var(--ink-4)' }}
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
+              <div className="flex flex-col gap-[8px]">
+                {subtasks.map(sub => {
+                  const todayISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+                  const isOverdue = !sub.done && sub.due_date && sub.due_date < todayISO;
+                  return (
+                    <div key={sub.id} className="flex items-center gap-2 group">
+                      <button
+                        onClick={() => handleToggleSubtask(sub)}
+                        className="w-4 h-4 rounded-[4px] border flex items-center justify-center flex-shrink-0 transition-colors"
+                        style={{
+                          background: sub.done ? 'var(--accent)' : 'transparent',
+                          borderColor: sub.done ? 'var(--accent)' : 'var(--line)',
+                          color: 'white',
+                        }}
+                      >
+                        {sub.done && <Check size={10} />}
+                      </button>
+                      <span
+                        className="text-[13px] flex-1 min-w-0 truncate"
+                        style={{ color: sub.done ? 'var(--ink-3)' : 'var(--ink)', textDecoration: sub.done ? 'line-through' : 'none' }}
+                        title={sub.title}
+                      >
+                        {sub.title}
+                      </span>
+                      {/* Assignee */}
+                      <select
+                        value={sub.assignee ?? ''}
+                        onChange={e => handleSubtaskField(sub, { assignee: e.target.value || null })}
+                        className="h-[24px] max-w-[110px] pl-1 pr-1 rounded-[5px] text-[11px] border outline-none flex-shrink-0"
+                        style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: sub.assignee ? 'var(--ink-2)' : 'var(--ink-4)', fontFamily: 'var(--font)' }}
+                        title="Responsable"
+                      >
+                        <option value="">Sin resp.</option>
+                        {allPeople.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                      </select>
+                      {/* Due date */}
+                      <input
+                        type="date"
+                        value={sub.due_date ?? ''}
+                        onChange={e => handleSubtaskField(sub, { due_date: e.target.value || null })}
+                        className="h-[24px] px-1 rounded-[5px] text-[11px] border outline-none flex-shrink-0"
+                        style={{
+                          background: isOverdue ? 'var(--danger-bg)' : 'var(--bg-2)',
+                          borderColor: isOverdue ? 'var(--danger)' : 'var(--line)',
+                          color: isOverdue ? 'var(--danger)' : (sub.due_date ? 'var(--ink-2)' : 'var(--ink-4)'),
+                        }}
+                        title="Fecha límite"
+                      />
+                      <button
+                        onClick={() => handleDeleteSubtask(sub)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity border-0 bg-transparent flex-shrink-0"
+                        style={{ color: 'var(--ink-4)' }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  );
+                })}
 
                 {/* Add subtask */}
                 <form onSubmit={handleAddSubtask} className="flex items-center gap-2 mt-1">
