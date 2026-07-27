@@ -2,9 +2,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Paperclip, Archive, MoreHorizontal, Plus, Send, Trash2, FileText, Image as ImageIcon, Upload, Check } from 'lucide-react';
 import {
-  getProject, fmtDate, PEOPLE, STATUSES, PRIORITIES,
+  fmtDate, PEOPLE, STATUSES, PRIORITIES,
 } from '@/lib/data';
 import { useLabels } from '@/lib/labels-context';
+import { useProjects } from '@/lib/projects-context';
 import {
   updateTask, fetchComments, insertComment,
   logActivity, fetchActivity,
@@ -28,6 +29,7 @@ interface Props {
 export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated }: Props) {
   const { profile } = useAuth();
   const allLabels = useLabels();
+  const allProjects = useProjects();
   const allPeople = users.length > 0 ? users : PEOPLE;
 
   const [edited, setEdited]         = useState<Task | null>(null);
@@ -93,7 +95,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
   if (!task || !edited) return null;
 
   const taskId  = task.id;
-  const project = getProject(edited.project);
+  const project = allProjects.find(p => p.id === edited.project);
   const labels  = edited.labels.map(id => allLabels.find(l => l.id === id)).filter(Boolean);
   const spentPct   = edited.estimate > 0 ? Math.min(100, (edited.spent / edited.estimate) * 100) : 0;
   const overBudget = edited.spent > edited.estimate;
@@ -279,7 +281,9 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated 
         <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--line)' }}>
           <div className="flex items-center gap-[10px]">
             <span className="w-2 h-2 rounded-[2px]" style={{ background: project?.color }} />
-            <span className="text-[12.5px]" style={{ color: 'var(--ink-3)' }}>{project?.name} · {task.ref}</span>
+            <span className="text-[12.5px]" style={{ color: 'var(--ink-3)' }}>
+              {project?.client && `${project.client} · `}{project?.name} · {task.ref}
+            </span>
             {saving && <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Guardando…</span>}
           </div>
           <div className="flex items-center gap-1">

@@ -1,6 +1,6 @@
 'use client';
 import { Clock } from 'lucide-react';
-import { STATUSES, PEOPLE, getProject, fmtDate, dueClass } from '@/lib/data';
+import { STATUSES, PEOPLE, fmtDate, dueClass } from '@/lib/data';
 import { useAuth } from '@/lib/auth-context';
 import type { Task, Project } from '@/lib/types';
 
@@ -17,7 +17,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   low:    'oklch(0.62 0.02 250)',
 };
 
-export function MyTasksView({ tasks, onOpenTask }: Props) {
+export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
   const { profile } = useAuth();
   const me = profile ?? PEOPLE[0];
   const myTasks = tasks.filter(t => t.assignees.includes(me.id));
@@ -70,7 +70,7 @@ export function MyTasksView({ tasks, onOpenTask }: Props) {
               style={{ border: '1px solid var(--line)', background: 'var(--surface)' }}
             >
               {group.items.map((task, i) => {
-                const proj = getProject(task.project);
+                const proj = projects.find(p => p.id === task.project);
                 const dueCls = dueClass(task.due, task.status);
                 return (
                   <button
@@ -98,8 +98,8 @@ export function MyTasksView({ tasks, onOpenTask }: Props) {
                     >
                       {task.ref}
                     </span>
-                    <span className="text-[11px] w-[80px] text-right flex-shrink-0 truncate" style={{ color: 'var(--ink-3)' }}>
-                      {proj?.name}
+                    <span className="text-[11px] w-[160px] text-right flex-shrink-0 truncate" style={{ color: 'var(--ink-3)' }}>
+                      {proj?.client && `${proj.client} · `}{proj?.name}
                     </span>
                     {task.due && (
                       <span className={`flex items-center gap-1 text-[11px] w-[72px] justify-end flex-shrink-0 ${dueCls}`}>

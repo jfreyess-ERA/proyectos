@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getProject } from '@/lib/data';
+import { useProjects } from '@/lib/projects-context';
 import type { Task } from '@/lib/types';
 
 interface Props {
@@ -19,6 +19,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 const DOW = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 export function CalendarView({ tasks, onOpenTask }: Props) {
+  const projects = useProjects();
   const todayBase = new Date(); todayBase.setHours(0, 0, 0, 0);
   const [cursor, setCursor] = useState(() => new Date(todayBase.getFullYear(), todayBase.getMonth(), 1));
 
@@ -154,7 +155,7 @@ export function CalendarView({ tasks, onOpenTask }: Props) {
 
               {/* Events */}
               {dayTasks.slice(0, 3).map(t => {
-                const proj = getProject(t.project);
+                const proj = projects.find(p => p.id === t.project);
                 return (
                   <button
                     key={t.id}

@@ -1,22 +1,26 @@
 'use client';
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Plus, Download } from 'lucide-react';
-import { STATUSES, PRIORITIES, getLabel, getProject, getUser, fmtDate, dueClass } from '@/lib/data';
+import { STATUSES, PRIORITIES, fmtDate, dueClass } from '@/lib/data';
+import { useProjects } from '@/lib/projects-context';
+import { useUsers } from '@/lib/users-context';
+import { useLabels } from '@/lib/labels-context';
 import { AvatarStack } from './Avatar';
-import type { Task } from '@/lib/types';
+import type { Task, Project, User, Label } from '@/lib/types';
 
 interface Props {
   tasks: Task[];
   onOpenTask: (task: Task) => void;
 }
 
-function exportCSV(tasks: Task[]) {
+function exportCSV(tasks: Task[], projects: Project[], users: User[], labelDefs: Label[]) {
   const headers = ['Ref', 'Título', 'Proyecto', 'Estado', 'Prioridad', 'Asignados', 'Etiquetas', 'Inicio', 'Vence', 'Estimado (h)', 'Real (h)'];
   const rows = tasks.map(t => {
-    const proj     = getProject(t.project);
-    const assignees = t.assignees.map(id => getUser(id)?.name ?? id).join('; ');
-    const labels   = t.labels.map(id => getLabel(id)?.text ?? id).join('; ');
-    return [t.ref, t.title, proj?.name ?? '', t.status, t.priority, assignees, labels, t.start ?? '', t.due ?? '', t.estimate, t.spent];
+    const proj     = projects.find(p => p.id === t.project);
+    const assignees = t.assignees.map(id => users.find(u => u.id === id)?.name ?? id).join('; ');
+    const labels   = t.labels.map(id => labelDefs.find(l => l.id === id)?.text ?? id).join('; ');
+    const projLabel = proj?.client ? `${proj.client} · ${proj.name}` : proj?.name ?? '';
+    return [t.ref, t.title, projLabel, t.status, t.priority, assignees, labels, t.start ?? '', t.due ?? '', t.estimate, t.spent];
   });
   const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -38,6 +42,9 @@ const PRIORITY_COLORS: Record<string, string> = {
 export function ListView({ tasks, onOpenTask }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggle = (id: string) => setCollapsed(c => ({ ...c, [id]: !c[id] }));
+  const projects = useProjects();
+  const users = useUsers();
+  const labelDefs = useLabels();
 
   const groups = STATUSES
     .map(s => ({ status: s, items: tasks.filter(t => t.status === s.id) }))
@@ -49,7 +56,7 @@ export function ListView({ tasks, onOpenTask }: Props) {
         {/* Toolbar */}
         <div className="flex items-center justify-end py-3 gap-2">
           <button
-            onClick={() => exportCSV(tasks)}
+            onClick={() => exportCSV(tasks, projects, users, labelDefs)}
             className="flex items-center gap-[6px] h-7 px-3 rounded-[6px] text-[12px] border-0 transition-colors"
             style={{ background: 'var(--bg-2)', color: 'var(--ink-3)', border: '1px solid var(--line)' }}
           >
@@ -106,7 +113,7 @@ export function ListView({ tasks, onOpenTask }: Props) {
               {open && (
                 <>
                   {g.items.map(t => {
-                    const labels = t.labels.map(id => getLabel(id)).filter(Boolean);
+                    const labels = t.labels.map(id => labelDefs.find(l => l.id === id)).filter(Boolean);
                     const priority = PRIORITIES.find(p => p.id === t.priority);
                     const dueCls = dueClass(t.due, t.status);
 

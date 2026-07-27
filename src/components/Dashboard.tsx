@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Flag, TrendingUp, Clock, CheckCircle } from 'lucide-react';
-import { PEOPLE, STATUSES, getProject, fmtDate, dueClass } from '@/lib/data';
+import { PEOPLE, STATUSES, fmtDate, dueClass } from '@/lib/data';
 import { useAuth } from '@/lib/auth-context';
 import type { Task, Project } from '@/lib/types';
 

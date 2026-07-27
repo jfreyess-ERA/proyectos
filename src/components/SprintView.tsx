@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Clock, Pencil, CheckSquare } from 'lucide-react';
-import { STATUSES, getProject, fmtDate, dueClass } from '@/lib/data';
+import { STATUSES, fmtDate, dueClass } from '@/lib/data';
 import { AvatarStack } from './Avatar';
 import { SprintModal } from './SprintModal';
 import type { Task, Sprint, Project } from '@/lib/types';

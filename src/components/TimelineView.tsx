@@ -1,5 +1,5 @@
 'use client';
-import { STATUSES, getUser } from '@/lib/data';
+import { STATUSES } from '@/lib/data';
 import { AvatarStack } from './Avatar';
 import type { Task, Project } from '@/lib/types';
 

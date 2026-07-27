@@ -1,6 +1,6 @@
 'use client';
 import { AlertTriangle, Clock, Eye, UserX } from 'lucide-react';
-import { getProject, fmtDate, dueClass } from '@/lib/data';
+import { fmtDate, dueClass } from '@/lib/data';
 import { AvatarStack } from './Avatar';
 import type { Task, Project } from '@/lib/types';
 
@@ -20,7 +20,7 @@ interface Section {
   bg: string;
 }
 
-export function InboxView({ tasks, onOpenTask }: Props) {
+export function InboxView({ tasks, projects, onOpenTask }: Props) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
   const overdue = tasks.filter(t =>
@@ -113,7 +113,7 @@ export function InboxView({ tasks, onOpenTask }: Props) {
               style={{ border: '1px solid var(--line)', borderTop: 'none', background: 'var(--surface)' }}
             >
               {section.items.map((task, i) => {
-                const proj = getProject(task.project);
+                const proj = projects.find(p => p.id === task.project);
                 const dueCls = dueClass(task.due, task.status);
                 return (
                   <button
@@ -128,6 +128,9 @@ export function InboxView({ tasks, onOpenTask }: Props) {
                   >
                     <span className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0" style={{ background: proj?.color }} />
                     <span className="flex-1 truncate font-medium">{task.title}</span>
+                    <span className="text-[11px] flex-shrink-0 truncate max-w-[160px]" style={{ color: 'var(--ink-4)' }}>
+                      {proj?.client && `${proj.client} · `}{proj?.name}
+                    </span>
                     <span className="text-[11px] flex-shrink-0" style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-4)' }}>
                       {task.ref}
                     </span>

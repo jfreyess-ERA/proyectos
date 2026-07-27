@@ -7,7 +7,9 @@ import {
 } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { ArrowLeft, Clock, Plus, Users, CheckCircle2, CircleDashed } from 'lucide-react';
-import { STATUSES, getProject, getLabel, fmtDate, dueClass, avatarBg } from '@/lib/data';
+import { STATUSES, fmtDate, dueClass, avatarBg } from '@/lib/data';
+import { useProjects } from '@/lib/projects-context';
+import { useLabels } from '@/lib/labels-context';
 import { updateTask } from '@/lib/db';
 import { AvatarStack } from './Avatar';
 import type { Task, ProjectStage, User } from '@/lib/types';
@@ -466,8 +468,9 @@ function DraggableCard({ task, onOpen, isDragging }: { task: Task; onOpen: (t: T
 // ── Task card ────────────────────────────────────────────────────
 
 function MiniCard({ task, onOpen, overlay = false }: { task: Task; onOpen: (t: Task) => void; overlay?: boolean }) {
-  const project  = getProject(task.project);
-  const labels   = task.labels.map(id => getLabel(id)).filter(Boolean);
+  const project  = useProjects().find(p => p.id === task.project);
+  const labelDefs = useLabels();
+  const labels   = task.labels.map(id => labelDefs.find(l => l.id === id)).filter(Boolean);
   const dueCls   = dueClass(task.due, task.status);
   const progress = task.subtasks.total > 0 ? task.subtasks.done / task.subtasks.total : 0;
 

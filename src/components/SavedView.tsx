@@ -1,6 +1,7 @@
 'use client';
 import { Clock } from 'lucide-react';
-import { getProject, fmtDate, dueClass, getLabel } from '@/lib/data';
+import { fmtDate, dueClass } from '@/lib/data';
+import { useLabels } from '@/lib/labels-context';
 import { AvatarStack } from './Avatar';
 import type { Task, Project } from '@/lib/types';
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function SavedView({ title, description, tasks, projects, onOpenTask }: Props) {
+  const labelDefs = useLabels();
   return (
     <div className="p-6 max-w-[860px]">
       <div className="mb-6">
@@ -33,9 +35,9 @@ export function SavedView({ title, description, tasks, projects, onOpenTask }: P
           style={{ border: '1px solid var(--line)', background: 'var(--surface)' }}
         >
           {tasks.map((task, i) => {
-            const proj = projects.find(p => p.id === task.project) ?? getProject(task.project);
+            const proj = projects.find(p => p.id === task.project);
             const dueCls = dueClass(task.due, task.status);
-            const labels = task.labels.map(id => getLabel(id)).filter(Boolean);
+            const labels = task.labels.map(id => labelDefs.find(l => l.id === id)).filter(Boolean);
             return (
               <button
                 key={task.id}
@@ -61,8 +63,8 @@ export function SavedView({ title, description, tasks, projects, onOpenTask }: P
                 <span className="text-[11px] flex-shrink-0" style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-4)' }}>
                   {task.ref}
                 </span>
-                <span className="text-[11px] w-[80px] text-right flex-shrink-0 truncate" style={{ color: 'var(--ink-3)' }}>
-                  {proj?.name}
+                <span className="text-[11px] w-[160px] text-right flex-shrink-0 truncate" style={{ color: 'var(--ink-3)' }}>
+                  {proj?.client && `${proj.client} · `}{proj?.name}
                 </span>
                 <AvatarStack userIds={task.assignees} max={2} />
                 {task.due && (

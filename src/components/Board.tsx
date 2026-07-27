@@ -13,7 +13,9 @@ import {
 } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Plus, MoreHorizontal, Clock, X, CheckSquare } from 'lucide-react';
-import { STATUSES, PRIORITIES, getProject, getLabel, fmtDate, dueClass, avatarBg } from '@/lib/data';
+import { STATUSES, PRIORITIES, fmtDate, dueClass, avatarBg } from '@/lib/data';
+import { useProjects } from '@/lib/projects-context';
+import { useLabels } from '@/lib/labels-context';
 import { updateTaskStatus, bulkUpdateTasks } from '@/lib/db';
 import { AvatarStack } from './Avatar';
 import type { Task, User } from '@/lib/types';
@@ -369,8 +371,9 @@ function TaskCard({
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
 }) {
-  const project = getProject(task.project);
-  const labels = task.labels.map(id => getLabel(id)).filter(Boolean);
+  const project = useProjects().find(p => p.id === task.project);
+  const labels = useLabels();
+  const taskLabels = task.labels.map(id => labels.find(l => l.id === id)).filter(Boolean);
   const progress = task.subtasks.total > 0 ? task.subtasks.done / task.subtasks.total : 0;
   const dueCls = dueClass(task.due, task.status);
 
@@ -426,9 +429,9 @@ function TaskCard({
       </div>
 
       {/* Labels */}
-      {labels.length > 0 && (
+      {taskLabels.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {labels.slice(0, 3).map(l => l && (
+          {taskLabels.slice(0, 3).map(l => l && (
             <span
               key={l.id}
               className="inline-flex items-center h-5 px-2 rounded-[4px] text-[11px] font-medium"

@@ -35,6 +35,7 @@ import { CrmReports } from '@/components/CrmReports';
 import { InviteUserModal } from '@/components/InviteUserModal';
 import { UsersContext } from '@/lib/users-context';
 import { LabelsContext } from '@/lib/labels-context';
+import { ProjectsContext } from '@/lib/projects-context';
 import { useNorteData } from '@/lib/useNorteData';
 import { useCrmData } from '@/lib/useCrmData';
 import { useAuth } from '@/lib/auth-context';
@@ -275,6 +276,7 @@ export default function Home() {
   return (
     <UsersContext.Provider value={users}>
     <LabelsContext.Provider value={labels}>
+    <ProjectsContext.Provider value={projects}>
     <>
       <Shell
         activeNav={activeNav}
@@ -425,6 +427,7 @@ export default function Home() {
         onImported={() => crmRefetch()}
       />
     </>
+    </ProjectsContext.Provider>
     </LabelsContext.Provider>
     </UsersContext.Provider>
   );
