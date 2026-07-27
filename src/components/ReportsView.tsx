@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { STATUSES, PRIORITIES, PEOPLE, avatarBg } from '@/lib/data';
 import { useUsers } from '@/lib/users-context';
 import type { Task, Project, User } from '@/lib/types';
@@ -103,6 +104,73 @@ function KpiCard({
   );
 }
 
+function FilterSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (v: string) => void; children: React.ReactNode }) {
+  return (
+    <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--ink-3)' }}>
+      <span className="font-medium">{label}:</span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="h-8 px-2 rounded-[7px] border text-[12px] outline-none"
+        style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
+      >
+        {children}
+      </select>
+    </label>
+  );
+}
+
+function ProjectProgressRow({
+  p, statusFilter, showClient, accuracyColor, accuracyLabel,
+}: {
+  p: Project & { total: number; done: number; pct: number; totalEst: number; totalSpent: number; ratio: number | null; byStatus: Record<string, number> };
+  statusFilter: string;
+  showClient: boolean;
+  accuracyColor: (r: number | null) => string;
+  accuracyLabel: (r: number | null) => string;
+}) {
+  const ratioColor = accuracyColor(p.ratio);
+  const statusDef = STATUSES.find(s => s.id === statusFilter);
+  const statusCount = statusFilter !== 'all' ? (p.byStatus[statusFilter] ?? 0) : null;
+  const barPct = statusFilter === 'all' ? p.pct : (p.total > 0 ? (statusCount ?? 0) / p.total : 0);
+  const barColor = statusFilter === 'all' ? p.color : (statusDef?.tone ?? p.color);
+
+  return (
+    <div className="flex flex-col gap-[6px]">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-[10px] h-[10px] rounded-[3px] flex-shrink-0" style={{ background: p.color }} />
+          <span className="text-[13px] font-medium truncate" style={{ color: 'var(--ink)' }}>
+            {showClient && p.client && (
+              <span className="font-normal" style={{ color: 'var(--ink-4)' }}>{p.client} · </span>
+            )}
+            {p.name}
+          </span>
+        </div>
+        <div className="flex items-center gap-4 text-[12px] flex-shrink-0" style={{ color: 'var(--ink-3)' }}>
+          {statusFilter !== 'all' ? (
+            <span style={{ color: barColor }} className="font-medium">
+              {statusCount} {statusDef?.label.toLowerCase()}
+            </span>
+          ) : (
+            <span>{p.done}/{p.total} tareas</span>
+          )}
+          {p.totalEst > 0 && (
+            <span style={{ color: ratioColor }}>
+              {p.totalSpent}h / {p.totalEst}h
+              <span className="ml-1 font-semibold">({accuracyLabel(p.ratio)})</span>
+            </span>
+          )}
+          <span className="font-semibold w-[36px] text-right" style={{ color: 'var(--ink-2)' }}>
+            {Math.round(barPct * 100)}%
+          </span>
+        </div>
+      </div>
+      <HBar pct={barPct} color={barColor} height={7} />
+    </div>
+  );
+}
+
 function HBar({
   pct,
   color,
@@ -140,6 +208,14 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // ── Progreso por proyecto: filters / grouping ───────────────────────────────
+  const [progressGroupBy, setProgressGroupBy] = useState<'project' | 'client'>('project');
+  const [progressClient, setProgressClient] = useState<string>('all');
+  const [progressStatus, setProgressStatus] = useState<string>('all');
+  const [timeInStateCollapsed, setTimeInStateCollapsed] = useState(true);
+
+  const progressClients = [...new Set(projects.map(p => p.client).filter(Boolean) as string[])].sort();
+
   const total = tasks.length;
   const doneTasks = tasks.filter(t => t.status === 'done');
   const activeTasks = tasks.filter(t => t.status !== 'done');
@@ -172,8 +248,26 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
     const totalSpent = pt.reduce((a, t) => a + (t.spent || 0), 0);
     const ratio = totalEst > 0 ? totalSpent / totalEst : null;
     const overdue = pt.filter(t => t.status !== 'done' && t.due && parseDate(t.due) < today);
-    return { ...p, total: pt.length, done: pdone.length, pct, totalEst, totalSpent, ratio, overdue };
+    const byStatus = Object.fromEntries(STATUSES.map(s => [s.id, pt.filter(t => t.status === s.id).length])) as Record<string, number>;
+    return { ...p, total: pt.length, done: pdone.length, pct, totalEst, totalSpent, ratio, overdue, byStatus };
   });
+
+  // filtered + grouped view used by "Progreso por proyecto"
+  const progressStats = projectStats.filter(p => {
+    if (progressClient !== 'all' && p.client !== progressClient) return false;
+    if (progressStatus !== 'all' && (p.byStatus[progressStatus] ?? 0) === 0) return false;
+    return true;
+  });
+
+  const progressByClient = (() => {
+    const map = new Map<string, typeof progressStats>();
+    for (const p of progressStats) {
+      const key = p.client || 'Sin cliente';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  })();
 
   // ── tiempo promedio en estado ────────────────────────────────────────────────
   // proxy: doing/review tasks with start → days since start; done tasks with start+due → (due-start)
@@ -375,52 +469,121 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
           <SectionTitle sub="Porcentaje de tareas completadas · horas estimadas vs. registradas">
             Progreso por proyecto
           </SectionTitle>
-          <div className="flex flex-col gap-5">
-            {projectStats.map(p => {
-              const ratioColor = accuracyColor(p.ratio);
-              return (
-                <div key={p.id} className="flex flex-col gap-[6px]">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="w-[10px] h-[10px] rounded-[3px] flex-shrink-0"
-                        style={{ background: p.color }}
-                      />
-                      <span className="text-[13px] font-medium truncate" style={{ color: 'var(--ink)' }}>
-                        {p.client && (
-                          <span className="font-normal" style={{ color: 'var(--ink-4)' }}>{p.client} · </span>
-                        )}
-                        {p.name}
+
+          {/* Filters + group-by */}
+          <div className="flex items-center gap-3 flex-wrap mb-4 pb-4" style={{ borderBottom: '1px solid var(--line)' }}>
+            <FilterSelect label="Cliente" value={progressClient} onChange={setProgressClient}>
+              <option value="all">Todos ({progressClients.length})</option>
+              {progressClients.map(c => <option key={c} value={c}>{c}</option>)}
+            </FilterSelect>
+            <FilterSelect label="Estado" value={progressStatus} onChange={setProgressStatus}>
+              <option value="all">Todos</option>
+              {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </FilterSelect>
+            <div className="inline-flex rounded-[8px] border overflow-hidden ml-auto" style={{ borderColor: 'var(--line)' }}>
+              <button
+                onClick={() => setProgressGroupBy('project')}
+                className="h-8 px-3 text-[12px] font-medium border-0 transition-colors"
+                style={{
+                  background: progressGroupBy === 'project' ? 'var(--bg-2)' : 'transparent',
+                  color: progressGroupBy === 'project' ? 'var(--ink)' : 'var(--ink-3)',
+                }}
+              >
+                Por proyecto
+              </button>
+              <button
+                onClick={() => setProgressGroupBy('client')}
+                className="h-8 px-3 text-[12px] font-medium border-0 transition-colors"
+                style={{
+                  background: progressGroupBy === 'client' ? 'var(--bg-2)' : 'transparent',
+                  color: progressGroupBy === 'client' ? 'var(--ink)' : 'var(--ink-3)',
+                  borderLeft: '1px solid var(--line)',
+                }}
+              >
+                Por cliente
+              </button>
+            </div>
+            {(progressClient !== 'all' || progressStatus !== 'all') && (
+              <button
+                onClick={() => { setProgressClient('all'); setProgressStatus('all'); }}
+                className="h-8 px-3 text-[12px] rounded-[7px] border transition-colors"
+                style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink-3)' }}
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+
+          {progressGroupBy === 'project' && (
+            <div className="flex flex-col gap-5">
+              {progressStats.map(p => (
+                <ProjectProgressRow key={p.id} p={p} statusFilter={progressStatus} showClient accuracyColor={accuracyColor} accuracyLabel={accuracyLabel} />
+              ))}
+              {progressStats.length === 0 && (
+                <p className="text-[13px] text-center py-6" style={{ color: 'var(--ink-4)' }}>
+                  Ningún proyecto coincide con los filtros.
+                </p>
+              )}
+            </div>
+          )}
+
+          {progressGroupBy === 'client' && (
+            <div className="flex flex-col gap-6">
+              {progressByClient.map(([client, rows]) => {
+                const clientDone = rows.reduce((s, p) => s + p.done, 0);
+                const clientTotal = rows.reduce((s, p) => s + p.total, 0);
+                const clientStatusCount = progressStatus !== 'all'
+                  ? rows.reduce((s, p) => s + (p.byStatus[progressStatus] ?? 0), 0)
+                  : null;
+                const clientPct = progressStatus === 'all'
+                  ? (clientTotal ? clientDone / clientTotal : 0)
+                  : (clientTotal ? (clientStatusCount ?? 0) / clientTotal : 0);
+                const statusDef = STATUSES.find(s => s.id === progressStatus);
+                return (
+                  <div key={client} className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[13.5px] font-bold" style={{ color: 'var(--ink)' }}>{client}</span>
+                      <span className="text-[11px] tabular-nums" style={{ color: 'var(--ink-4)' }}>
+                        {rows.length} proyecto{rows.length !== 1 ? 's' : ''} ·{' '}
+                        {progressStatus === 'all' ? `${clientDone}/${clientTotal} tareas` : `${clientStatusCount} ${statusDef?.label.toLowerCase()}`} ·{' '}
+                        {Math.round(clientPct * 100)}%
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 text-[12px] flex-shrink-0" style={{ color: 'var(--ink-3)' }}>
-                      <span>{p.done}/{p.total} tareas</span>
-                      {p.totalEst > 0 && (
-                        <span style={{ color: ratioColor }}>
-                          {p.totalSpent}h / {p.totalEst}h
-                          <span className="ml-1 font-semibold">({accuracyLabel(p.ratio)})</span>
-                        </span>
-                      )}
-                      <span
-                        className="font-semibold w-[36px] text-right"
-                        style={{ color: 'var(--ink-2)' }}
-                      >
-                        {Math.round(p.pct * 100)}%
-                      </span>
+                    <HBar pct={clientPct} color={progressStatus === 'all' ? 'var(--ink-3)' : (statusDef?.tone ?? 'var(--ink-3)')} height={5} bg="var(--bg-2)" />
+                    <div className="flex flex-col gap-4 pl-4" style={{ borderLeft: '2px solid var(--line-2)' }}>
+                      {rows.map(p => (
+                        <ProjectProgressRow key={p.id} p={p} statusFilter={progressStatus} showClient={false} accuracyColor={accuracyColor} accuracyLabel={accuracyLabel} />
+                      ))}
                     </div>
                   </div>
-                  <HBar pct={p.pct} color={p.color} height={7} />
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+              {progressByClient.length === 0 && (
+                <p className="text-[13px] text-center py-6" style={{ color: 'var(--ink-4)' }}>
+                  Ningún proyecto coincide con los filtros.
+                </p>
+              )}
+            </div>
+          )}
         </Card>
 
         {/* ── Tiempo promedio en estado ────────────────────────────────────────── */}
         <Card>
-          <SectionTitle sub="Promedio de días · proxy basado en fecha de inicio y entrega">
-            Tiempo promedio en estado por proyecto
-          </SectionTitle>
+          <button
+            onClick={() => setTimeInStateCollapsed(c => !c)}
+            className="w-full flex items-center justify-between border-0 bg-transparent text-left"
+            style={{ marginBottom: timeInStateCollapsed ? 0 : 16 }}
+          >
+            <div>
+              <div className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>Tiempo promedio en estado por proyecto</div>
+              <div className="text-[11px] mt-[2px]" style={{ color: 'var(--ink-4)' }}>Promedio de días · proxy basado en fecha de inicio y entrega</div>
+            </div>
+            <ChevronDown
+              size={16}
+              style={{ color: 'var(--ink-3)', flexShrink: 0, transform: timeInStateCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }}
+            />
+          </button>
+          {!timeInStateCollapsed && (
           <div className="overflow-x-auto">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -521,6 +684,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
               </tbody>
             </table>
           </div>
+          )}
         </Card>
 
         {/* ── Precisión de estimaciones por proyecto ──────────────────────────── */}
