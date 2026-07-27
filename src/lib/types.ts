@@ -19,6 +19,12 @@ export interface Project {
   color: string;
   favorite: boolean;
   client?: string;
+  // Phase milestone dates (ISO yyyy-mm-dd) — loaded from the tracking sheet.
+  kickoff_date?: string | null;
+  situacion_date?: string | null;
+  opciones_date?: string | null;
+  implementacion_date?: string | null;
+  seguimiento_date?: string | null;
 }
 
 export interface Subtasks {

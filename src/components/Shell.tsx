@@ -6,7 +6,7 @@ import {
   PanelLeft, ChevronRight, ChevronDown, SlidersHorizontal,
   LayoutGrid, List, GanttChart, Calendar, Layers,
   Target, MessageSquare, ListChecks, Zap, Mail, LayoutDashboard, CalendarDays,
-  TrendingUp, PieChart,
+  TrendingUp, PieChart, Clock,
 } from 'lucide-react';
 import { PEOPLE } from '@/lib/data';
 import { Avatar } from './Avatar';
@@ -173,6 +173,7 @@ export function Shell({
               {[
                 { id: 'admin:team-week', icon: <CalendarDays size={16} />, label: 'Panel del equipo' },
                 { id: 'admin:stats',     icon: <PieChart size={16} />,     label: 'Estadísticas' },
+                { id: 'admin:durations', icon: <Clock size={16} />,        label: 'Tiempos por fase' },
               ].map(item => (
                 <button
                   key={item.id}

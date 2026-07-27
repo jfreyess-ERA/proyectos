@@ -16,6 +16,7 @@ import { InboxView } from '@/components/InboxView';
 import { PeopleView } from '@/components/PeopleView';
 import { TeamWeekView } from '@/components/TeamWeekView';
 import { StatsView } from '@/components/StatsView';
+import { PhaseDurationView } from '@/components/PhaseDurationView';
 import { ReportsView } from '@/components/ReportsView';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProjectModal } from '@/components/ProjectModal';
@@ -44,7 +45,7 @@ import { useAuth } from '@/lib/auth-context';
 import { getOrCreateShare } from '@/lib/db';
 import type { Task, Project, Sprint, Prospect } from '@/lib/types';
 
-type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | 'admin:team-week' | 'admin:stats' | string;
+type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | 'admin:team-week' | 'admin:stats' | 'admin:durations' | string;
 type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
 
 export default function Home() {
@@ -101,6 +102,7 @@ export default function Home() {
   const ADMIN_LABELS: Record<string, string> = {
     'admin:team-week': 'Panel del equipo',
     'admin:stats':     'Estadísticas',
+    'admin:durations': 'Tiempos por fase',
   };
 
   const crumbs = isProjectView && project
@@ -215,6 +217,10 @@ export default function Home() {
         case 'admin:stats':
           return profile?.is_admin
             ? <StatsView tasks={tasks} projects={projects} users={users} onOpenProject={id => handleNav('project:' + id)} />
+            : <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
+        case 'admin:durations':
+          return profile?.is_admin
+            ? <PhaseDurationView tasks={tasks} projects={projects} onOpenProject={id => handleNav('project:' + id)} />
             : <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
         case 'reports': return <ReportsView tasks={tasks} projects={projects} users={users} />;
         case 'crm:dashboard': return (
