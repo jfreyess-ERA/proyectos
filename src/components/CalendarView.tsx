@@ -7,6 +7,7 @@ import type { Task } from '@/lib/types';
 interface Props {
   tasks: Task[];
   onOpenTask: (task: Task) => void;
+  viewMode?: 'month' | 'week';
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -18,22 +19,49 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 const DOW = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-export function CalendarView({ tasks, onOpenTask }: Props) {
+function startOfWeekMon(d: Date): Date {
+  const date = new Date(d); date.setHours(0, 0, 0, 0);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  return date;
+}
+
+export function CalendarView({ tasks, onOpenTask, viewMode = 'month' }: Props) {
   const projects = useProjects();
   const todayBase = new Date(); todayBase.setHours(0, 0, 0, 0);
-  const [cursor, setCursor] = useState(() => new Date(todayBase.getFullYear(), todayBase.getMonth(), 1));
+  const [cursor, setCursor] = useState(() =>
+    viewMode === 'week' ? startOfWeekMon(todayBase) : new Date(todayBase.getFullYear(), todayBase.getMonth(), 1)
+  );
 
-  const monthLabel = cursor.toLocaleDateString('es', { month: 'long', year: 'numeric' });
-  const firstDay = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-  const lastDay  = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
-  const startOffset = (firstDay.getDay() + 6) % 7; // Monday-first
-  const gridStart = new Date(firstDay); gridStart.setDate(firstDay.getDate() - startOffset);
-  const totalCells = Math.ceil((startOffset + lastDay.getDate()) / 7) * 7;
+  // Reset cursor when viewMode changes so it snaps to a valid boundary
+  const cursorRef = cursor;
+  const normalisedCursor = viewMode === 'week' ? startOfWeekMon(cursorRef) : new Date(cursorRef.getFullYear(), cursorRef.getMonth(), 1);
 
   const cells: Date[] = [];
-  for (let i = 0; i < totalCells; i++) {
-    const d = new Date(gridStart); d.setDate(gridStart.getDate() + i);
-    cells.push(d);
+  let headerLabel = '';
+
+  if (viewMode === 'week') {
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(normalisedCursor); d.setDate(normalisedCursor.getDate() + i);
+      cells.push(d);
+    }
+    const sunday = cells[6];
+    const sameMonth = normalisedCursor.getMonth() === sunday.getMonth();
+    const startLbl = normalisedCursor.toLocaleDateString('es', { day: 'numeric', month: sameMonth ? undefined : 'short' });
+    const endLbl = sunday.toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+    headerLabel = `${startLbl} — ${endLbl}`;
+  } else {
+    const firstDay = new Date(normalisedCursor.getFullYear(), normalisedCursor.getMonth(), 1);
+    const lastDay  = new Date(normalisedCursor.getFullYear(), normalisedCursor.getMonth() + 1, 0);
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const gridStart = new Date(firstDay); gridStart.setDate(firstDay.getDate() - startOffset);
+    const totalCells = Math.ceil((startOffset + lastDay.getDate()) / 7) * 7;
+    for (let i = 0; i < totalCells; i++) {
+      const d = new Date(gridStart); d.setDate(gridStart.getDate() + i);
+      cells.push(d);
+    }
+    headerLabel = normalisedCursor.toLocaleDateString('es', { month: 'long', year: 'numeric' });
   }
 
   const tasksOn = (d: Date) => {
@@ -41,9 +69,23 @@ export function CalendarView({ tasks, onOpenTask }: Props) {
     return tasks.filter(t => t.due === iso);
   };
 
-  const prev = () => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1));
-  const next = () => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1));
-  const goToday = () => setCursor(new Date(todayBase.getFullYear(), todayBase.getMonth(), 1));
+  const prev = () => {
+    if (viewMode === 'week') {
+      const n = new Date(normalisedCursor); n.setDate(n.getDate() - 7); setCursor(n);
+    } else {
+      setCursor(new Date(normalisedCursor.getFullYear(), normalisedCursor.getMonth() - 1, 1));
+    }
+  };
+  const next = () => {
+    if (viewMode === 'week') {
+      const n = new Date(normalisedCursor); n.setDate(n.getDate() + 7); setCursor(n);
+    } else {
+      setCursor(new Date(normalisedCursor.getFullYear(), normalisedCursor.getMonth() + 1, 1));
+    }
+  };
+  const goToday = () => setCursor(
+    viewMode === 'week' ? startOfWeekMon(todayBase) : new Date(todayBase.getFullYear(), todayBase.getMonth(), 1)
+  );
 
   const tasksWithDate = tasks.filter(t => t.due).length;
 
@@ -80,7 +122,7 @@ export function CalendarView({ tasks, onOpenTask }: Props) {
             className="ml-2 font-semibold text-[14px] capitalize"
             style={{ color: 'var(--ink)' }}
           >
-            {monthLabel}
+            {headerLabel}
           </span>
         </div>
         <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
@@ -109,11 +151,11 @@ export function CalendarView({ tasks, onOpenTask }: Props) {
         className="flex-1 min-h-0 overflow-auto grid"
         style={{
           gridTemplateColumns: 'repeat(7, 1fr)',
-          gridAutoRows: '1fr',
+          gridAutoRows: viewMode === 'week' ? 'minmax(400px, 1fr)' : '1fr',
         }}
       >
         {cells.map((d, i) => {
-          const inMonth = d.getMonth() === cursor.getMonth();
+          const inMonth = viewMode === 'week' ? true : d.getMonth() === normalisedCursor.getMonth();
           const isToday = d.getTime() === todayBase.getTime();
           const dayTasks = tasksOn(d);
           const isWeekend = d.getDay() === 0 || d.getDay() === 6;
@@ -146,7 +188,7 @@ export function CalendarView({ tasks, onOpenTask }: Props) {
                 >
                   {d.getDate()}
                 </span>
-                {dayTasks.length > 3 && (
+                {dayTasks.length > (viewMode === 'week' ? 12 : 3) && (
                   <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
                     +{dayTasks.length}
                   </span>
@@ -154,7 +196,7 @@ export function CalendarView({ tasks, onOpenTask }: Props) {
               </div>
 
               {/* Events */}
-              {dayTasks.slice(0, 3).map(t => {
+              {dayTasks.slice(0, viewMode === 'week' ? 12 : 3).map(t => {
                 const proj = projects.find(p => p.id === t.project);
                 return (
                   <button
@@ -179,12 +221,12 @@ export function CalendarView({ tasks, onOpenTask }: Props) {
                   </button>
                 );
               })}
-              {dayTasks.length > 3 && (
+              {dayTasks.length > (viewMode === 'week' ? 12 : 3) && (
                 <button
                   className="text-[11px] px-1 py-[2px] border-0 bg-transparent text-left"
                   style={{ color: 'var(--ink-3)' }}
                 >
-                  + {dayTasks.length - 3} más
+                  + {dayTasks.length - (viewMode === 'week' ? 12 : 3)} más
                 </button>
               )}
             </div>
