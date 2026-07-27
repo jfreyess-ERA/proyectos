@@ -61,55 +61,82 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+interface Buckets {
+  overdue: Task[];
+  dueThisWeek: Task[];
+  inProgress: Task[];
+  pending: Task[];
+  completedThisWeek: Task[];
+  activeCount: number;
+}
+
+function computeBuckets(taskList: Task[], weekStartISO: string, weekEndISO: string): Buckets {
+  const active = taskList.filter(t => t.status !== 'done');
+  const dueThisWeek = active.filter(t => t.due && t.due >= weekStartISO && t.due <= weekEndISO);
+  const overdue = active.filter(t => t.due && t.due < weekStartISO);
+  const inProgressAll = active.filter(t => t.status === 'doing');
+  const seenIds = new Set([...dueThisWeek, ...overdue].map(t => t.id));
+  const inProgress = inProgressAll.filter(t => !seenIds.has(t.id));
+  const pending = active.filter(t => !seenIds.has(t.id) && t.status !== 'doing' && (t.status === 'todo' || t.status === 'review' || t.status === 'backlog'));
+  const completedThisWeek = taskList.filter(t => t.status === 'done' && t.due && t.due >= weekStartISO && t.due <= weekEndISO);
+  return { overdue, dueThisWeek, inProgress, pending, completedThisWeek, activeCount: active.length };
+}
+
+type GroupBy = 'person' | 'project';
+
 export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [showEmpty, setShowEmpty]         = useState(false);
+  const [showEmpty, setShowEmpty] = useState(false);
+  const [groupBy, setGroupBy]     = useState<GroupBy>('person');
 
   const weekEnd = addDays(weekStart, 6);
   const weekStartISO = isoDate(weekStart);
   const weekEndISO = isoDate(weekEnd);
   const todayISO = isoDate(new Date());
 
-  const rows = useMemo(() => {
+  // ── Person rows ─────────────────────────────────────────────────
+  const personRows = useMemo(() => {
     return users.map(u => {
       const mine = tasks.filter(t => t.assignees.includes(u.id));
-
-      // active = doing / review / todo / backlog (i.e. not done)
-      const active = mine.filter(t => t.status !== 'done');
-
-      // due this week (any status except done)
-      const dueThisWeek = active.filter(t => t.due && t.due >= weekStartISO && t.due <= weekEndISO);
-
-      // overdue = due before weekStart, still active
-      const overdue = active.filter(t => t.due && t.due < weekStartISO);
-
-      // in progress (doing) — always show
-      const inProgress = active.filter(t => t.status === 'doing');
-
-      // pending = todo + review + backlog, not already counted in dueThisWeek/overdue
-      const seenIds = new Set([...dueThisWeek, ...overdue, ...inProgress].map(t => t.id));
-      const pending = active.filter(t => !seenIds.has(t.id) && (t.status === 'todo' || t.status === 'review' || t.status === 'backlog'));
-
-      // completed this week
-      const completedThisWeek = mine.filter(t => t.status === 'done' && t.due && t.due >= weekStartISO && t.due <= weekEndISO);
-
-      return {
-        user: u,
-        overdue,
-        dueThisWeek,
-        inProgress: inProgress.filter(t => !dueThisWeek.some(x => x.id === t.id) && !overdue.some(x => x.id === t.id)),
-        pending,
-        completedThisWeek,
-        activeCount: active.length,
-      };
+      return { user: u, ...computeBuckets(mine, weekStartISO, weekEndISO) };
     });
   }, [users, tasks, weekStartISO, weekEndISO]);
 
-  const visibleRows = showEmpty ? rows : rows.filter(r => r.activeCount > 0 || r.completedThisWeek.length > 0);
+  // ── Project rows (grouped by client) ────────────────────────────
+  const clientSections = useMemo(() => {
+    const projRows = projects.map(p => {
+      const pt = tasks.filter(t => t.project === p.id);
+      return { project: p, ...computeBuckets(pt, weekStartISO, weekEndISO) };
+    });
+    const byClient = new Map<string, typeof projRows>();
+    for (const r of projRows) {
+      const key = r.project.client ?? 'Sin cliente';
+      if (!byClient.has(key)) byClient.set(key, []);
+      byClient.get(key)!.push(r);
+    }
+    // sort each client's projects alphabetically
+    for (const arr of byClient.values()) arr.sort((a, b) => a.project.name.localeCompare(b.project.name));
+    return [...byClient.entries()]
+      .map(([client, rows]) => ({ client, rows }))
+      .sort((a, b) => a.client.localeCompare(b.client));
+  }, [projects, tasks, weekStartISO, weekEndISO]);
 
-  const totalActive = rows.reduce((s, r) => s + r.activeCount, 0);
-  const totalOverdue = rows.reduce((s, r) => s + r.overdue.length, 0);
+  // ── Totals ──────────────────────────────────────────────────────
+  const totalActive = groupBy === 'person'
+    ? personRows.reduce((s, r) => s + r.activeCount, 0)
+    // sum only distinct active tasks (each task once) — but each task belongs to one project, so summing works
+    : clientSections.reduce((s, sec) => s + sec.rows.reduce((ss, r) => ss + r.activeCount, 0), 0);
+  const totalOverdue = groupBy === 'person'
+    ? personRows.reduce((s, r) => s + r.overdue.length, 0)
+    : clientSections.reduce((s, sec) => s + sec.rows.reduce((ss, r) => ss + r.overdue.length, 0), 0);
+  const visiblePersons = showEmpty ? personRows : personRows.filter(r => r.activeCount > 0 || r.completedThisWeek.length > 0);
+  const visibleClientSections = groupBy === 'project'
+    ? clientSections.map(sec => ({
+        ...sec,
+        rows: showEmpty ? sec.rows : sec.rows.filter(r => r.activeCount > 0 || r.completedThisWeek.length > 0),
+      })).filter(sec => sec.rows.length > 0)
+    : [];
 
   return (
     <div className="p-6 max-w-[1200px]">
@@ -120,7 +147,7 @@ export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject
             Panel del equipo
           </h1>
           <p className="text-[14px] mt-1" style={{ color: 'var(--ink-3)' }}>
-            {rows.length} personas · {totalActive} tareas activas
+            {groupBy === 'person' ? `${personRows.length} personas` : `${projects.length} proyectos`} · {totalActive} tareas activas
             {totalOverdue > 0 && (
               <span className="ml-2 font-medium" style={{ color: 'var(--danger)' }}>
                 · {totalOverdue} atrasadas
@@ -170,157 +197,337 @@ export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject
         </div>
       </div>
 
-      {/* Toggle empty */}
-      <div className="mb-4 flex items-center gap-3">
+      {/* Controls */}
+      <div className="mb-4 flex items-center gap-4 flex-wrap">
+        {/* Group by toggle */}
+        <div className="inline-flex rounded-[8px] border overflow-hidden" style={{ borderColor: 'var(--line)' }}>
+          <button
+            onClick={() => setGroupBy('person')}
+            className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
+            style={{
+              background: groupBy === 'person' ? 'var(--surface)' : 'transparent',
+              color: groupBy === 'person' ? 'var(--ink)' : 'var(--ink-3)',
+              boxShadow: groupBy === 'person' ? 'var(--shadow-1)' : 'none',
+            }}
+          >
+            Persona
+          </button>
+          <button
+            onClick={() => setGroupBy('project')}
+            className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
+            style={{
+              background: groupBy === 'project' ? 'var(--surface)' : 'transparent',
+              color: groupBy === 'project' ? 'var(--ink)' : 'var(--ink-3)',
+              boxShadow: groupBy === 'project' ? 'var(--shadow-1)' : 'none',
+              borderLeft: '1px solid var(--line)',
+            }}
+          >
+            Cliente → Proyecto
+          </button>
+        </div>
+
         <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--ink-3)' }}>
           <input
             type="checkbox"
             checked={showEmpty}
             onChange={e => setShowEmpty(e.target.checked)}
           />
-          Mostrar personas sin tareas activas
+          Mostrar {groupBy === 'person' ? 'personas' : 'proyectos'} sin tareas activas
         </label>
       </div>
 
-      {/* Rows */}
-      <div className="flex flex-col gap-3">
-        {visibleRows.map(row => {
-          const isCollapsed = collapsed[row.user.id];
-          const groups = [
-            { key: 'overdue', title: 'Atrasadas', items: row.overdue, accent: 'var(--danger)' },
-            { key: 'week', title: 'Vencen esta semana', items: row.dueThisWeek, accent: 'oklch(0.62 0.16 265)' },
-            { key: 'doing', title: 'En curso', items: row.inProgress, accent: 'oklch(0.62 0.16 265)' },
-            { key: 'pending', title: 'Pendientes', items: row.pending, accent: 'var(--ink-3)' },
-            { key: 'done', title: 'Completadas esta semana', items: row.completedThisWeek, accent: 'oklch(0.60 0.14 160)' },
-          ].filter(g => g.items.length > 0);
-
-          return (
-            <div
+      {/* Body */}
+      {groupBy === 'person' && (
+        <div className="flex flex-col gap-3">
+          {visiblePersons.map(row => (
+            <EntityCard
               key={row.user.id}
-              className="rounded-[12px]"
-              style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--line)',
-                boxShadow: 'var(--shadow-1)',
-              }}
-            >
-              {/* Header */}
-              <button
-                onClick={() => setCollapsed(c => ({ ...c, [row.user.id]: !c[row.user.id] }))}
-                className="w-full flex items-center gap-3 px-5 py-4 text-left border-0 bg-transparent"
-              >
-                <ChevronDown
-                  size={16}
-                  style={{
-                    color: 'var(--ink-3)',
-                    flexShrink: 0,
-                    transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
-                    transition: 'transform 150ms',
-                  }}
-                />
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-[13px] flex-shrink-0"
-                  style={{ background: avatarBg(row.user.hue) }}
-                >
-                  {row.user.initials}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>{row.user.name}</div>
-                  <div className="text-[12px]" style={{ color: 'var(--ink-3)' }}>{row.user.role}</div>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap justify-end">
-                  {row.overdue.length > 0 && (
-                    <Pill color="var(--danger)" bg="var(--danger-bg)" label={`${row.overdue.length} atrasada${row.overdue.length > 1 ? 's' : ''}`} />
-                  )}
-                  {row.inProgress.length + row.dueThisWeek.filter(t => t.status === 'doing').length > 0 && (
-                    <Pill color="oklch(0.42 0.14 265)" bg="oklch(0.94 0.03 265)" label={`${row.inProgress.length + row.dueThisWeek.filter(t => t.status === 'doing').length} en curso`} />
-                  )}
-                  {row.pending.length + row.dueThisWeek.filter(t => t.status !== 'doing').length > 0 && (
-                    <Pill color="var(--ink-2)" bg="var(--bg-3)" label={`${row.pending.length + row.dueThisWeek.filter(t => t.status !== 'doing').length} pendientes`} />
-                  )}
-                  {row.completedThisWeek.length > 0 && (
-                    <Pill color="oklch(0.42 0.12 160)" bg="oklch(0.94 0.03 160)" label={`${row.completedThisWeek.length} completada${row.completedThisWeek.length > 1 ? 's' : ''}`} />
-                  )}
-                  {row.activeCount === 0 && row.completedThisWeek.length === 0 && (
-                    <span className="text-[12px]" style={{ color: 'var(--ink-4)' }}>Sin tareas en esta semana</span>
-                  )}
-                </div>
-              </button>
+              id={row.user.id}
+              collapsed={!!collapsed[row.user.id]}
+              onToggle={() => setCollapsed(c => ({ ...c, [row.user.id]: !c[row.user.id] }))}
+              buckets={row}
+              projects={projects}
+              users={users}
+              onOpenTask={onOpenTask}
+              onOpenProject={onOpenProject}
+              todayISO={todayISO}
+              variant="person"
+              user={row.user}
+            />
+          ))}
+          {visiblePersons.length === 0 && (
+            <EmptyState label="Nadie tiene tareas activas esta semana." />
+          )}
+        </div>
+      )}
 
-              {/* Body */}
-              {!isCollapsed && groups.length > 0 && (
-                <div className="border-t px-5 py-4 flex flex-col gap-4" style={{ borderColor: 'var(--line)' }}>
-                  {groups.map(group => (
-                    <section key={group.key}>
-                      <div className="text-[11px] font-semibold uppercase tracking-wider mb-2 flex items-center gap-2" style={{ color: group.accent }}>
-                        {group.title}
-                        <span className="text-[11px] px-[7px] py-px rounded-full tabular-nums" style={{ background: 'var(--bg-3)', color: 'var(--ink-4)' }}>
-                          {group.items.length}
-                        </span>
-                      </div>
-                      <div className="flex flex-col rounded-[8px] overflow-hidden" style={{ border: '1px solid var(--line-2)' }}>
-                        {group.items.map((task, i) => {
-                          const proj = projects.find(p => p.id === task.project);
-                          const dueCls = dueClass(task.due, task.status);
-                          const isOverdue = task.due && task.due < todayISO && task.status !== 'done';
-                          return (
-                            <button
-                              key={task.id}
-                              onClick={() => onOpenTask(task)}
-                              className="flex items-center gap-3 px-3 py-2 text-left text-[13px] border-0 bg-transparent transition-colors"
-                              style={{
-                                borderTop: i > 0 ? '1px solid var(--line-2)' : 'none',
-                                color: 'var(--ink)',
-                              }}
-                              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
-                              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                            >
-                              <span className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: PRIORITY_COLORS[task.priority] }} title={task.priority} />
-                              <span
-                                onClick={e => { e.stopPropagation(); if (proj) onOpenProject(proj.id); }}
-                                className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0 cursor-pointer"
-                                style={{ background: proj?.color }}
-                                title={proj ? `${proj.client ? proj.client + ' · ' : ''}${proj.name}` : ''}
-                              />
-                              <span className="text-[11px] flex-shrink-0 truncate max-w-[150px]" style={{ color: 'var(--ink-4)' }}>
-                                {proj?.client && `${proj.client} · `}{proj?.name}
-                              </span>
-                              <span className="flex-1 truncate">{task.title}</span>
-                              <span
-                                className="inline-flex items-center gap-1 h-5 px-2 rounded-[4px] text-[10.5px] font-medium flex-shrink-0"
-                                style={{ background: 'transparent', color: STATUS_TONES[task.status] ?? 'var(--ink-3)', border: `1px solid ${STATUS_TONES[task.status] ?? 'var(--line)'}` }}
-                              >
-                                {STATUS_LABELS[task.status]}
-                              </span>
-                              {task.due && (
-                                <span className={`flex items-center gap-1 text-[11px] flex-shrink-0 tabular-nums ${isOverdue ? '' : dueCls}`} style={{ color: isOverdue ? 'var(--danger)' : undefined, minWidth: 78, justifyContent: 'flex-end' }}>
-                                  {isOverdue ? <Flag size={11} /> : <Clock size={11} />}
-                                  {fmtDate(task.due, { relative: true })}
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  ))}
-                </div>
-              )}
-              {!isCollapsed && groups.length === 0 && (
-                <div className="border-t px-5 py-6 text-center text-[13px]" style={{ borderColor: 'var(--line)', color: 'var(--ink-4)' }}>
-                  Sin tareas relevantes para esta semana.
-                </div>
+      {groupBy === 'project' && (
+        <div className="flex flex-col gap-6">
+          {visibleClientSections.map(sec => (
+            <section key={sec.client}>
+              <div className="flex items-baseline gap-2 mb-2 px-1">
+                <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>{sec.client}</h2>
+                <span className="text-[11px] tabular-nums" style={{ color: 'var(--ink-4)' }}>
+                  {sec.rows.length} proyecto{sec.rows.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {sec.rows.map(row => (
+                  <EntityCard
+                    key={row.project.id}
+                    id={row.project.id}
+                    collapsed={!!collapsed[row.project.id]}
+                    onToggle={() => setCollapsed(c => ({ ...c, [row.project.id]: !c[row.project.id] }))}
+                    buckets={row}
+                    projects={projects}
+                    users={users}
+                    onOpenTask={onOpenTask}
+                    onOpenProject={onOpenProject}
+                    todayISO={todayISO}
+                    variant="project"
+                    project={row.project}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+          {visibleClientSections.length === 0 && (
+            <EmptyState label="Ningún proyecto tiene tareas activas esta semana." />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Entity card (person or project) ────────────────────────────────
+
+interface EntityCardProps {
+  id: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  buckets: Buckets;
+  projects: Project[];
+  users: User[];
+  onOpenTask: (t: Task) => void;
+  onOpenProject: (id: string) => void;
+  todayISO: string;
+  variant: 'person' | 'project';
+  user?: User;
+  project?: Project;
+}
+
+function EntityCard({ collapsed, onToggle, buckets, projects, users, onOpenTask, onOpenProject, todayISO, variant, user, project }: EntityCardProps) {
+  const groups = [
+    { key: 'overdue', title: 'Atrasadas', items: buckets.overdue, accent: 'var(--danger)' },
+    { key: 'week', title: 'Vencen esta semana', items: buckets.dueThisWeek, accent: 'oklch(0.62 0.16 265)' },
+    { key: 'doing', title: 'En curso', items: buckets.inProgress, accent: 'oklch(0.62 0.16 265)' },
+    { key: 'pending', title: 'Pendientes', items: buckets.pending, accent: 'var(--ink-3)' },
+    { key: 'done', title: 'Completadas esta semana', items: buckets.completedThisWeek, accent: 'oklch(0.60 0.14 160)' },
+  ].filter(g => g.items.length > 0);
+
+  const doingCount = buckets.inProgress.length + buckets.dueThisWeek.filter(t => t.status === 'doing').length;
+  const pendingCount = buckets.pending.length + buckets.dueThisWeek.filter(t => t.status !== 'doing').length;
+
+  return (
+    <div
+      className="rounded-[12px]"
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--line)',
+        boxShadow: 'var(--shadow-1)',
+      }}
+    >
+      {/* Header */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-5 py-4 text-left border-0 bg-transparent"
+      >
+        <ChevronDown
+          size={16}
+          style={{
+            color: 'var(--ink-3)',
+            flexShrink: 0,
+            transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+            transition: 'transform 150ms',
+          }}
+        />
+        {variant === 'person' && user && (
+          <>
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-[13px] flex-shrink-0"
+              style={{ background: avatarBg(user.hue) }}
+            >
+              {user.initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>{user.name}</div>
+              <div className="text-[12px]" style={{ color: 'var(--ink-3)' }}>{user.role}</div>
+            </div>
+          </>
+        )}
+        {variant === 'project' && project && (
+          <>
+            <span className="w-3 h-3 rounded-[3px] flex-shrink-0" style={{ background: project.color }} />
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>
+                <span
+                  className="cursor-pointer hover:underline"
+                  onClick={e => { e.stopPropagation(); onOpenProject(project.id); }}
+                >
+                  {project.name}
+                </span>
+              </div>
+              {project.client && (
+                <div className="text-[12px]" style={{ color: 'var(--ink-3)' }}>{project.client}</div>
               )}
             </div>
-          );
-        })}
-
-        {visibleRows.length === 0 && (
-          <div className="py-16 text-center" style={{ color: 'var(--ink-4)' }}>
-            <div className="text-[14px]">Nadie tiene tareas activas esta semana.</div>
-          </div>
+          </>
         )}
-      </div>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {buckets.overdue.length > 0 && (
+            <Pill color="var(--danger)" bg="var(--danger-bg)" label={`${buckets.overdue.length} atrasada${buckets.overdue.length > 1 ? 's' : ''}`} />
+          )}
+          {doingCount > 0 && (
+            <Pill color="oklch(0.42 0.14 265)" bg="oklch(0.94 0.03 265)" label={`${doingCount} en curso`} />
+          )}
+          {pendingCount > 0 && (
+            <Pill color="var(--ink-2)" bg="var(--bg-3)" label={`${pendingCount} pendientes`} />
+          )}
+          {buckets.completedThisWeek.length > 0 && (
+            <Pill color="oklch(0.42 0.12 160)" bg="oklch(0.94 0.03 160)" label={`${buckets.completedThisWeek.length} completada${buckets.completedThisWeek.length > 1 ? 's' : ''}`} />
+          )}
+          {buckets.activeCount === 0 && buckets.completedThisWeek.length === 0 && (
+            <span className="text-[12px]" style={{ color: 'var(--ink-4)' }}>Sin tareas en esta semana</span>
+          )}
+        </div>
+      </button>
+
+      {/* Body */}
+      {!collapsed && groups.length > 0 && (
+        <div className="border-t px-5 py-4 flex flex-col gap-4" style={{ borderColor: 'var(--line)' }}>
+          {groups.map(group => (
+            <section key={group.key}>
+              <div className="text-[11px] font-semibold uppercase tracking-wider mb-2 flex items-center gap-2" style={{ color: group.accent }}>
+                {group.title}
+                <span className="text-[11px] px-[7px] py-px rounded-full tabular-nums" style={{ background: 'var(--bg-3)', color: 'var(--ink-4)' }}>
+                  {group.items.length}
+                </span>
+              </div>
+              <div className="flex flex-col rounded-[8px] overflow-hidden" style={{ border: '1px solid var(--line-2)' }}>
+                {group.items.map((task, i) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    firstBorder={i > 0}
+                    variant={variant}
+                    projects={projects}
+                    users={users}
+                    onOpenTask={onOpenTask}
+                    onOpenProject={onOpenProject}
+                    todayISO={todayISO}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+      {!collapsed && groups.length === 0 && (
+        <div className="border-t px-5 py-6 text-center text-[13px]" style={{ borderColor: 'var(--line)', color: 'var(--ink-4)' }}>
+          Sin tareas relevantes para esta semana.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Task row ───────────────────────────────────────────────────────
+
+interface TaskRowProps {
+  task: Task;
+  firstBorder: boolean;
+  variant: 'person' | 'project';
+  projects: Project[];
+  users: User[];
+  onOpenTask: (t: Task) => void;
+  onOpenProject: (id: string) => void;
+  todayISO: string;
+}
+
+function TaskRow({ task, firstBorder, variant, projects, users, onOpenTask, onOpenProject, todayISO }: TaskRowProps) {
+  const dueCls = dueClass(task.due, task.status);
+  const isOverdue = task.due && task.due < todayISO && task.status !== 'done';
+  const proj = variant === 'person' ? projects.find(p => p.id === task.project) : undefined;
+  const assignees = variant === 'project'
+    ? task.assignees.map(id => users.find(u => u.id === id)).filter(Boolean) as User[]
+    : [];
+
+  return (
+    <button
+      onClick={() => onOpenTask(task)}
+      className="flex items-center gap-3 px-3 py-2 text-left text-[13px] border-0 bg-transparent transition-colors"
+      style={{
+        borderTop: firstBorder ? '1px solid var(--line-2)' : 'none',
+        color: 'var(--ink)',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+    >
+      <span className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: PRIORITY_COLORS[task.priority] }} title={task.priority} />
+      {variant === 'person' && (
+        <>
+          <span
+            onClick={e => { e.stopPropagation(); if (proj) onOpenProject(proj.id); }}
+            className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0 cursor-pointer"
+            style={{ background: proj?.color }}
+            title={proj ? `${proj.client ? proj.client + ' · ' : ''}${proj.name}` : ''}
+          />
+          <span className="text-[11px] flex-shrink-0 truncate max-w-[150px]" style={{ color: 'var(--ink-4)' }}>
+            {proj?.client && `${proj.client} · `}{proj?.name}
+          </span>
+        </>
+      )}
+      <span className="flex-1 truncate">{task.title}</span>
+      {variant === 'project' && (
+        <span className="inline-flex flex-shrink-0" style={{ minWidth: 0 }}>
+          {assignees.length === 0 ? (
+            <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Sin asignar</span>
+          ) : (
+            assignees.slice(0, 3).map((u, i) => (
+              <span
+                key={u.id}
+                className="w-5 h-5 rounded-full inline-flex items-center justify-center font-semibold text-white text-[9px] flex-shrink-0 border-[1.5px]"
+                style={{ background: avatarBg(u.hue), borderColor: 'var(--surface)', marginLeft: i > 0 ? -6 : 0 }}
+                title={u.name}
+              >{u.initials}</span>
+            ))
+          )}
+          {assignees.length > 3 && (
+            <span className="ml-1 text-[11px]" style={{ color: 'var(--ink-4)' }}>+{assignees.length - 3}</span>
+          )}
+        </span>
+      )}
+      <span
+        className="inline-flex items-center gap-1 h-5 px-2 rounded-[4px] text-[10.5px] font-medium flex-shrink-0"
+        style={{ background: 'transparent', color: STATUS_TONES[task.status] ?? 'var(--ink-3)', border: `1px solid ${STATUS_TONES[task.status] ?? 'var(--line)'}` }}
+      >
+        {STATUS_LABELS[task.status]}
+      </span>
+      {task.due && (
+        <span className={`flex items-center gap-1 text-[11px] flex-shrink-0 tabular-nums ${isOverdue ? '' : dueCls}`} style={{ color: isOverdue ? 'var(--danger)' : undefined, minWidth: 78, justifyContent: 'flex-end' }}>
+          {isOverdue ? <Flag size={11} /> : <Clock size={11} />}
+          {fmtDate(task.due, { relative: true })}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="py-16 text-center" style={{ color: 'var(--ink-4)' }}>
+      <div className="text-[14px]">{label}</div>
     </div>
   );
 }
