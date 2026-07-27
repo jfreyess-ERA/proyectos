@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Clock } from 'lucide-react';
 import { STATUSES, PEOPLE, fmtDate, dueClass } from '@/lib/data';
 import { useAuth } from '@/lib/auth-context';
+import { updateTaskStatus } from '@/lib/db';
 import { CalendarView } from './CalendarView';
 import type { Task, Project } from '@/lib/types';
 
@@ -25,15 +26,25 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
   const { profile } = useAuth();
   const me = profile ?? PEOPLE[0];
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, Task['status']>>({});
+
+  function effectiveStatus(t: Task): Task['status'] {
+    return statusOverrides[t.id] ?? t.status;
+  }
+
+  function handleStatusChange(taskId: string, status: Task['status']) {
+    setStatusOverrides(prev => ({ ...prev, [taskId]: status }));
+    updateTaskStatus(taskId, status).catch(console.error);
+  }
 
   const myTasks = tasks.filter(t => t.assignees.includes(me.id));
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const overdue = myTasks.filter(t => t.due && t.status !== 'done' && new Date(t.due + 'T00:00:00') < today);
+  const overdue = myTasks.filter(t => t.due && effectiveStatus(t) !== 'done' && new Date(t.due + 'T00:00:00') < today);
 
   const grouped = STATUSES.map(s => ({
     ...s,
-    items: myTasks.filter(t => t.status === s.id),
+    items: myTasks.filter(t => effectiveStatus(t) === s.id),
   })).filter(g => g.items.length > 0);
 
   const isCalendar = viewMode !== 'list';
@@ -47,7 +58,7 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
             Mis tareas
           </h1>
           <p className="text-[14px] mt-1" style={{ color: 'var(--ink-3)' }}>
-            {myTasks.filter(t => t.status !== 'done').length} activas
+            {myTasks.filter(t => effectiveStatus(t) !== 'done').length} activas
             {overdue.length > 0 && (
               <span className="ml-2 font-medium" style={{ color: 'var(--danger)' }}>
                 · {overdue.length} atrasada{overdue.length > 1 ? 's' : ''}
@@ -101,16 +112,19 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
                 {group.items.map((task, i) => {
                   const proj = projects.find(p => p.id === task.project);
                   const dueCls = dueClass(task.due, task.status);
+                  const status = effectiveStatus(task);
                   return (
-                    <button
+                    <div
                       key={task.id}
                       onClick={() => onOpenTask(task)}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors text-[13px]"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors text-[13px] cursor-pointer"
                       style={{
                         borderTop: i > 0 ? '1px solid var(--line)' : 'none',
                         background: 'transparent',
                         color: 'var(--ink)',
                       }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
                       <span
                         className="w-[8px] h-[8px] rounded-full flex-shrink-0"
@@ -122,21 +136,37 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
                       />
                       <span className="flex-1 truncate font-medium">{task.title}</span>
                       <span
-                        className="text-[11px] flex-shrink-0"
+                        className="text-[11px] flex-shrink-0 hidden md:inline"
                         style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-4)' }}
                       >
                         {task.ref}
                       </span>
-                      <span className="text-[11px] w-[160px] text-right flex-shrink-0 truncate" style={{ color: 'var(--ink-3)' }}>
+                      <span className="text-[11px] w-[160px] text-right flex-shrink-0 truncate hidden sm:inline" style={{ color: 'var(--ink-3)' }}>
                         {proj?.client && `${proj.client} · `}{proj?.name}
                       </span>
+                      <select
+                        value={status}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => handleStatusChange(task.id, e.target.value as Task['status'])}
+                        className="flex-shrink-0 h-[26px] pl-2 pr-1 rounded-[6px] text-[11.5px] font-medium border outline-none cursor-pointer"
+                        style={{
+                          background: 'var(--bg-2)',
+                          borderColor: 'var(--line)',
+                          color: STATUSES.find(s => s.id === status)?.tone ?? 'var(--ink-2)',
+                          fontFamily: 'var(--font)',
+                        }}
+                      >
+                        {STATUSES.map(s => (
+                          <option key={s.id} value={s.id}>{s.label}</option>
+                        ))}
+                      </select>
                       {task.due && (
-                        <span className={`flex items-center gap-1 text-[11px] w-[72px] justify-end flex-shrink-0 ${dueCls}`}>
+                        <span className={`flex items-center gap-1 text-[11px] w-[72px] justify-end flex-shrink-0 hidden lg:flex ${dueCls}`}>
                           <Clock size={11} />
                           {fmtDate(task.due, { relative: true })}
                         </span>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
