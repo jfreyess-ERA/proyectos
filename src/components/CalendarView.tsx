@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Clock } from 'lucide-react';
 import { useProjects } from '@/lib/projects-context';
 import { useUsers } from '@/lib/users-context';
 import { avatarBg } from '@/lib/data';
@@ -23,6 +23,10 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 const DOW = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 function startOfWeekMon(d: Date): Date {
   const date = new Date(d); date.setHours(0, 0, 0, 0);
   const day = date.getDay();
@@ -38,6 +42,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
   const [cursor, setCursor] = useState(() =>
     viewMode === 'week' ? startOfWeekMon(todayBase) : new Date(todayBase.getFullYear(), todayBase.getMonth(), 1)
   );
+  const [selectedISO, setSelectedISO] = useState<string | null>(null);
 
   // Reset cursor when viewMode changes so it snaps to a valid boundary
   const cursorRef = cursor;
@@ -69,12 +74,10 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
     headerLabel = normalisedCursor.toLocaleDateString('es', { month: 'long', year: 'numeric' });
   }
 
-  const tasksOn = (d: Date) => {
-    const iso = d.toISOString().slice(0, 10);
-    return tasks.filter(t => t.due === iso);
-  };
+  const tasksOn = (d: Date) => tasks.filter(t => t.due === isoDate(d));
 
   const prev = () => {
+    setSelectedISO(null);
     if (viewMode === 'week') {
       const n = new Date(normalisedCursor); n.setDate(n.getDate() - 7); setCursor(n);
     } else {
@@ -82,17 +85,23 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
     }
   };
   const next = () => {
+    setSelectedISO(null);
     if (viewMode === 'week') {
       const n = new Date(normalisedCursor); n.setDate(n.getDate() + 7); setCursor(n);
     } else {
       setCursor(new Date(normalisedCursor.getFullYear(), normalisedCursor.getMonth() + 1, 1));
     }
   };
-  const goToday = () => setCursor(
-    viewMode === 'week' ? startOfWeekMon(todayBase) : new Date(todayBase.getFullYear(), todayBase.getMonth(), 1)
-  );
+  const goToday = () => {
+    setSelectedISO(null);
+    setCursor(viewMode === 'week' ? startOfWeekMon(todayBase) : new Date(todayBase.getFullYear(), todayBase.getMonth(), 1));
+  };
 
   const tasksWithDate = tasks.filter(t => t.due).length;
+  const selectedTasks = selectedISO ? tasks.filter(t => t.due === selectedISO) : [];
+  const selectedLabel = selectedISO
+    ? new Date(selectedISO + 'T00:00:00').toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })
+    : '';
 
   return (
     <div className="flex flex-col h-full">
@@ -159,13 +168,17 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
           const isToday = d.getTime() === todayBase.getTime();
           const dayTasks = tasksOn(d);
           const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+          const dayISO = isoDate(d);
+          const isSelected = dayISO === selectedISO;
 
           return (
             <div
               key={i}
-              className="min-w-0 border-r border-b last:border-r-0 min-h-[110px] p-[6px] flex flex-col gap-[3px]"
+              onClick={() => setSelectedISO(prev => prev === dayISO ? null : dayISO)}
+              className="min-w-0 border-r border-b last:border-r-0 min-h-[110px] p-[6px] flex flex-col gap-[3px] cursor-pointer transition-colors"
               style={{
                 borderColor: 'var(--line-2)',
+                boxShadow: isSelected ? 'inset 0 0 0 2px var(--accent)' : 'none',
                 background: isToday
                   ? 'var(--accent-bg)'
                   : !inMonth
@@ -201,7 +214,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                 return (
                   <button
                     key={t.id}
-                    onClick={() => onOpenTask(t)}
+                    onClick={e => { e.stopPropagation(); onOpenTask(t); }}
                     className="min-w-0 flex items-center gap-[6px] text-left rounded-[4px] px-[6px] py-[3px] border-0 border-l-[3px] text-[11.5px] transition-colors w-full"
                     style={{
                       borderLeftColor: proj?.color ?? 'var(--ink-3)',
@@ -257,6 +270,86 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
         })}
         </div>
       </div>
+
+      {/* Selected day detail */}
+      {selectedISO && (
+        <div
+          className="flex-shrink-0 border-t overflow-y-auto"
+          style={{ borderColor: 'var(--line)', background: 'var(--surface)', maxHeight: '40%' }}
+        >
+          <div className="flex items-center justify-between px-6 py-3 sticky top-0" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--line-2)' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-semibold capitalize" style={{ color: 'var(--ink)' }}>
+                {selectedLabel}
+              </span>
+              <span className="text-[11px] px-[7px] py-px rounded-full tabular-nums" style={{ background: 'var(--bg-3)', color: 'var(--ink-4)' }}>
+                {selectedTasks.length}
+              </span>
+            </div>
+            <button
+              onClick={() => setSelectedISO(null)}
+              className="w-7 h-7 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors"
+              style={{ color: 'var(--ink-3)' }}
+            >
+              <X size={15} />
+            </button>
+          </div>
+
+          {selectedTasks.length === 0 ? (
+            <div className="px-6 py-6 text-center text-[13px]" style={{ color: 'var(--ink-4)' }}>
+              Sin tareas este día
+            </div>
+          ) : (
+            <div className="flex flex-col px-3 pb-3">
+              {selectedTasks.map((t, i) => {
+                const proj = projects.find(p => p.id === t.project);
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => onOpenTask(t)}
+                    className="flex items-center gap-3 px-3 py-[10px] text-left text-[13px] border-0 bg-transparent transition-colors w-full"
+                    style={{
+                      borderTop: i > 0 ? '1px solid var(--line-2)' : 'none',
+                      color: 'var(--ink)',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <span className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: PRIORITY_COLORS[t.priority] }} />
+                    <span className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0" style={{ background: proj?.color }} />
+                    <span className="flex-1 min-w-0 truncate font-medium">{t.title}</span>
+                    <span className="text-[11px] flex-shrink-0 truncate max-w-[160px] hidden sm:inline" style={{ color: 'var(--ink-4)' }}>
+                      {proj?.client && `${proj.client} · `}{proj?.name}
+                    </span>
+                    {showAssignees && t.assignees.length > 0 && (
+                      <span className="inline-flex flex-shrink-0">
+                        {t.assignees.slice(0, 3).map((id, ix) => {
+                          const u = users.find(x => x.id === id);
+                          if (!u) return null;
+                          return (
+                            <span
+                              key={id}
+                              className="w-5 h-5 rounded-full inline-flex items-center justify-center font-semibold text-white text-[9px] flex-shrink-0 border-[1.5px]"
+                              style={{ background: avatarBg(u.hue), borderColor: 'var(--surface)', marginLeft: ix > 0 ? -6 : 0 }}
+                              title={u.name}
+                            >
+                              {u.initials}
+                            </span>
+                          );
+                        })}
+                      </span>
+                    )}
+                    <span className="text-[11px] flex-shrink-0 flex items-center gap-1" style={{ color: 'var(--ink-3)' }}>
+                      <Clock size={11} />
+                      {t.status === 'done' ? 'Completada' : t.status === 'doing' ? 'En curso' : t.status === 'review' ? 'En revisión' : t.status === 'todo' ? 'Por hacer' : 'Backlog'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
