@@ -36,6 +36,7 @@ import { CrmImportModal } from '@/components/CrmImportModal';
 import { CreateCrmTaskModal } from '@/components/CreateCrmTaskModal';
 import { CrmReports } from '@/components/CrmReports';
 import { InviteUserModal } from '@/components/InviteUserModal';
+import { EMPTY_FILTERS, applySubtaskFilters } from '@/components/TaskFilterBar';
 import { UsersContext } from '@/lib/users-context';
 import { LabelsContext } from '@/lib/labels-context';
 import { ProjectsContext } from '@/lib/projects-context';
@@ -51,7 +52,7 @@ type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
 export default function Home() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
-  const { tasks, projects, users, labels, sprints, loading, error, refetch } = useNorteData();
+  const { tasks, projects, users, labels, sprints, datedSubtasks, loading, error, refetch } = useNorteData();
   const { prospects, interactions, crmTasks, triggers, templates, refetch: crmRefetch } = useCrmData();
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [createProspectOpen, setCreateProspectOpen] = useState(false);
@@ -208,11 +209,11 @@ export default function Home() {
     if (!isProjectView) {
       switch (activeNav) {
         case 'inbox':   return <InboxView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
-        case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
-        case 'people':  return <PeopleView tasks={tasks} projects={projects} users={users} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />;
+        case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} />;
+        case 'people':  return <PeopleView tasks={tasks} projects={projects} users={users} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />;
         case 'admin:team-week':
           return profile?.is_admin
-            ? <TeamWeekView tasks={tasks} projects={projects} users={users} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />
+            ? <TeamWeekView tasks={tasks} projects={projects} users={users} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />
             : <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
         case 'admin:stats':
           return profile?.is_admin
@@ -290,7 +291,13 @@ export default function Home() {
     switch (activeView) {
       case 'stages':   return <StageBoard tasks={visibleTasks} users={users} onOpenTask={setSelectedTask} onCreateTask={openCreateTask} />;
       case 'list':     return <ListView tasks={visibleTasks} onOpenTask={setSelectedTask} />;
-      case 'calendar': return <CalendarView tasks={visibleTasks} onOpenTask={setSelectedTask} />;
+      case 'calendar': return (
+        <CalendarView
+          tasks={visibleTasks}
+          onOpenTask={setSelectedTask}
+          subtaskEvents={applySubtaskFilters(datedSubtasks, tasks, projects, { ...EMPTY_FILTERS, project: projectId ?? 'all' })}
+        />
+      );
       case 'timeline': return <TimelineView tasks={visibleTasks} projects={projects} onOpenTask={setSelectedTask} />;
       default:         return <Board tasks={visibleTasks} users={users} onOpenTask={setSelectedTask} onCreateTask={openCreateTask} />;
     }

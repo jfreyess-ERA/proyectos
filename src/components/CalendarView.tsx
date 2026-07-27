@@ -1,10 +1,15 @@
 'use client';
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, X, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Clock, CornerDownRight } from 'lucide-react';
 import { useProjects } from '@/lib/projects-context';
 import { useUsers } from '@/lib/users-context';
 import { avatarBg } from '@/lib/data';
-import type { Task } from '@/lib/types';
+import type { Task, DatedSubtask } from '@/lib/types';
+
+interface SubtaskEvent {
+  subtask: DatedSubtask;
+  task: Task;
+}
 
 interface Props {
   tasks: Task[];
@@ -12,6 +17,13 @@ interface Props {
   viewMode?: 'month' | 'week';
   /** Show assignee initials on each task chip — useful in team-wide calendars. */
   showAssignees?: boolean;
+  /** Subtasks with a due_date, paired with their parent task — rendered alongside tasks. */
+  subtaskEvents?: SubtaskEvent[];
+}
+
+function todayISOStr(): string {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -35,7 +47,7 @@ function startOfWeekMon(d: Date): Date {
   return date;
 }
 
-export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssignees = false }: Props) {
+export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssignees = false, subtaskEvents = [] }: Props) {
   const projects = useProjects();
   const users = useUsers();
   const todayBase = new Date(); todayBase.setHours(0, 0, 0, 0);
@@ -75,6 +87,8 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
   }
 
   const tasksOn = (d: Date) => tasks.filter(t => t.due === isoDate(d));
+  const subtasksOn = (d: Date) => subtaskEvents.filter(e => e.subtask.due_date === isoDate(d));
+  const todayISO2 = todayISOStr();
 
   const prev = () => {
     setSelectedISO(null);
@@ -99,6 +113,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
 
   const tasksWithDate = tasks.filter(t => t.due).length;
   const selectedTasks = selectedISO ? tasks.filter(t => t.due === selectedISO) : [];
+  const selectedSubtasks = selectedISO ? subtaskEvents.filter(e => e.subtask.due_date === selectedISO) : [];
   const selectedLabel = selectedISO
     ? new Date(selectedISO + 'T00:00:00').toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })
     : '';
@@ -141,6 +156,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
         </div>
         <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
           {tasksWithDate} tareas con fecha
+          {subtaskEvents.length > 0 && ` · ${subtaskEvents.length} subtarea${subtaskEvents.length > 1 ? 's' : ''} con fecha`}
         </span>
       </div>
 
@@ -167,6 +183,9 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
           const inMonth = viewMode === 'week' ? true : d.getMonth() === normalisedCursor.getMonth();
           const isToday = d.getTime() === todayBase.getTime();
           const dayTasks = tasksOn(d);
+          const daySubtasks = subtasksOn(d);
+          const dayCount = dayTasks.length + daySubtasks.length;
+          const cap = viewMode === 'week' ? 12 : 3;
           const isWeekend = d.getDay() === 0 || d.getDay() === 6;
           const dayISO = isoDate(d);
           const isSelected = dayISO === selectedISO;
@@ -201,15 +220,15 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                 >
                   {d.getDate()}
                 </span>
-                {dayTasks.length > (viewMode === 'week' ? 12 : 3) && (
+                {dayCount > cap && (
                   <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
-                    +{dayTasks.length}
+                    +{dayCount}
                   </span>
                 )}
               </div>
 
               {/* Events */}
-              {dayTasks.slice(0, viewMode === 'week' ? 12 : 3).map(t => {
+              {dayTasks.slice(0, cap).map(t => {
                 const proj = projects.find(p => p.id === t.project);
                 return (
                   <button
@@ -257,12 +276,36 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                   </button>
                 );
               })}
-              {dayTasks.length > (viewMode === 'week' ? 12 : 3) && (
+              {daySubtasks.slice(0, Math.max(0, cap - dayTasks.length)).map(({ subtask, task }) => {
+                const proj = projects.find(p => p.id === task.project);
+                const isOverdue = !subtask.done && subtask.due_date < todayISO2;
+                return (
+                  <button
+                    key={subtask.id}
+                    onClick={e => { e.stopPropagation(); onOpenTask(task); }}
+                    title={`Subtarea de: ${task.title}`}
+                    className="min-w-0 flex items-center gap-[5px] text-left rounded-[4px] px-[6px] py-[3px] border-0 border-l-[3px] border-dashed text-[11.5px] transition-colors w-full"
+                    style={{
+                      borderLeftColor: proj?.color ?? 'var(--ink-3)',
+                      borderLeftStyle: 'dashed',
+                      borderLeftWidth: 3,
+                      background: isOverdue ? 'var(--danger-bg)' : 'var(--bg-2)',
+                      color: isOverdue ? 'var(--danger)' : 'var(--ink-2)',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = isOverdue ? 'var(--danger-bg)' : 'var(--bg-3)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = isOverdue ? 'var(--danger-bg)' : 'var(--bg-2)')}
+                  >
+                    <CornerDownRight size={10} className="flex-shrink-0" />
+                    <span className="flex-1 min-w-0 truncate">{subtask.title}</span>
+                  </button>
+                );
+              })}
+              {dayCount > cap && (
                 <button
                   className="text-[11px] px-1 py-[2px] border-0 bg-transparent text-left"
                   style={{ color: 'var(--ink-3)' }}
                 >
-                  + {dayTasks.length - (viewMode === 'week' ? 12 : 3)} más
+                  + {dayCount - cap} más
                 </button>
               )}
             </div>
@@ -283,7 +326,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                 {selectedLabel}
               </span>
               <span className="text-[11px] px-[7px] py-px rounded-full tabular-nums" style={{ background: 'var(--bg-3)', color: 'var(--ink-4)' }}>
-                {selectedTasks.length}
+                {selectedTasks.length + selectedSubtasks.length}
               </span>
             </div>
             <button
@@ -295,7 +338,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
             </button>
           </div>
 
-          {selectedTasks.length === 0 ? (
+          {selectedTasks.length === 0 && selectedSubtasks.length === 0 ? (
             <div className="px-6 py-6 text-center text-[13px]" style={{ color: 'var(--ink-4)' }}>
               Sin tareas este día
             </div>
@@ -342,6 +385,43 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                     <span className="text-[11px] flex-shrink-0 flex items-center gap-1" style={{ color: 'var(--ink-3)' }}>
                       <Clock size={11} />
                       {t.status === 'done' ? 'Completada' : t.status === 'doing' ? 'En curso' : t.status === 'review' ? 'En revisión' : t.status === 'todo' ? 'Por hacer' : 'Backlog'}
+                    </span>
+                  </button>
+                );
+              })}
+              {selectedSubtasks.map(({ subtask, task }, i) => {
+                const proj = projects.find(p => p.id === task.project);
+                const isOverdue = !subtask.done && subtask.due_date < todayISO2;
+                const assigneeUser = subtask.assignee ? users.find(u => u.id === subtask.assignee) : undefined;
+                return (
+                  <button
+                    key={subtask.id}
+                    onClick={() => onOpenTask(task)}
+                    className="flex items-center gap-3 px-3 py-[10px] text-left text-[13px] border-0 bg-transparent transition-colors w-full"
+                    style={{
+                      borderTop: (i > 0 || selectedTasks.length > 0) ? '1px solid var(--line-2)' : 'none',
+                      color: isOverdue ? 'var(--danger)' : 'var(--ink)',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <CornerDownRight size={13} className="flex-shrink-0" style={{ color: 'var(--ink-4)' }} />
+                    <span className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0" style={{ background: proj?.color }} />
+                    <span className="flex-1 min-w-0 truncate font-medium">{subtask.title}</span>
+                    <span className="text-[11px] flex-shrink-0 truncate max-w-[160px] hidden sm:inline" style={{ color: 'var(--ink-4)' }}>
+                      {task.title}
+                    </span>
+                    {assigneeUser && (
+                      <span
+                        className="w-5 h-5 rounded-full inline-flex items-center justify-center font-semibold text-white text-[9px] flex-shrink-0 border-[1.5px]"
+                        style={{ background: avatarBg(assigneeUser.hue), borderColor: 'var(--surface)' }}
+                        title={assigneeUser.name}
+                      >
+                        {assigneeUser.initials}
+                      </span>
+                    )}
+                    <span className="text-[11px] flex-shrink-0" style={{ color: isOverdue ? 'var(--danger)' : 'var(--ink-3)' }}>
+                      {subtask.done ? 'Completada' : isOverdue ? 'Atrasada' : 'Subtarea'}
                     </span>
                   </button>
                 );

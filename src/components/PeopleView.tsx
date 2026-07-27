@@ -2,20 +2,21 @@
 import { useState } from 'react';
 import { avatarBg } from '@/lib/data';
 import { CalendarView } from './CalendarView';
-import { TaskFilterBar, applyTaskFilters, EMPTY_FILTERS, type TaskFilterState } from './TaskFilterBar';
-import type { Task, Project, User } from '@/lib/types';
+import { TaskFilterBar, applyTaskFilters, applySubtaskFilters, EMPTY_FILTERS, type TaskFilterState } from './TaskFilterBar';
+import type { Task, Project, User, DatedSubtask } from '@/lib/types';
 
 interface Props {
   tasks: Task[];
   projects: Project[];
   users: User[];
+  datedSubtasks: DatedSubtask[];
   onOpenTask: (task: Task) => void;
   onOpenProject: (projectId: string) => void;
 }
 
 type ViewMode = 'cards' | 'calendar-week' | 'calendar-month';
 
-export function PeopleView({ tasks, projects, users, onOpenTask, onOpenProject }: Props) {
+export function PeopleView({ tasks, projects, users, datedSubtasks, onOpenTask, onOpenProject }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [personFilter, setPersonFilter] = useState<string>('all');
   const [filters, setFilters] = useState<TaskFilterState>(EMPTY_FILTERS);
@@ -30,6 +31,13 @@ export function PeopleView({ tasks, projects, users, onOpenTask, onOpenProject }
   const calendarTasks = personFilter === 'all'
     ? filtered
     : filtered.filter(t => t.assignees.includes(personFilter));
+
+  // Subtasks shown alongside: when a person is selected, their assigned subtasks (even on tasks
+  // not assigned to them); otherwise every dated subtask matching the active client/project/etc filters.
+  const calendarSubtaskEvents = applySubtaskFilters(
+    datedSubtasks, tasks, projects,
+    personFilter === 'all' ? filters : { ...filters, assignee: personFilter },
+  );
 
   const stats = visibleUsers.map(u => {
     const assigned = filtered.filter(t => t.assignees.includes(u.id));
@@ -106,6 +114,7 @@ export function PeopleView({ tasks, projects, users, onOpenTask, onOpenProject }
             onOpenTask={onOpenTask}
             viewMode={viewMode === 'calendar-week' ? 'week' : 'month'}
             showAssignees={personFilter === 'all'}
+            subtaskEvents={calendarSubtaskEvents}
           />
         </div>
       )}

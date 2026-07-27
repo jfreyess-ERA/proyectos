@@ -5,12 +5,13 @@ import { STATUSES, PEOPLE, fmtDate, dueClass } from '@/lib/data';
 import { useAuth } from '@/lib/auth-context';
 import { updateTaskStatus } from '@/lib/db';
 import { CalendarView } from './CalendarView';
-import { TaskFilterBar, applyTaskFilters, EMPTY_FILTERS, filtersActive, type TaskFilterState } from './TaskFilterBar';
-import type { Task, Project } from '@/lib/types';
+import { TaskFilterBar, applyTaskFilters, applySubtaskFilters, EMPTY_FILTERS, filtersActive, type TaskFilterState } from './TaskFilterBar';
+import type { Task, Project, DatedSubtask } from '@/lib/types';
 
 interface Props {
   tasks: Task[];
   projects: Project[];
+  datedSubtasks: DatedSubtask[];
   onOpenTask: (task: Task) => void;
 }
 
@@ -23,7 +24,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 type ViewMode = 'list' | 'calendar-month' | 'calendar-week';
 
-export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
+export function MyTasksView({ tasks, projects, datedSubtasks, onOpenTask }: Props) {
   const { profile } = useAuth();
   const me = profile ?? PEOPLE[0];
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -42,8 +43,14 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
   const myTasks = tasks.filter(t => t.assignees.includes(me.id));
   const filtered = applyTaskFilters(myTasks, projects, filters);
 
+  // Subtasks assigned to me, even on tasks not assigned to me — client/project/priority filters still apply.
+  const mySubtaskEvents = applySubtaskFilters(datedSubtasks, tasks, projects, { ...filters, assignee: me.id })
+    .sort((a, b) => a.subtask.due_date.localeCompare(b.subtask.due_date));
+
   const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayISO = today.toISOString().slice(0, 10);
   const overdue = filtered.filter(t => t.due && effectiveStatus(t) !== 'done' && new Date(t.due + 'T00:00:00') < today);
+  const overdueSubtasks = mySubtaskEvents.filter(e => !e.subtask.done && e.subtask.due_date < todayISO);
 
   const grouped = STATUSES.map(s => ({
     ...s,
@@ -93,12 +100,12 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
 
       {viewMode === 'calendar-week' && (
         <div className="flex-1 min-h-0">
-          <CalendarView tasks={filtered} onOpenTask={onOpenTask} viewMode="week" />
+          <CalendarView tasks={filtered} onOpenTask={onOpenTask} viewMode="week" subtaskEvents={mySubtaskEvents} />
         </div>
       )}
       {viewMode === 'calendar-month' && (
         <div className="flex-1 min-h-0">
-          <CalendarView tasks={filtered} onOpenTask={onOpenTask} viewMode="month" />
+          <CalendarView tasks={filtered} onOpenTask={onOpenTask} viewMode="month" subtaskEvents={mySubtaskEvents} />
         </div>
       )}
 
@@ -188,6 +195,70 @@ export function MyTasksView({ tasks, projects, onOpenTask }: Props) {
               </div>
             </section>
           ))}
+
+          {mySubtaskEvents.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full" style={{ background: 'var(--accent)' }} />
+                <span className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-3)' }}>
+                  Subtareas
+                </span>
+                <span
+                  className="text-[11px] px-[7px] py-px rounded-full tabular-nums"
+                  style={{ background: 'var(--bg-3)', color: 'var(--ink-4)' }}
+                >
+                  {mySubtaskEvents.length}
+                </span>
+                {overdueSubtasks.length > 0 && (
+                  <span className="text-[12px] font-medium" style={{ color: 'var(--danger)' }}>
+                    · {overdueSubtasks.length} atrasada{overdueSubtasks.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              <div
+                className="rounded-[10px] overflow-hidden"
+                style={{ border: '1px solid var(--line)', background: 'var(--surface)' }}
+              >
+                {mySubtaskEvents.map(({ subtask, task }, i) => {
+                  const proj = projects.find(p => p.id === task.project);
+                  const isOverdue = !subtask.done && subtask.due_date < todayISO;
+                  return (
+                    <div
+                      key={subtask.id}
+                      onClick={() => onOpenTask(task)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors text-[13px] cursor-pointer"
+                      style={{
+                        borderTop: i > 0 ? '1px solid var(--line)' : 'none',
+                        background: 'transparent',
+                        color: isOverdue ? 'var(--danger)' : 'var(--ink)',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <span
+                        className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0"
+                        style={{ background: proj?.color }}
+                      />
+                      <span className={`flex-1 truncate font-medium ${subtask.done ? 'line-through' : ''}`}>
+                        {subtask.title}
+                      </span>
+                      <span className="text-[11px] flex-shrink-0 hidden md:inline" style={{ color: 'var(--ink-4)' }}>
+                        {task.title}
+                      </span>
+                      <span className="text-[11px] w-[160px] text-right flex-shrink-0 truncate hidden sm:inline" style={{ color: 'var(--ink-3)' }}>
+                        {proj?.client && `${proj.client} · `}{proj?.name}
+                      </span>
+                      <span className="flex items-center gap-1 text-[11px] w-[72px] justify-end flex-shrink-0" style={{ color: isOverdue ? 'var(--danger)' : 'var(--ink-3)' }}>
+                        <Clock size={11} />
+                        {fmtDate(subtask.due_date, { relative: true })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {filtered.length === 0 && (
             <div className="py-16 text-center" style={{ color: 'var(--ink-4)' }}>

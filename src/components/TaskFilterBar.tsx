@@ -1,6 +1,6 @@
 'use client';
 import { STATUSES, PRIORITIES } from '@/lib/data';
-import type { Task, Project, User } from '@/lib/types';
+import type { Task, Project, User, DatedSubtask } from '@/lib/types';
 
 export interface TaskFilterState {
   client: string;
@@ -41,9 +41,40 @@ export function applyTaskFilters(tasks: Task[], projects: Project[], f: TaskFilt
     if (f.assignee !== 'all' && !t.assignees.includes(f.assignee)) return false;
     if (f.status !== 'all' && t.status !== f.status) return false;
     if (f.priority !== 'all' && t.priority !== f.priority) return false;
-    if (f.overdueOnly && !(t.status !== 'done' && t.due && t.due < iso)) return false;
+    if (f.overdueOnly && !((t.status !== 'done' && t.due && t.due < iso) || (t.subtasks.overdue ?? 0) > 0)) return false;
     return true;
   });
+}
+
+/**
+ * Pairs each dated subtask with its parent task, applying the same client/project/status/priority
+ * filters to the parent as applyTaskFilters — but the assignee filter (when set) matches the
+ * subtask's own assignee instead of the parent task's, so a subtask assigned to someone shows up
+ * even when the parent task itself isn't assigned to them.
+ */
+export function applySubtaskFilters(
+  datedSubtasks: DatedSubtask[],
+  tasks: Task[],
+  projects: Project[],
+  f: TaskFilterState,
+): { subtask: DatedSubtask; task: Task }[] {
+  const taskById = new Map(tasks.map(t => [t.id, t]));
+  const projectClient: Record<string, string | undefined> = {};
+  for (const p of projects) projectClient[p.id] = p.client;
+  const iso = todayISO();
+  const result: { subtask: DatedSubtask; task: Task }[] = [];
+  for (const subtask of datedSubtasks) {
+    const task = taskById.get(subtask.task_id);
+    if (!task) continue;
+    if (f.client !== 'all' && projectClient[task.project] !== f.client) continue;
+    if (f.project !== 'all' && task.project !== f.project) continue;
+    if (f.status !== 'all' && task.status !== f.status) continue;
+    if (f.priority !== 'all' && task.priority !== f.priority) continue;
+    if (f.assignee !== 'all' && subtask.assignee !== f.assignee) continue;
+    if (f.overdueOnly && !(!subtask.done && subtask.due_date < iso)) continue;
+    result.push({ subtask, task });
+  }
+  return result;
 }
 
 type DropdownKey = 'client' | 'project' | 'assignee' | 'status' | 'priority';

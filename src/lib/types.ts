@@ -103,6 +103,16 @@ export interface SubtaskItem {
   assignee?: string | null;
 }
 
+/** A subtask that has a due_date — used to surface subtasks in calendars, "atrasadas" and Mis tareas. */
+export interface DatedSubtask {
+  id: string;
+  task_id: string;
+  title: string;
+  done: boolean;
+  due_date: string;
+  assignee: string | null;
+}
+
 export interface Comment {
   id: string;
   task_id: string;

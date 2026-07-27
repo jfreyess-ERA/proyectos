@@ -3,13 +3,14 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, Clock, Flag } from 'lucide-react';
 import { avatarBg, fmtDate, dueClass } from '@/lib/data';
 import { CalendarView } from './CalendarView';
-import { TaskFilterBar, applyTaskFilters, EMPTY_FILTERS, type TaskFilterState } from './TaskFilterBar';
-import type { Task, Project, User } from '@/lib/types';
+import { TaskFilterBar, applyTaskFilters, applySubtaskFilters, EMPTY_FILTERS, type TaskFilterState } from './TaskFilterBar';
+import type { Task, Project, User, DatedSubtask } from '@/lib/types';
 
 interface Props {
   tasks: Task[];
   projects: Project[];
   users: User[];
+  datedSubtasks: DatedSubtask[];
   onOpenTask: (task: Task) => void;
   onOpenProject: (projectId: string) => void;
 }
@@ -87,7 +88,7 @@ function computeBuckets(taskList: Task[], weekStartISO: string, weekEndISO: stri
 type GroupBy = 'person' | 'project';
 type ViewMode = 'panel' | 'calendar-week' | 'calendar-month';
 
-export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject }: Props) {
+export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask, onOpenProject }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [showEmpty, setShowEmpty] = useState(false);
@@ -96,6 +97,10 @@ export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject
   const [filters, setFilters]     = useState<TaskFilterState>(EMPTY_FILTERS);
 
   const filteredTasks = useMemo(() => applyTaskFilters(tasks, projects, filters), [tasks, projects, filters]);
+  const filteredSubtaskEvents = useMemo(
+    () => applySubtaskFilters(datedSubtasks, tasks, projects, filters),
+    [datedSubtasks, tasks, projects, filters],
+  );
 
   const weekEnd = addDays(weekStart, 6);
   const weekStartISO = isoDate(weekStart);
@@ -240,6 +245,7 @@ export function TeamWeekView({ tasks, projects, users, onOpenTask, onOpenProject
             onOpenTask={onOpenTask}
             viewMode={viewMode === 'calendar-week' ? 'week' : 'month'}
             showAssignees
+            subtaskEvents={filteredSubtaskEvents}
           />
         </div>
       )}
