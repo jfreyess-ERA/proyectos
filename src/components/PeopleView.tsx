@@ -7,9 +7,10 @@ interface Props {
   projects: Project[];
   users: User[];
   onOpenTask: (task: Task) => void;
+  onOpenProject: (projectId: string) => void;
 }
 
-export function PeopleView({ tasks, projects, users }: Props) {
+export function PeopleView({ tasks, projects, users, onOpenProject }: Props) {
   const stats = users.map(u => {
     const assigned = tasks.filter(t => t.assignees.includes(u.id));
     const active = assigned.filter(t => t.status !== 'done');
@@ -121,13 +122,20 @@ export function PeopleView({ tasks, projects, users }: Props) {
                 {activeProjects.map(p => {
                   const pTasks = active.filter(t => t.project === p.id);
                   return (
-                    <div key={p.id} className="flex items-center gap-2">
+                    <button
+                      key={p.id}
+                      onClick={() => onOpenProject(p.id)}
+                      className="flex items-center gap-2 -mx-1 px-1 py-[2px] rounded-[6px] text-left transition-colors"
+                      style={{ background: 'transparent' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-3)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
                       <span className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0" style={{ background: p.color }} />
                       <span className="text-[12px] flex-1 truncate" style={{ color: 'var(--ink-2)' }}>{p.name}</span>
                       <span className="text-[11px] tabular-nums" style={{ color: 'var(--ink-4)' }}>
                         {pTasks.length} tarea{pTasks.length > 1 ? 's' : ''}
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

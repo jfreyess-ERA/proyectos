@@ -197,7 +197,7 @@ export default function Home() {
       switch (activeNav) {
         case 'inbox':   return <InboxView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
         case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
-        case 'people':  return <PeopleView tasks={tasks} projects={projects} users={users} onOpenTask={setSelectedTask} />;
+        case 'people':  return <PeopleView tasks={tasks} projects={projects} users={users} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />;
         case 'reports': return <ReportsView tasks={tasks} projects={projects} users={users} />;
         case 'crm:dashboard': return (
           <CrmDashboard
