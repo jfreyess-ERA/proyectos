@@ -387,6 +387,9 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                         style={{ background: p.color }}
                       />
                       <span className="text-[13px] font-medium truncate" style={{ color: 'var(--ink)' }}>
+                        {p.client && (
+                          <span className="font-normal" style={{ color: 'var(--ink-4)' }}>{p.client} · </span>
+                        )}
                         {p.name}
                       </span>
                     </div>
@@ -546,6 +549,9 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                           style={{ background: p.color }}
                         />
                         <span className="text-[13px] font-medium" style={{ color: 'var(--ink)' }}>
+                          {p.client && (
+                            <span className="font-normal" style={{ color: 'var(--ink-4)' }}>{p.client} · </span>
+                          )}
                           {p.name}
                         </span>
                       </div>

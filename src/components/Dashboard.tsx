@@ -205,7 +205,12 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
             {projectStats.filter(p => p.total > 0).map(p => (
               <div key={p.id} className="flex items-center gap-4">
                 <span className="w-[10px] h-[10px] rounded-[3px] flex-shrink-0" style={{ background: p.color }} />
-                <span className="text-[13px] w-[220px] truncate" style={{ color: 'var(--ink)' }}>{p.name}</span>
+                <span className="text-[13px] w-[220px] truncate" style={{ color: 'var(--ink)' }}>
+                  {p.client && (
+                    <span style={{ color: 'var(--ink-4)' }}>{p.client} · </span>
+                  )}
+                  {p.name}
+                </span>
                 <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
                   <div className="h-full rounded-full transition-all" style={{ width: `${p.pct * 100}%`, background: p.color }} />
                 </div>
