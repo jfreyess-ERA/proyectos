@@ -564,6 +564,17 @@ export async function updateCrmTrigger(id: string, fields: Partial<Omit<CrmTrigg
   if (error) throw error;
 }
 
+/**
+ * Despierta los prospectos dormidos cuya fecha de recontacto ya llegó y les deja
+ * la tarea de retomar contacto. Es idempotente, así que se llama en cada carga
+ * del CRM sin riesgo de duplicar nada. Devuelve cuántos reactivó.
+ */
+export async function reactivateDueProspects(): Promise<number> {
+  const { data, error } = await supabase.rpc('crm_reactivate_due');
+  if (error) throw error;
+  return (data as number) ?? 0;
+}
+
 /** Relee un prospecto — el trigger del playbook le cambia el nodo/estado del lado del servidor. */
 export async function fetchProspect(id: string): Promise<Prospect | null> {
   const { data, error } = await supabase.from('prospects').select('*').eq('id', id).maybeSingle();

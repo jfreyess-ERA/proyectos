@@ -37,6 +37,7 @@ import { CreateCrmTaskModal } from '@/components/CreateCrmTaskModal';
 import { CrmReports } from '@/components/CrmReports';
 import { InviteUserModal } from '@/components/InviteUserModal';
 import { EMPTY_FILTERS, applySubtaskFilters } from '@/components/TaskFilterBar';
+import { overdueCrmTasks, dueForReactivation } from '@/lib/crm-alerts';
 import { UsersContext } from '@/lib/users-context';
 import { LabelsContext } from '@/lib/labels-context';
 import { ProjectsContext } from '@/lib/projects-context';
@@ -208,7 +209,12 @@ export default function Home() {
 
     if (!isProjectView) {
       switch (activeNav) {
-        case 'inbox':   return <InboxView tasks={tasks} projects={projects} onOpenTask={setSelectedTask} />;
+        case 'inbox':   return (
+          <InboxView
+            tasks={tasks} projects={projects} onOpenTask={setSelectedTask}
+            crmTasks={crmTasks} prospects={prospects} onOpenProspect={setSelectedProspect}
+          />
+        );
         case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} />;
         case 'people':  return <PeopleView tasks={tasks} projects={projects} users={users} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />;
         case 'admin:team-week':
@@ -331,7 +337,11 @@ export default function Home() {
         onOpenTask={(taskId) => { const t = tasks.find(t => t.id === taskId); if (t) setSelectedTask(t); }}
         onCreateSprint={() => setSprintModalOpen(true)}
         loading={loading}
-        inboxCount={tasks.filter(t => t.status !== 'done' && t.due && new Date(t.due) < new Date()).length}
+        inboxCount={
+          tasks.filter(t => t.status !== 'done' && t.due && new Date(t.due) < new Date()).length
+          + overdueCrmTasks(crmTasks).length
+          + dueForReactivation(prospects).length
+        }
         myTasksCount={profile ? tasks.filter(t => t.status !== 'done' && t.assignees?.includes(profile.id)).length : 0}
       >
         {error && (

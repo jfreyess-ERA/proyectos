@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   fetchProspects, fetchInteractions, fetchCrmTasks,
-  fetchCrmTriggers, fetchEmailTemplates, fetchPlaybook,
+  fetchCrmTriggers, fetchEmailTemplates, fetchPlaybook, reactivateDueProspects,
 } from './db';
 import type { Prospect, CrmInteraction, CrmTask, CrmTrigger, EmailTemplate, PlaybookNode, PlaybookEdge } from './types';
 
@@ -35,6 +35,11 @@ export function useCrmData(): CrmData {
     setLoading(true);
     setError(null);
     try {
+      // Antes de leer: despertar a los dormidos que ya cumplieron su fecha de
+      // recontacto, para que los datos que siguen ya los traigan reactivados.
+      // Si falla no bloquea la carga del CRM.
+      await reactivateDueProspects().catch(err => console.error('reactivación:', err));
+
       const [p, i, t, tr, te, pb] = await Promise.all([
         fetchProspects(),
         fetchInteractions(),
