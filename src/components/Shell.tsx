@@ -11,7 +11,7 @@ import {
 import { PEOPLE } from '@/lib/data';
 import { Avatar } from './Avatar';
 import { NotificationBell } from './NotificationBell';
-import type { Project, Sprint } from '@/lib/types';
+import type { Project, Sprint, CrmTask, Prospect } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | string;
 type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
@@ -38,6 +38,9 @@ interface ShellProps {
   onOpenTask?: (taskId: string) => void;
   onCreateSprint?: () => void;
   sprints?: Sprint[];
+  crmTasks?: CrmTask[];
+  prospects?: Prospect[];
+  onOpenProspect?: (p: Prospect) => void;
   children: React.ReactNode;
 }
 
@@ -62,6 +65,9 @@ export function Shell({
   onOpenTask,
   onCreateSprint,
   sprints = [],
+  crmTasks = [],
+  prospects = [],
+  onOpenProspect,
   children,
 }: ShellProps) {
   const [collapsed, setCollapsed] = useState(false);
@@ -465,7 +471,12 @@ export function Shell({
             </span>
           </div>
 
-          <NotificationBell onOpenTask={taskId => onOpenTask?.(taskId)} />
+          <NotificationBell
+            onOpenTask={taskId => onOpenTask?.(taskId)}
+            crmTasks={crmTasks}
+            prospects={prospects}
+            onOpenProspect={onOpenProspect}
+          />
 
           <button
             onClick={onCreateTask}

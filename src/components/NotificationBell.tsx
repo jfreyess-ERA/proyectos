@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Check } from 'lucide-react';
+import { Bell, Check, Flame, RotateCcw } from 'lucide-react';
 import { fetchNotifications, markNotificationsRead } from '@/lib/db';
 import { useAuth } from '@/lib/auth-context';
-import type { Notification } from '@/lib/types';
+import { buildCrmAlerts } from '@/lib/crm-alerts';
+import type { Notification, CrmTask, Prospect } from '@/lib/types';
 
 const TYPE_ICONS: Record<string, string> = {
   comment:  '💬',
@@ -11,13 +12,24 @@ const TYPE_ICONS: Record<string, string> = {
   overdue:  '⏰',
 };
 
-export function NotificationBell({ onOpenTask }: { onOpenTask?: (taskId: string) => void }) {
+interface Props {
+  onOpenTask?: (taskId: string) => void;
+  /** Alertas CRM: se derivan en vivo (mismo estado que la Bandeja), no son filas de `notifications`. */
+  crmTasks?: CrmTask[];
+  prospects?: Prospect[];
+  onOpenProspect?: (p: Prospect) => void;
+}
+
+export function NotificationBell({ onOpenTask, crmTasks = [], prospects = [], onOpenProspect }: Props) {
   const { profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const ref = useRef<HTMLDivElement>(null);
 
   const unread = notifications.filter(n => !n.read);
+  const crmAlerts = buildCrmAlerts(crmTasks, prospects);
+  const prospectById = new Map(prospects.map(p => [p.id, p]));
+  const totalBadge = unread.length + crmAlerts.length;
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -69,12 +81,12 @@ export function NotificationBell({ onOpenTask }: { onOpenTask?: (taskId: string)
         style={{ color: 'var(--ink-2)' }}
       >
         <Bell size={16} />
-        {unread.length > 0 && (
+        {totalBadge > 0 && (
           <span
             className="absolute top-[5px] right-[5px] min-w-[8px] h-[8px] rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-            style={{ background: 'var(--danger)', padding: unread.length > 9 ? '0 2px' : 0 }}
+            style={{ background: 'var(--danger)', padding: totalBadge > 9 ? '0 2px' : 0 }}
           >
-            {unread.length > 9 ? '9+' : ''}
+            {totalBadge > 9 ? '9+' : ''}
           </span>
         )}
       </button>
@@ -108,29 +120,59 @@ export function NotificationBell({ onOpenTask }: { onOpenTask?: (taskId: string)
           </div>
 
           <div className="overflow-y-auto flex-1">
-            {notifications.length === 0 ? (
+            {crmAlerts.length > 0 && (
+              <div>
+                <div className="px-4 pt-2 pb-1 text-[10.5px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)', background: 'var(--bg-2)' }}>
+                  Alertas CRM
+                </div>
+                {crmAlerts.map(a => (
+                  <button
+                    key={`${a.kind}-${a.id}`}
+                    onClick={() => { const p = prospectById.get(a.prospectId); if (p) onOpenProspect?.(p); setOpen(false); }}
+                    className="w-full flex items-start gap-3 px-4 py-3 text-left border-b transition-colors"
+                    style={{ borderColor: 'var(--line)', background: 'var(--danger-bg)' }}
+                  >
+                    <span className="flex-shrink-0 mt-[1px]" style={{ color: 'var(--danger)' }}>
+                      {a.kind === 'crm_overdue' ? <Flame size={15} /> : <RotateCcw size={15} />}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12.5px] leading-snug font-medium" style={{ color: 'var(--ink)' }}>{a.title}</p>
+                      <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{a.company}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {notifications.length === 0 && crmAlerts.length === 0 ? (
               <div className="py-10 text-center text-[13px]" style={{ color: 'var(--ink-4)' }}>
                 Sin notificaciones
               </div>
             ) : (
-              notifications.map(n => (
-                <button
-                  key={n.id}
-                  onClick={() => { onOpenTask?.(n.task_id); setOpen(false); }}
-                  className="w-full flex items-start gap-3 px-4 py-3 text-left border-b transition-colors"
-                  style={{
-                    borderColor: 'var(--line)',
-                    background: n.read ? 'transparent' : 'var(--accent-bg)',
-                    borderLeft: n.read ? 'none' : '3px solid var(--accent)',
-                  }}
-                >
-                  <span className="text-[16px] flex-shrink-0 mt-[1px]">{TYPE_ICONS[n.type] ?? '🔔'}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12.5px] leading-snug" style={{ color: 'var(--ink)' }}>{n.message}</p>
-                    <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{fmtTime(n.created_at)}</span>
+              <>
+                {crmAlerts.length > 0 && notifications.length > 0 && (
+                  <div className="px-4 pt-2 pb-1 text-[10.5px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
+                    Notificaciones
                   </div>
-                </button>
-              ))
+                )}
+                {notifications.map(n => (
+                  <button
+                    key={n.id}
+                    onClick={() => { onOpenTask?.(n.task_id); setOpen(false); }}
+                    className="w-full flex items-start gap-3 px-4 py-3 text-left border-b transition-colors"
+                    style={{
+                      borderColor: 'var(--line)',
+                      background: n.read ? 'transparent' : 'var(--accent-bg)',
+                      borderLeft: n.read ? 'none' : '3px solid var(--accent)',
+                    }}
+                  >
+                    <span className="text-[16px] flex-shrink-0 mt-[1px]">{TYPE_ICONS[n.type] ?? '🔔'}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12.5px] leading-snug" style={{ color: 'var(--ink)' }}>{n.message}</p>
+                      <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{fmtTime(n.created_at)}</span>
+                    </div>
+                  </button>
+                ))}
+              </>
             )}
           </div>
         </div>

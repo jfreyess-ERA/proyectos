@@ -1,4 +1,4 @@
-import type { CrmTask, Prospect } from './types';
+import type { CrmTask, Prospect, CrmAlert } from './types';
 
 /** Estados en los que una tarea CRM sigue pidiendo acción. */
 const OPEN_STATUSES = new Set(['Pending', 'In Progress', 'Waiting']);
@@ -39,4 +39,32 @@ export function dueForReactivation(prospects: Prospect[], now: Date = new Date()
     const iso = p.reconnect_at ?? (p.reconnect_month ? `${p.reconnect_month}-01` : null);
     return iso !== null && new Date(iso + 'T00:00:00') <= today;
   });
+}
+
+/** Arma la lista de alertas CRM para la campanita, a partir del mismo estado que la Bandeja. */
+export function buildCrmAlerts(tasks: CrmTask[], prospects: Prospect[], now: Date = new Date()): CrmAlert[] {
+  const byId = new Map(prospects.map(p => [p.id, p]));
+  const overdue: CrmAlert[] = overdueCrmTasks(tasks, now)
+    .map((t): CrmAlert | null => {
+      const p = byId.get(t.prospect_id);
+      if (!p) return null;
+      return {
+        id: t.id,
+        kind: 'crm_overdue',
+        title: t.notes?.trim() || t.task_type || 'Seguimiento CRM',
+        company: p.company,
+        prospectId: p.id,
+      };
+    })
+    .filter((a): a is CrmAlert => a !== null);
+
+  const reactivate: CrmAlert[] = dueForReactivation(prospects, now).map(p => ({
+    id: p.id,
+    kind: 'crm_reactivate' as const,
+    title: 'Llegó la fecha de recontacto',
+    company: p.company,
+    prospectId: p.id,
+  }));
+
+  return [...overdue, ...reactivate];
 }

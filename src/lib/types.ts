@@ -81,6 +81,20 @@ export interface Notification {
   created_at: string;
 }
 
+/**
+ * Alerta CRM mostrada en la campanita: no es una fila persistida en `notifications`
+ * (no hay owner_id confiable por prospecto todavía — ver crm-alerts.ts), sino que
+ * se deriva en vivo del mismo estado que ya usa la Bandeja. Por eso no tiene
+ * "leído/no leído": siempre refleja el estado actual.
+ */
+export interface CrmAlert {
+  id: string;
+  kind: 'crm_overdue' | 'crm_reactivate';
+  title: string;
+  company: string;
+  prospectId: string;
+}
+
 export interface Attachment {
   id: string;
   task_id: string;

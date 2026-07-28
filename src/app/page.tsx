@@ -342,6 +342,9 @@ export default function Home() {
         onEditProject={openEditProject}
         onOpenTask={(taskId) => { const t = tasks.find(t => t.id === taskId); if (t) setSelectedTask(t); }}
         onCreateSprint={() => setSprintModalOpen(true)}
+        crmTasks={crmTasks}
+        prospects={prospects}
+        onOpenProspect={setSelectedProspect}
         loading={loading}
         inboxCount={
           tasks.filter(t => t.status !== 'done' && t.due && new Date(t.due) < new Date()).length
