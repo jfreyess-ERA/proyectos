@@ -53,7 +53,7 @@ export default function Home() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
   const { tasks, projects, users, labels, sprints, datedSubtasks, loading, error, refetch } = useNorteData();
-  const { prospects, interactions, crmTasks, triggers, templates, refetch: crmRefetch } = useCrmData();
+  const { prospects, interactions, crmTasks, triggers, templates, playbookNodes, playbookEdges, refetch: crmRefetch } = useCrmData();
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [createProspectOpen, setCreateProspectOpen] = useState(false);
   const [importProspectOpen, setImportProspectOpen] = useState(false);
@@ -429,6 +429,8 @@ export default function Home() {
       <ProspectDetail
         prospect={selectedProspect}
         projects={projects}
+        playbookNodes={playbookNodes}
+        playbookEdges={playbookEdges}
         onClose={() => setSelectedProspect(null)}
         onUpdated={updated => {
           setSelectedProspect(updated);

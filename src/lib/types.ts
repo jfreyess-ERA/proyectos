@@ -128,7 +128,55 @@ export type ProspectStatus   = 'Active' | 'Warm' | 'Paused' | 'Nurture' | 'Close
 export type ProspectStage    = 'New' | 'Contacted' | 'Meeting Requested' | 'Meeting Held' | 'Proposal' | 'Negotiation' | 'Won';
 
 // Tipo de respuesta del prospecto — alimenta el motor de cadencia (playbook).
-export type ResponseType = 'acepta_reunion' | 'mas_adelante' | 'deriva' | 'objecion' | 'sin_respuesta';
+// Las 5 primeras son las respuestas iniciales del contacto; el resto sólo aparecen
+// dentro de una rama (después de "acepta reunión" la pregunta es Ok/Reagendar, etc.).
+export type ResponseType =
+  | 'acepta_reunion' | 'mas_adelante' | 'deriva' | 'objecion' | 'sin_respuesta'
+  | 'ok' | 'reagendar' | 'nueva_postergacion';
+
+/** Las 5 respuestas con las que arranca cualquier cadencia (bloque "Contacto inicial"). */
+export const INITIAL_RESPONSES: ResponseType[] = [
+  'acepta_reunion', 'mas_adelante', 'deriva', 'objecion', 'sin_respuesta',
+];
+
+export const RESPONSE_LABELS: Record<ResponseType, string> = {
+  acepta_reunion:     'Acepta reunión',
+  mas_adelante:       'Más adelante',
+  deriva:             'Deriva a otra persona',
+  objecion:           'Objeción',
+  sin_respuesta:      'Sin respuesta',
+  ok:                 'Ok / confirma',
+  reagendar:          'Reagendar',
+  nueva_postergacion: 'Nueva postergación',
+};
+
+/** Una tarea que el nodo del playbook genera al entrar. */
+export interface PlaybookTask {
+  type: CrmTaskType;
+  detail: string;
+}
+
+/** Nodo del árbol de cadencia: un estado con sus tareas, plazo y alerta. */
+export interface PlaybookNode {
+  node_key: string;
+  branch: ResponseType;
+  label: string;
+  position: number;
+  tasks: PlaybookTask[];
+  days_offset: number;
+  alert_label?: string | null;
+  close_months?: number | null;
+  sets_status?: ProspectStatus | null;
+  is_terminal: boolean;
+}
+
+/** Arista: la respuesta del prospecto que lleva de un nodo al siguiente. */
+export interface PlaybookEdge {
+  from_node: string;   // '_root' = las respuestas iniciales
+  response: ResponseType;
+  to_node: string;
+  sort_order: number;
+}
 
 export interface Prospect {
   id: string;
@@ -155,7 +203,8 @@ export interface Prospect {
   notes?: string;
   project_id?: string;
   response_type?: ResponseType;   // última respuesta registrada (playbook)
-  playbook_step?: number;         // posición en la cadencia
+  playbook_node?: string | null;  // nodo actual del árbol de cadencia
+  playbook_step?: number;         // posición dentro de la rama (para "paso N de M")
   created_at: string;
   updated_at?: string;
 }

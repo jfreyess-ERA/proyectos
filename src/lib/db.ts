@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem, DatedSubtask, Sprint, Prospect, CrmInteraction, CrmTask, CrmTrigger, EmailTemplate } from './types';
+import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem, DatedSubtask, Sprint, Prospect, CrmInteraction, CrmTask, CrmTrigger, EmailTemplate, PlaybookNode, PlaybookEdge } from './types';
 
 // ── Row types from Supabase ────────────────────────────────────────
 
@@ -562,6 +562,26 @@ export async function insertCrmTrigger(input: Omit<CrmTrigger, 'id' | 'created_a
 export async function updateCrmTrigger(id: string, fields: Partial<Omit<CrmTrigger, 'id' | 'created_at'>>): Promise<void> {
   const { error } = await supabase.from('crm_triggers').update(fields).eq('id', id);
   if (error) throw error;
+}
+
+/** Relee un prospecto — el trigger del playbook le cambia el nodo/estado del lado del servidor. */
+export async function fetchProspect(id: string): Promise<Prospect | null> {
+  const { data, error } = await supabase.from('prospects').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return (data as Prospect) ?? null;
+}
+
+// ── CRM: Playbook (árbol de cadencia de seguimiento) ──────────────
+
+/** Nodos y aristas del playbook. Es configuración: se lee una vez y se cachea en memoria. */
+export async function fetchPlaybook(): Promise<{ nodes: PlaybookNode[]; edges: PlaybookEdge[] }> {
+  const [{ data: nodes, error: ne }, { data: edges, error: ee }] = await Promise.all([
+    supabase.from('crm_playbook_nodes').select('*').order('branch').order('position'),
+    supabase.from('crm_playbook_edges').select('*').order('from_node').order('sort_order'),
+  ]);
+  if (ne) throw ne;
+  if (ee) throw ee;
+  return { nodes: (nodes ?? []) as PlaybookNode[], edges: (edges ?? []) as PlaybookEdge[] };
 }
 
 // ── CRM: Email Templates ──────────────────────────────────────────

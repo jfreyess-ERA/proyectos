@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Trash2, ExternalLink, Mail, Phone, ChevronDown } from 'lucide-react';
 import {
-  updateProspect, deleteProspect,
+  updateProspect, deleteProspect, fetchProspect,
   fetchInteractions, insertInteraction, deleteInteraction,
   fetchCrmTasks, insertCrmTask, updateCrmTask, deleteCrmTask,
   fetchCrmTriggers, insertCrmTrigger, updateCrmTrigger,
@@ -11,7 +11,10 @@ import type {
   Prospect, ProspectStatus, ProspectStage, ProspectPriority,
   CrmInteraction, CrmTask, CrmTrigger, InteractionChannel, InteractionOutcome,
   CrmTaskType, CrmTaskStatus, TriggerType, ResponseType,
+  PlaybookNode, PlaybookEdge,
 } from '@/lib/types';
+import { RESPONSE_LABELS } from '@/lib/types';
+import { PlaybookPanel, validResponses } from './PlaybookPanel';
 import { PRIORITY_STYLE, STATUS_STYLE, STAGE_STYLE } from './ProspectsView';
 
 const STAGES: ProspectStage[] = ['New', 'Contacted', 'Meeting Requested', 'Meeting Held', 'Proposal', 'Negotiation', 'Won'];
@@ -23,20 +26,13 @@ const TASK_TYPES: CrmTaskType[] = ['Follow-up', 'Research', 'Send case study', '
 const TASK_STATUSES: CrmTaskStatus[] = ['Pending', 'In Progress', 'Waiting', 'Done', 'Deferred', 'Cancelled'];
 const TRIGGER_TYPES: TriggerType[] = ['News', 'Hiring', 'Expansion', 'Regulation', 'Leadership change', 'Earnings', 'Results'];
 
-// Tipos de respuesta que activan el motor de cadencia (playbook)
-const RESPONSE_TYPES: { value: ResponseType; label: string }[] = [
-  { value: 'acepta_reunion', label: 'Acepta reunión' },
-  { value: 'mas_adelante',   label: 'Más adelante' },
-  { value: 'deriva',         label: 'Deriva a otra persona' },
-  { value: 'objecion',       label: 'Objeción' },
-  { value: 'sin_respuesta',  label: 'Sin respuesta' },
-];
 const POSTPONE_REASONS = ['Reestructuración interna', 'Proceso de consultoría vigente', 'Contingencia del mercado', 'Motivos internacionales', 'Otro'];
 const OBJECTION_REASONS = ['Sin presupuesto', 'Prioridades distintas', 'Ya lo hacen internamente', 'Proveedor actual', 'No ve valor', 'Otro'];
 // Motivo/detalle contextual según el tipo de respuesta
 const REASONS_BY_RESPONSE: Partial<Record<ResponseType, string[]>> = {
-  mas_adelante: POSTPONE_REASONS,
-  objecion: OBJECTION_REASONS,
+  mas_adelante:       POSTPONE_REASONS,
+  nueva_postergacion: POSTPONE_REASONS,
+  objecion:           OBJECTION_REASONS,
 };
 
 import type { Project } from '@/lib/types';
@@ -47,6 +43,8 @@ interface Props {
   onUpdated: (p: Prospect) => void;
   onDeleted: (id: string) => void;
   projects?: Project[];
+  playbookNodes?: PlaybookNode[];
+  playbookEdges?: PlaybookEdge[];
 }
 
 type Tab = 'info' | 'interactions' | 'tasks' | 'triggers' | 'timeline';
@@ -121,7 +119,7 @@ function EditableText({ value, onSave, placeholder, multiline }: {
   );
 }
 
-export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projects = [] }: Props) {
+export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projects = [], playbookNodes = [], playbookEdges = [] }: Props) {
   const [tab, setTab] = useState<Tab>('info');
   const [interactions, setInteractions] = useState<CrmInteraction[]>([]);
   const [tasks, setTasks] = useState<CrmTask[]>([]);
@@ -161,6 +159,14 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
   }, [prospect?.id, reload]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!prospect) return null;
+
+  // Respuestas que ofrece el selector: las del nodo actual (el guion) primero,
+  // y las iniciales después, porque el cliente siempre puede salirse del guion.
+  const currentNode = prospect.playbook_node
+    ? playbookNodes.find(n => n.node_key === prospect.playbook_node)
+    : undefined;
+  const responseOptions = validResponses(prospect, playbookEdges);
+  const nodeLabel = (key: string) => playbookNodes.find(n => n.node_key === key)?.label ?? key;
 
   async function save(fields: Partial<Omit<Prospect, 'id' | 'created_at'>>) {
     if (!prospect) return;
@@ -204,11 +210,21 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
     });
     setNewIntForm(false);
     setIntDraft({ date: new Date().toISOString().slice(0, 10) });
-    // Recargar: si hubo tipo de respuesta, el trigger ya creó la próxima tarea
-    // y actualizó el prospecto, así que refrescamos interacciones + tareas.
     await reload(prospect.id);
+
+    // Con tipo de respuesta el trigger ya avanzó la cadencia del lado del servidor:
+    // hay que releer el prospecto para que el panel muestre el nodo nuevo.
     if (intDraft.response_type) {
-      setPlaybookHint('Se registró la respuesta y el sistema generó la próxima tarea según la cadencia. Mirá la pestaña Tareas.');
+      const fresh = await fetchProspect(prospect.id);
+      if (fresh) onUpdated(fresh);
+      const node = fresh?.playbook_node
+        ? playbookNodes.find(n => n.node_key === fresh.playbook_node)
+        : undefined;
+      setPlaybookHint(
+        node
+          ? `Cadencia → “${node.label}”. Se generaron ${node.tasks.length} tarea${node.tasks.length > 1 ? 's' : ''} en la pestaña Tareas.`
+          : 'Se registró la respuesta y el sistema generó la próxima tarea según la cadencia.',
+      );
       setTimeout(() => setPlaybookHint(null), 6000);
     }
   }
@@ -390,6 +406,11 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
         <div className="flex-1 overflow-y-auto p-5">
           {tab === 'info' && (
             <div>
+              {playbookNodes.length > 0 && (
+                <div className="mb-4">
+                  <PlaybookPanel prospect={prospect} nodes={playbookNodes} edges={playbookEdges} />
+                </div>
+              )}
               <FieldRow label="Contacto">
                 <EditableText value={prospect.contact_name} onSave={v => save({ contact_name: v })} placeholder="Nombre contacto" />
               </FieldRow>
@@ -537,12 +558,29 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                   <div className="mb-3 p-2.5 rounded-[8px]" style={{ background: 'var(--bg-3)', border: '1px dashed var(--line)' }}>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Tipo de respuesta (cadencia)</label>
+                        <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>
+                          ¿Qué respondió? {currentNode && <span style={{ color: 'var(--ink-4)' }}>· desde “{currentNode.label}”</span>}
+                        </label>
                         <select value={intDraft.response_type ?? ''} onChange={e => setIntDraft(d => ({ ...d, response_type: (e.target.value || undefined) as ResponseType | undefined, response_detail: undefined }))}
                           className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
                           style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
                           <option value="">— Sin cadencia —</option>
-                          {RESPONSE_TYPES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                          {responseOptions.contextual.length > 0 && (
+                            <optgroup label={currentNode ? 'Según la cadencia' : 'Respuesta al contacto inicial'}>
+                              {responseOptions.contextual.map(({ response, to }) => (
+                                <option key={response} value={response}>
+                                  {RESPONSE_LABELS[response]} → {nodeLabel(to)}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {responseOptions.initial.length > 0 && (
+                            <optgroup label="Se salió del guion — arranca otra rama">
+                              {responseOptions.initial.map(r => (
+                                <option key={r} value={r}>{RESPONSE_LABELS[r]}</option>
+                              ))}
+                            </optgroup>
+                          )}
                         </select>
                       </div>
                       {intDraft.response_type && REASONS_BY_RESPONSE[intDraft.response_type] && (
