@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { fetchTasks, fetchProjects, fetchUsers, fetchLabels, fetchAllSprints, fetchDatedSubtasks, taskRowToTask } from './db';
+import { fetchTasks, fetchProjects, fetchUsers, fetchLabels, fetchAllSprints, fetchAllSubtasks, taskRowToTask } from './db';
 import { supabase } from './supabase';
-import type { Task, Project, User, Label, Sprint, DatedSubtask } from './types';
+import type { Task, Project, User, Label, Sprint, DatedSubtask, SubtaskLite } from './types';
 
 interface NorteData {
   tasks: Task[];
@@ -10,6 +10,7 @@ interface NorteData {
   users: User[];
   labels: Label[];
   sprints: Sprint[];
+  subtasks: SubtaskLite[];
   datedSubtasks: DatedSubtask[];
   loading: boolean;
   error: string | null;
@@ -22,7 +23,7 @@ export function useNorteData(): NorteData {
   const [users, setUsers] = useState<User[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
-  const [datedSubtasks, setDatedSubtasks] = useState<DatedSubtask[]>([]);
+  const [subtasks, setSubtasks] = useState<SubtaskLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -33,15 +34,15 @@ export function useNorteData(): NorteData {
     setLoading(true);
     setError(null);
 
-    Promise.all([fetchTasks(), fetchProjects(), fetchUsers(), fetchLabels(), fetchAllSprints(), fetchDatedSubtasks()])
-      .then(([t, p, u, l, s, ds]) => {
+    Promise.all([fetchTasks(), fetchProjects(), fetchUsers(), fetchLabels(), fetchAllSprints(), fetchAllSubtasks()])
+      .then(([t, p, u, l, s, st]) => {
         if (cancelled) return;
         setTasks(t);
         setProjects(p);
         setUsers(u);
         setLabels(l);
         setSprints(s);
-        setDatedSubtasks(ds);
+        setSubtasks(st);
       })
       .catch(err => {
         if (!cancelled) setError(err.message ?? 'Error conectando a Supabase');
@@ -80,5 +81,8 @@ export function useNorteData(): NorteData {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  return { tasks, projects, users, labels, sprints, datedSubtasks, loading, error, refetch: () => setTick(t => t + 1) };
+  // Las subtareas con fecha se derivan de todas — evita una segunda query.
+  const datedSubtasks = subtasks.filter(s => s.due_date) as DatedSubtask[];
+
+  return { tasks, projects, users, labels, sprints, subtasks, datedSubtasks, loading, error, refetch: () => setTick(t => t + 1) };
 }

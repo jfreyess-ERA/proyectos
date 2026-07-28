@@ -17,6 +17,7 @@ import { PeopleView } from '@/components/PeopleView';
 import { TeamWeekView } from '@/components/TeamWeekView';
 import { StatsView } from '@/components/StatsView';
 import { PhaseDurationView } from '@/components/PhaseDurationView';
+import { SubtaskStatsView } from '@/components/SubtaskStatsView';
 import { ReportsView } from '@/components/ReportsView';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProjectModal } from '@/components/ProjectModal';
@@ -47,13 +48,13 @@ import { useAuth } from '@/lib/auth-context';
 import { getOrCreateShare } from '@/lib/db';
 import type { Task, Project, Sprint, Prospect } from '@/lib/types';
 
-type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | 'admin:team-week' | 'admin:stats' | 'admin:durations' | string;
+type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | 'admin:team-week' | 'admin:stats' | 'admin:durations' | 'admin:subtasks' | string;
 type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
 
 export default function Home() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
-  const { tasks, projects, users, labels, sprints, datedSubtasks, loading, error, refetch } = useNorteData();
+  const { tasks, projects, users, labels, sprints, subtasks, datedSubtasks, loading, error, refetch } = useNorteData();
   const { prospects, interactions, crmTasks, triggers, templates, playbookNodes, playbookEdges, refetch: crmRefetch } = useCrmData();
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [createProspectOpen, setCreateProspectOpen] = useState(false);
@@ -105,6 +106,7 @@ export default function Home() {
     'admin:team-week': 'Panel del equipo',
     'admin:stats':     'Estadísticas',
     'admin:durations': 'Tiempos por fase',
+    'admin:subtasks':  'Subtareas',
   };
 
   const crumbs = isProjectView && project
@@ -228,6 +230,10 @@ export default function Home() {
         case 'admin:durations':
           return profile?.is_admin
             ? <PhaseDurationView tasks={tasks} projects={projects} onOpenProject={id => handleNav('project:' + id)} />
+            : <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
+        case 'admin:subtasks':
+          return profile?.is_admin
+            ? <SubtaskStatsView subtasks={subtasks} tasks={tasks} projects={projects} users={users} onOpenProject={id => handleNav('project:' + id)} />
             : <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
         case 'reports': return <ReportsView tasks={tasks} projects={projects} users={users} />;
         case 'crm:dashboard': return (

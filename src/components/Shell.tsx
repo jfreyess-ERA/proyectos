@@ -174,6 +174,7 @@ export function Shell({
                 { id: 'admin:team-week', icon: <CalendarDays size={16} />, label: 'Panel del equipo' },
                 { id: 'admin:stats',     icon: <PieChart size={16} />,     label: 'Estadísticas' },
                 { id: 'admin:durations', icon: <Clock size={16} />,        label: 'Tiempos por fase' },
+                { id: 'admin:subtasks',  icon: <ListChecks size={16} />,   label: 'Subtareas' },
               ].map(item => (
                 <button
                   key={item.id}

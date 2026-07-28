@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem, DatedSubtask, Sprint, Prospect, CrmInteraction, CrmTask, CrmTrigger, EmailTemplate, PlaybookNode, PlaybookEdge } from './types';
+import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem, SubtaskLite, Sprint, Prospect, CrmInteraction, CrmTask, CrmTrigger, EmailTemplate, PlaybookNode, PlaybookEdge } from './types';
 
 // ── Row types from Supabase ────────────────────────────────────────
 
@@ -303,13 +303,15 @@ export async function fetchSubtasks(taskId: string): Promise<SubtaskItem[]> {
   return (data ?? []) as SubtaskItem[];
 }
 
-/** All subtasks that have a due_date, across every task — feeds calendars, "atrasadas" and Mis tareas. */
-export async function fetchDatedSubtasks(): Promise<DatedSubtask[]> {
+/**
+ * Todas las subtareas del sistema (livianas). De acá se derivan las que tienen
+ * fecha (calendarios / atrasadas / Mis tareas) y las estadísticas de subtareas.
+ */
+export async function fetchAllSubtasks(): Promise<SubtaskLite[]> {
   const { data } = await supabase
     .from('task_subtasks')
-    .select('id, task_id, title, done, due_date, assignee')
-    .not('due_date', 'is', null);
-  return (data ?? []) as DatedSubtask[];
+    .select('id, task_id, title, done, due_date, assignee');
+  return (data ?? []) as SubtaskLite[];
 }
 
 async function syncSubtaskCounts(taskId: string): Promise<void> {
