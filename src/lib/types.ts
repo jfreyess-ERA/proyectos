@@ -156,6 +156,14 @@ export interface PlaybookTask {
   detail: string;
 }
 
+/**
+ * Contra qué se mide el plazo del nodo:
+ *  - 'now'       relativo a cuando se entra al nodo (la cadencia de toques)
+ *  - 'meeting'   relativo a la reunión agendada (offsets negativos = antes)
+ *  - 'reconnect' la fecha de recontacto que se haya pactado
+ */
+export type PlaybookAnchor = 'now' | 'meeting' | 'reconnect';
+
 /** Nodo del árbol de cadencia: un estado con sus tareas, plazo y alerta. */
 export interface PlaybookNode {
   node_key: string;
@@ -163,7 +171,8 @@ export interface PlaybookNode {
   label: string;
   position: number;
   tasks: PlaybookTask[];
-  days_offset: number;
+  anchor: PlaybookAnchor;
+  offset_hours: number;
   alert_label?: string | null;
   close_months?: number | null;
   sets_status?: ProspectStatus | null;
@@ -205,6 +214,8 @@ export interface Prospect {
   response_type?: ResponseType;   // última respuesta registrada (playbook)
   playbook_node?: string | null;  // nodo actual del árbol de cadencia
   playbook_step?: number;         // posición dentro de la rama (para "paso N de M")
+  meeting_at?: string | null;     // reunión agendada — ancla de los plazos "antes de la reunión"
+  reconnect_at?: string | null;   // fecha de recontacto pactada
   created_at: string;
   updated_at?: string;
 }
@@ -228,6 +239,8 @@ export interface CrmInteraction {
   owner_id?: string;
   response_type?: ResponseType;   // dispara el motor de cadencia (playbook)
   response_detail?: string;       // motivo de postergación / objeción / info de interés
+  meeting_at?: string | null;     // fecha y hora de la reunión, al agendarla
+  reconnect_at?: string | null;   // fecha de recontacto elegida al postergar
   created_at: string;
 }
 
@@ -242,6 +255,7 @@ export interface CrmTask {
   priority?: 'High' | 'Medium' | 'Low';
   status: CrmTaskStatus;
   due_date?: string;
+  due_at?: string | null;   // vencimiento con hora (alertas del tipo "12 horas antes")
   reminder_window?: number;
   notes?: string;
   completed_date?: string;

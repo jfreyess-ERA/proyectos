@@ -14,7 +14,7 @@ import type {
   PlaybookNode, PlaybookEdge,
 } from '@/lib/types';
 import { RESPONSE_LABELS } from '@/lib/types';
-import { PlaybookPanel, validResponses } from './PlaybookPanel';
+import { PlaybookPanel, validResponses, edgeTarget, anchorHint } from './PlaybookPanel';
 import { PRIORITY_STYLE, STATUS_STYLE, STAGE_STYLE } from './ProspectsView';
 
 const STAGES: ProspectStage[] = ['New', 'Contacted', 'Meeting Requested', 'Meeting Held', 'Proposal', 'Negotiation', 'Won'];
@@ -25,6 +25,16 @@ const OUTCOMES: InteractionOutcome[] = ['No response', 'Positive', 'Interested',
 const TASK_TYPES: CrmTaskType[] = ['Follow-up', 'Research', 'Send case study', 'Call', 'Meeting', 'Reconnect', 'Proposal'];
 const TASK_STATUSES: CrmTaskStatus[] = ['Pending', 'In Progress', 'Waiting', 'Done', 'Deferred', 'Cancelled'];
 const TRIGGER_TYPES: TriggerType[] = ['News', 'Hiring', 'Expansion', 'Regulation', 'Leadership change', 'Earnings', 'Results'];
+
+/**
+ * meeting_at se guarda en ISO (UTC) pero <input type="datetime-local"> trabaja en
+ * hora local: sin convertir, el campo se repinta corrido por el offset horario.
+ */
+function isoToLocalInput(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
 
 const POSTPONE_REASONS = ['Reestructuración interna', 'Proceso de consultoría vigente', 'Contingencia del mercado', 'Motivos internacionales', 'Otro'];
 const OBJECTION_REASONS = ['Sin presupuesto', 'Prioridades distintas', 'Ya lo hacen internamente', 'Proveedor actual', 'No ve valor', 'Otro'];
@@ -131,6 +141,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
   const [newIntForm, setNewIntForm] = useState(false);
   const [intDraft, setIntDraft] = useState<Partial<CrmInteraction>>({ date: new Date().toISOString().slice(0, 10) });
   const [playbookHint, setPlaybookHint] = useState<string | null>(null);
+  const [reconnectPreset, setReconnectPreset] = useState<number | null>(null);
 
   // New task form
   const [newTaskForm, setNewTaskForm] = useState(false);
@@ -167,6 +178,14 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
     : undefined;
   const responseOptions = validResponses(prospect, playbookEdges);
   const nodeLabel = (key: string) => playbookNodes.find(n => n.node_key === key)?.label ?? key;
+
+  // Qué fecha hay que pedir la decide el ancla del nodo al que lleva la respuesta
+  // elegida, no una lista de respuestas hardcodeada.
+  const targetNode = intDraft.response_type
+    ? playbookNodes.find(n => n.node_key === edgeTarget(prospect, playbookEdges, intDraft.response_type!))
+    : undefined;
+  const needsMeeting   = targetNode?.anchor === 'meeting'   && !prospect.meeting_at;
+  const needsReconnect = targetNode?.anchor === 'reconnect';
 
   async function save(fields: Partial<Omit<Prospect, 'id' | 'created_at'>>) {
     if (!prospect) return;
@@ -207,9 +226,12 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
       trigger_mentioned: intDraft.trigger_mentioned ?? false,
       response_type: intDraft.response_type,
       response_detail: intDraft.response_detail,
+      meeting_at: intDraft.meeting_at,
+      reconnect_at: intDraft.reconnect_at,
     });
     setNewIntForm(false);
     setIntDraft({ date: new Date().toISOString().slice(0, 10) });
+    setReconnectPreset(null);
     await reload(prospect.id);
 
     // Con tipo de respuesta el trigger ya avanzó la cadencia del lado del servidor:
@@ -595,8 +617,54 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                         </div>
                       )}
                     </div>
+                    {needsMeeting && (
+                      <div className="mt-2">
+                        <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>
+                          Fecha y hora de la reunión <span style={{ color: 'var(--danger)' }}>·  los avisos se cuentan desde acá</span>
+                        </label>
+                        <input type="datetime-local" value={isoToLocalInput(intDraft.meeting_at)}
+                          onChange={e => setIntDraft(d => ({ ...d, meeting_at: e.target.value ? new Date(e.target.value).toISOString() : null }))}
+                          className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
+                          style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
+                      </div>
+                    )}
+
+                    {needsReconnect && (
+                      <div className="mt-2">
+                        <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Recontactar en</label>
+                        <div className="flex gap-2 flex-wrap items-center">
+                          {[30, 90, 180].map(days => {
+                            const active = reconnectPreset === days;
+                            return (
+                              <button key={days} type="button"
+                                onClick={() => {
+                                  // La fecha se calcula al hacer click, no en cada render.
+                                  const iso = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+                                  setReconnectPreset(days);
+                                  setIntDraft(d => ({ ...d, reconnect_at: iso }));
+                                }}
+                                className="h-7 px-2.5 text-[12px] rounded-[6px] border transition-colors"
+                                style={active
+                                  ? { background: 'var(--accent-bg)', borderColor: 'var(--accent)', color: 'var(--accent)' }
+                                  : { background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-3)' }}>
+                                {days} días
+                              </button>
+                            );
+                          })}
+                          <input type="date" value={intDraft.reconnect_at ?? ''}
+                            onChange={e => { setReconnectPreset(null); setIntDraft(d => ({ ...d, reconnect_at: e.target.value || null })); }}
+                            className="h-7 px-2 rounded-[6px] text-[12px] outline-none"
+                            style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
+                        </div>
+                      </div>
+                    )}
+
                     <p className="text-[10.5px] mt-1.5" style={{ color: 'var(--ink-4)' }}>
-                      Al elegir un tipo de respuesta, el sistema crea automáticamente la próxima tarea con su fecha según la cadencia de seguimiento.
+                      {targetNode
+                        ? targetNode.tasks.length > 1
+                          ? `Se van a crear ${targetNode.tasks.length} tareas con vencimiento ${anchorHint(targetNode)}.`
+                          : `Se va a crear 1 tarea con vencimiento ${anchorHint(targetNode)}.`
+                        : 'Al elegir un tipo de respuesta, el sistema crea automáticamente la próxima tarea con su fecha según la cadencia de seguimiento.'}
                     </p>
                   </div>
                   <div className="mb-3">

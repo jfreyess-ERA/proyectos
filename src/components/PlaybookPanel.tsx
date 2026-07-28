@@ -1,8 +1,13 @@
 'use client';
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, CornerDownRight, Flag, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, CornerDownRight, Flag, CheckCircle2, CalendarClock } from 'lucide-react';
 import { RESPONSE_LABELS, INITIAL_RESPONSES } from '@/lib/types';
 import type { Prospect, PlaybookNode, PlaybookEdge, ResponseType } from '@/lib/types';
+
+const fmtDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('es', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const fmtDate = (iso: string) =>
+  new Date(iso + (iso.length === 10 ? 'T00:00:00' : '')).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
 
 /**
  * Resuelve qué respuestas puede registrar el usuario ahora mismo.
@@ -20,6 +25,30 @@ export function validResponses(
     .map(e => ({ response: e.response, to: e.to_node }));
   const taken = new Set(contextual.map(c => c.response));
   return { contextual, initial: INITIAL_RESPONSES.filter(r => !taken.has(r)) };
+}
+
+/** Describe en castellano cuándo vence el nodo, según su ancla. */
+export function anchorHint(node: PlaybookNode): string {
+  const h = node.offset_hours;
+  const abs = Math.abs(h);
+  const magnitude = abs === 0 ? '' : abs % 24 === 0 ? `${abs / 24} día${abs / 24 > 1 ? 's' : ''}` : `${abs} horas`;
+  if (node.anchor === 'meeting') {
+    if (h === 0) return 'el día de la reunión';
+    return h < 0 ? `${magnitude} antes de la reunión` : `${magnitude} después de la reunión`;
+  }
+  if (node.anchor === 'reconnect') return 'en la fecha de recontacto';
+  return h === 0 ? 'hoy' : `en ${magnitude}`;
+}
+
+/** A qué nodo lleva una respuesta desde donde está el prospecto (mismo fallback que el motor). */
+export function edgeTarget(
+  prospect: Prospect | null,
+  edges: PlaybookEdge[],
+  response: ResponseType,
+): string | undefined {
+  const from = prospect?.playbook_node ?? '_root';
+  return (edges.find(e => e.from_node === from && e.response === response)
+       ?? edges.find(e => e.from_node === '_root' && e.response === response))?.to_node;
 }
 
 interface Props {
@@ -71,6 +100,24 @@ export function PlaybookPanel({ prospect, nodes, edges }: Props) {
           paso {current.position} de {total}
         </span>
       </div>
+
+      {/* Fechas ancla que gobiernan los plazos de esta rama */}
+      {(prospect.meeting_at || prospect.reconnect_at) && (
+        <div className="flex flex-wrap gap-x-4 gap-y-px mb-2 text-[11.5px]" style={{ color: 'var(--ink-2)' }}>
+          {prospect.meeting_at && (
+            <span className="flex items-center gap-1">
+              <CalendarClock size={12} style={{ color: 'var(--accent)' }} />
+              Reunión: <strong>{fmtDateTime(prospect.meeting_at)}</strong>
+            </span>
+          )}
+          {prospect.reconnect_at && (
+            <span className="flex items-center gap-1">
+              <CalendarClock size={12} style={{ color: 'var(--ink-4)' }} />
+              Recontacto: <strong>{fmtDate(prospect.reconnect_at)}</strong>
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Estado actual */}
       <div className="flex items-start gap-2 mb-2">
@@ -147,7 +194,7 @@ export function PlaybookPanel({ prospect, nodes, edges }: Props) {
                   </div>
                   <div className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
                     {n.tasks.map(t => t.detail).join(' · ')}
-                    {n.alert_label && ` — ⚠ ${n.alert_label}`}
+                    {' — vence '}{anchorHint(n)}
                   </div>
                 </div>
               </div>
