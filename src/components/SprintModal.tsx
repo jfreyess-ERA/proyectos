@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { insertSprint, updateSprint, deleteSprint } from '@/lib/db';
+import { ProjectPicker } from './ProjectPicker';
 import type { Sprint, Project } from '@/lib/types';
 
 interface Props {
@@ -125,13 +126,7 @@ export function SprintModal({ open, sprint, projects, defaultProjectId, onClose,
 
           {!sprint && (
             <Field label="Proyecto *">
-              <select
-                value={projectId} onChange={e => setProjectId(e.target.value)} required
-                className="h-8 px-2 rounded-[7px] text-[13px] outline-none w-full"
-                style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
-              >
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+              <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} height={32} />
             </Field>
           )}
 

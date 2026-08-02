@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react';
 import { ArrowUp, ArrowDown, Download, ListChecks } from 'lucide-react';
 import { avatarBg } from '@/lib/data';
+import { groupByClient } from './TaskFilterBar';
 import type { Task, Project, User, SubtaskLite } from '@/lib/types';
 
 interface Props {
@@ -186,9 +187,13 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
             className="h-8 px-2 rounded-[7px] border text-[12px] outline-none max-w-[220px]"
             style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
             <option value="all">Todos</option>
-            {projectOptions.map(p => (
-              <option key={p.id} value={p.id}>{clientFilter === 'all' && p.client ? `${p.client} · ${p.name}` : p.name}</option>
-            ))}
+            {clientFilter !== 'all'
+              ? projectOptions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
+              : groupByClient(projectOptions).map(([client, ps]) => (
+                  <optgroup key={client} label={client}>
+                    {ps.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </optgroup>
+                ))}
           </select>
         </label>
         <button onClick={exportCSV} disabled={!hasData}

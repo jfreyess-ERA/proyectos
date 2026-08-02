@@ -4,6 +4,7 @@ import { X, Check } from 'lucide-react';
 import { STATUSES, PRIORITIES } from '@/lib/data';
 import { insertTask } from '@/lib/db';
 import { Avatar } from './Avatar';
+import { ProjectPicker } from './ProjectPicker';
 import type { Task, Project, User } from '@/lib/types';
 
 interface Props {
@@ -147,16 +148,7 @@ export function CreateTaskModal({
               <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
                 Proyecto
               </label>
-              <select
-                value={projectId}
-                onChange={e => setProjectId(e.target.value)}
-                className="h-9 px-2 rounded-[7px] text-[13px] outline-none"
-                style={inputStyle}
-              >
-                {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+              <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} height={36} />
             </div>
 
             <div className="flex flex-col gap-1">

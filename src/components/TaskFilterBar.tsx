@@ -30,6 +30,21 @@ function todayISO(): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Agrupa proyectos por cliente, ordenados cliente→proyecto. Reusado por los <optgroup>. */
+export function groupByClient(projects: Project[]): [string, Project[]][] {
+  const sorted = projects.slice().sort((a, b) => {
+    const c = (a.client ?? '').localeCompare(b.client ?? '');
+    return c !== 0 ? c : a.name.localeCompare(b.name);
+  });
+  const map = new Map<string, Project[]>();
+  for (const p of sorted) {
+    const key = p.client ?? 'Sin cliente';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(p);
+  }
+  return [...map.entries()];
+}
+
 /** Apply the active filters to a task list. */
 export function applyTaskFilters(tasks: Task[], projects: Project[], f: TaskFilterState): Task[] {
   const projectClient: Record<string, string | undefined> = {};
@@ -137,11 +152,15 @@ export function TaskFilterBar({
       {show.includes('project') && (
         <Select label="Proyecto" value={filters.project} onChange={v => set('project', v)}>
           <option value="all">Todos</option>
-          {projectOptions.map(p => (
-            <option key={p.id} value={p.id}>
-              {filters.client === 'all' && p.client ? `${p.client} · ${p.name}` : p.name}
-            </option>
-          ))}
+          {/* Con un cliente ya elegido la lista es corta y homogénea; sin cliente, agrupamos
+              por cliente para desambiguar los nombres de servicio repetidos ("Agua", etc.). */}
+          {filters.client !== 'all'
+            ? projectOptions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
+            : groupByClient(projectOptions).map(([client, ps]) => (
+                <optgroup key={client} label={client}>
+                  {ps.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </optgroup>
+              ))}
         </Select>
       )}
       {show.includes('assignee') && (
