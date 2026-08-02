@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shell } from '@/components/Shell';
 import { Dashboard } from '@/components/Dashboard';
@@ -45,7 +45,8 @@ import { ProjectsContext } from '@/lib/projects-context';
 import { useNorteData } from '@/lib/useNorteData';
 import { useCrmData } from '@/lib/useCrmData';
 import { useAuth } from '@/lib/auth-context';
-import { getOrCreateShare } from '@/lib/db';
+import { getOrCreateShare, deleteTask, deleteProspect } from '@/lib/db';
+import { useToast } from '@/lib/toast-context';
 import type { Task, Project, Sprint, Prospect } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | 'admin:team-week' | 'admin:stats' | 'admin:durations' | 'admin:subtasks' | string;
@@ -54,8 +55,16 @@ type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
 export default function Home() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
-  const { tasks, projects, users, labels, sprints, subtasks, datedSubtasks, loading, error, refetch } = useNorteData();
-  const { prospects, interactions, crmTasks, triggers, templates, playbookNodes, playbookEdges, refetch: crmRefetch } = useCrmData();
+  const { tasks: allTasks, projects, users, labels, sprints, subtasks, datedSubtasks, loading, error, refetch } = useNorteData();
+  const { prospects: allProspects, interactions, crmTasks, triggers, templates, playbookNodes, playbookEdges, refetch: crmRefetch } = useCrmData();
+  const { deleteWithUndo } = useToast();
+
+  // Borrado diferido con deshacer: los ítems marcados se ocultan de toda la app hasta que
+  // expira la ventana; el filtro en un solo punto (acá) evita tener que tocar cada consumidor.
+  const [hiddenTaskIds, setHiddenTaskIds] = useState<Set<string>>(new Set());
+  const [hiddenProspectIds, setHiddenProspectIds] = useState<Set<string>>(new Set());
+  const tasks = useMemo(() => hiddenTaskIds.size ? allTasks.filter(t => !hiddenTaskIds.has(t.id)) : allTasks, [allTasks, hiddenTaskIds]);
+  const prospects = useMemo(() => hiddenProspectIds.size ? allProspects.filter(p => !hiddenProspectIds.has(p.id)) : allProspects, [allProspects, hiddenProspectIds]);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [createProspectOpen, setCreateProspectOpen] = useState(false);
   const [importProspectOpen, setImportProspectOpen] = useState(false);
@@ -163,6 +172,28 @@ export default function Home() {
   function openCreateProject() {
     setEditingProject(undefined);
     setProjectModalOpen(true);
+  }
+
+  // Borrado con deshacer: cerramos el detalle, ocultamos el ítem, y el DELETE real
+  // corre solo si la ventana de deshacer expira.
+  function requestDeleteTask(task: Task) {
+    setSelectedTask(null);
+    setHiddenTaskIds(s => new Set(s).add(task.id));
+    deleteWithUndo({
+      message: `Tarea "${task.title}" eliminada`,
+      onCommit: () => { deleteTask(task.id).then(refetch).catch(console.error); setHiddenTaskIds(s => { const n = new Set(s); n.delete(task.id); return n; }); },
+      onUndo: () => setHiddenTaskIds(s => { const n = new Set(s); n.delete(task.id); return n; }),
+    });
+  }
+
+  function requestDeleteProspect(prospect: Prospect) {
+    setSelectedProspect(null);
+    setHiddenProspectIds(s => new Set(s).add(prospect.id));
+    deleteWithUndo({
+      message: `Prospecto "${prospect.company}" eliminado`,
+      onCommit: () => { deleteProspect(prospect.id).then(crmRefetch).catch(console.error); setHiddenProspectIds(s => { const n = new Set(s); n.delete(prospect.id); return n; }); },
+      onUndo: () => setHiddenProspectIds(s => { const n = new Set(s); n.delete(prospect.id); return n; }),
+    });
   }
 
   function openEditProject(id: string) {
@@ -383,7 +414,7 @@ export default function Home() {
         sprints={localSprints.filter(s => selectedTask ? s.project_id === selectedTask.project : false)}
         onClose={() => setSelectedTask(null)}
         onUpdated={updated => { setSelectedTask(updated); refetch(); }}
-        onDeleted={() => { setSelectedTask(null); refetch(); }}
+        onDeleted={() => { if (selectedTask) requestDeleteTask(selectedTask); }}
       />
 
       <CommandPalette
@@ -455,10 +486,7 @@ export default function Home() {
           setSelectedProspect(updated);
           crmRefetch();
         }}
-        onDeleted={() => {
-          setSelectedProspect(null);
-          crmRefetch();
-        }}
+        onDeleted={() => { if (selectedProspect) requestDeleteProspect(selectedProspect); }}
       />
 
       <CreateProspectModal

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Trash2, ExternalLink, Mail, Phone, ChevronDown } from 'lucide-react';
 import {
-  updateProspect, deleteProspect, fetchProspect,
+  updateProspect, fetchProspect,
   fetchInteractions, insertInteraction, deleteInteraction,
   fetchCrmTasks, insertCrmTask, updateCrmTask, deleteCrmTask,
   fetchCrmTriggers, insertCrmTrigger, updateCrmTrigger,
@@ -135,7 +135,6 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
   const [tasks, setTasks] = useState<CrmTask[]>([]);
   const [triggers, setTriggers] = useState<CrmTrigger[]>([]);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   // New interaction form
   const [newIntForm, setNewIntForm] = useState(false);
@@ -198,17 +197,11 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
     }
   }
 
-  async function handleDelete() {
+  // El borrado real lo hace la página con deshacer (toast). Acá solo señalizamos y cerramos.
+  function handleDelete() {
     if (!prospect) return;
-    if (!confirm(`¿Eliminar el prospecto "${prospect.company}"? Se borrarán todas las interacciones, tareas y triggers asociados.`)) return;
-    setDeleting(true);
-    try {
-      await deleteProspect(prospect.id);
-      onDeleted(prospect.id);
-      onClose();
-    } finally {
-      setDeleting(false);
-    }
+    onDeleted(prospect.id);
+    onClose();
   }
 
   async function submitInteraction() {
@@ -338,7 +331,6 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
             )}
             <button
               onClick={handleDelete}
-              disabled={deleting}
               className="w-7 h-7 flex items-center justify-center rounded-[6px] border-0 bg-transparent transition-colors"
               style={{ color: 'var(--ink-4)' }}
               title="Eliminar prospecto"

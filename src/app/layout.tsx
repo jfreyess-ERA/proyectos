@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
+import { ToastProvider } from "@/lib/toast-context";
 import "./globals.css";
 
 const inter = Inter({
@@ -32,7 +33,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('era-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}` }} />
       </head>
       <body className="h-full">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider><ToastProvider>{children}</ToastProvider></AuthProvider>
       </body>
     </html>
   );

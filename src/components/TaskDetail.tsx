@@ -6,8 +6,9 @@ import {
 } from '@/lib/data';
 import { useLabels } from '@/lib/labels-context';
 import { useProjects } from '@/lib/projects-context';
+import { useToast } from '@/lib/toast-context';
 import {
-  updateTask, deleteTask, fetchComments, insertComment,
+  updateTask, fetchComments, insertComment,
   logActivity, fetchActivity,
   fetchAttachments, uploadAttachment, deleteAttachment,
   fetchSubtasks, insertSubtask, toggleSubtask, deleteSubtask, updateSubtask,
@@ -31,6 +32,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
   const { profile } = useAuth();
   const allLabels = useLabels();
   const allProjects = useProjects();
+  const { deleteWithUndo } = useToast();
   const allPeople = users.length > 0 ? users : PEOPLE;
 
   const [edited, setEdited]         = useState<Task | null>(null);
@@ -48,9 +50,6 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
   const [addingSubtask, setAddingSubtask] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [showMenu, setShowMenu]     = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [deleting, setDeleting]     = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const labelPickerRef = useRef<HTMLDivElement>(null);
   const menuRef         = useRef<HTMLDivElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
@@ -67,8 +66,6 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
     setEditingDesc(false);
     setShowLabelPicker(false);
     setShowMenu(false);
-    setConfirmingDelete(false);
-    setDeleteError(null);
     fetchComments(task.id).then(setComments).catch(() => {});
     fetchActivity(task.id).then(setActivity).catch(() => {});
     fetchAttachments(task.id).then(setAttachments).catch(() => {});
@@ -143,18 +140,11 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
     }
   }
 
-  async function handleDelete() {
+  // El borrado real lo hace la página con deshacer (toast). Acá solo señalizamos y cerramos.
+  function handleDelete() {
     if (!task) return;
-    setDeleting(true);
-    try {
-      await deleteTask(task.id);
-      onDeleted?.(task.id);
-      onClose();
-    } catch (e) {
-      console.error(e);
-      setDeleteError('No se pudo eliminar la tarea.');
-      setDeleting(false);
-    }
+    onDeleted?.(task.id);
+    onClose();
   }
 
   function patch(fields: Partial<Task>, activityMsg?: string) {
@@ -218,14 +208,22 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
     if (task) onUpdated?.(task);
   }
 
-  async function handleDeleteSubtask(sub: SubtaskItem) {
+  function handleDeleteSubtask(sub: SubtaskItem) {
+    // Se oculta al instante; el DELETE real corre solo si no se deshace.
     setSubtasks(prev => prev.filter(s => s.id !== sub.id));
-    setEdited(prev => {
-      if (!prev) return prev;
-      return { ...prev, subtasks: { done: sub.done ? prev.subtasks.done - 1 : prev.subtasks.done, total: prev.subtasks.total - 1 } };
+    setEdited(prev => prev
+      ? { ...prev, subtasks: { done: sub.done ? prev.subtasks.done - 1 : prev.subtasks.done, total: prev.subtasks.total - 1 } }
+      : prev);
+    deleteWithUndo({
+      message: 'Subtarea eliminada',
+      onCommit: () => { deleteSubtask(sub.id, taskId).catch(console.error); if (task) onUpdated?.(task); },
+      onUndo: () => {
+        setSubtasks(prev => [...prev, sub].sort((a, b) => a.position - b.position));
+        setEdited(prev => prev
+          ? { ...prev, subtasks: { done: sub.done ? prev.subtasks.done + 1 : prev.subtasks.done, total: prev.subtasks.total + 1 } }
+          : prev);
+      },
     });
-    await deleteSubtask(sub.id, taskId);
-    if (task) onUpdated?.(task);
   }
 
   async function handleSubtaskField(sub: SubtaskItem, fields: Partial<{ due_date: string | null; assignee: string | null }>) {
@@ -333,7 +331,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                   style={{ width: 180, background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-pop)' }}
                 >
                   <button
-                    onClick={() => { setShowMenu(false); setDeleteError(null); setConfirmingDelete(true); }}
+                    onClick={() => { setShowMenu(false); handleDelete(); }}
                     className="flex items-center gap-2 px-3 py-[7px] text-left text-[12.5px] border-0 bg-transparent transition-colors"
                     style={{ color: 'var(--danger)' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--danger-bg)')}
@@ -878,52 +876,6 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
         </div>
       </div>
     </div>
-
-    {confirmingDelete && (
-      <div
-        className="fixed inset-0 z-[60] grid place-items-center"
-        style={{ background: 'rgba(20,18,12,.32)', backdropFilter: 'blur(2px)' }}
-        onClick={() => !deleting && setConfirmingDelete(false)}
-      >
-        <div
-          onClick={e => e.stopPropagation()}
-          className="flex flex-col gap-4 p-5"
-          style={{
-            width: 340, background: 'var(--surface)', border: '1px solid var(--line)',
-            borderRadius: 14, boxShadow: 'var(--shadow-pop)',
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <Trash2 size={16} style={{ color: 'var(--danger)' }} />
-            <h3 className="text-[14.5px] font-semibold" style={{ color: 'var(--ink)' }}>Eliminar tarea</h3>
-          </div>
-          <p className="text-[13px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>
-            ¿Eliminar &quot;{task.title}&quot;? Esta acción no se puede deshacer.
-          </p>
-          {deleteError && (
-            <p className="text-[12px]" style={{ color: 'var(--danger)' }}>{deleteError}</p>
-          )}
-          <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => setConfirmingDelete(false)}
-              disabled={deleting}
-              className="h-8 px-3 rounded-[7px] text-[13px] font-medium border-0 disabled:opacity-50"
-              style={{ background: 'var(--bg-2)', color: 'var(--ink-2)' }}
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="h-8 px-3 rounded-[7px] text-[13px] font-medium border-0 text-white disabled:opacity-50"
-              style={{ background: 'var(--danger)' }}
-            >
-              {deleting ? 'Eliminando…' : 'Eliminar'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
     </>
   );
 }
