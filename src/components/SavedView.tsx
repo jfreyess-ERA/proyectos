@@ -1,8 +1,9 @@
 'use client';
-import { Clock } from 'lucide-react';
+import { Clock, CheckCircle2 } from 'lucide-react';
 import { fmtDate, dueClass } from '@/lib/data';
 import { useLabels } from '@/lib/labels-context';
 import { AvatarStack } from './Avatar';
+import { EmptyState } from './EmptyState';
 import type { Task, Project } from '@/lib/types';
 
 interface Props {
@@ -25,10 +26,7 @@ export function SavedView({ title, description, tasks, projects, onOpenTask }: P
       </div>
 
       {tasks.length === 0 ? (
-        <div className="py-16 text-center" style={{ color: 'var(--ink-4)' }}>
-          <div className="text-[32px] mb-2">✓</div>
-          <div className="text-[14px]">Sin tareas en esta vista</div>
-        </div>
+        <EmptyState icon={<CheckCircle2 size={26} />} title="Nada por acá" hint="Ninguna tarea cae hoy en esta vista. Buena señal." />
       ) : (
         <div
           className="rounded-[12px] overflow-hidden"

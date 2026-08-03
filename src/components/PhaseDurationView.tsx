@@ -1,7 +1,8 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { ArrowUp, ArrowDown, Download } from 'lucide-react';
+import { ArrowUp, ArrowDown, Download, Filter } from 'lucide-react';
 import type { Task, Project } from '@/lib/types';
+import { EmptyState } from './EmptyState';
 
 interface Props {
   tasks: Task[];
@@ -254,7 +255,9 @@ export function PhaseDurationView({ tasks, projects, onOpenProject }: Props) {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={8} className="py-8 text-center" style={{ color: 'var(--ink-4)' }}>Ningún proyecto coincide con los filtros.</td></tr>
+                <tr key="empty"><td colSpan={8}>
+                  <EmptyState icon={<Filter size={24} />} title="Ningún proyecto coincide" hint="Ajustá o limpiá los filtros de arriba para ver resultados." compact />
+                </td></tr>
               )}
             </tbody>
           </table>

@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
+import { ListChecks } from 'lucide-react';
 import { updateCrmTask, deleteCrmTask } from '@/lib/db';
+import { EmptyState } from './EmptyState';
 import type { CrmTask, Prospect } from '@/lib/types';
 
 interface Props {
@@ -100,9 +102,20 @@ export function CrmTasksView({ crmTasks, prospects, onOpenProspect, onTasksChang
       {/* Tasks list */}
       <div className="flex flex-col gap-2">
         {filtered.length === 0 && (
-          <div className="text-center py-10 text-[13px]" style={{ color: 'var(--ink-4)' }}>
-            Sin tareas en esta categoría
-          </div>
+          crmTasks.length === 0 ? (
+            <EmptyState
+              icon={<ListChecks size={26} />}
+              title="Todavía no hay tareas de seguimiento"
+              hint="Las tareas se generan solas al registrar respuestas en un prospecto (la cadencia), o podés crearlas a mano."
+            />
+          ) : (
+            <EmptyState
+              icon={<ListChecks size={26} />}
+              title={`Ninguna tarea en “${statusFilter === 'Todos' ? 'todas' : statusFilter}”`}
+              hint="Probá con otro estado en las pestañas de arriba."
+              compact
+            />
+          )
         )}
         {filtered.map(task => {
           const prospect = prospectMap[task.prospect_id];

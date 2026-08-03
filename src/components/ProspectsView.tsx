@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { Search, Upload, ChevronUp, ChevronDown, X, Check } from 'lucide-react';
+import { Search, Upload, ChevronUp, ChevronDown, X, Check, Target } from 'lucide-react';
 import { updateProspect } from '@/lib/db';
+import { EmptyState } from './EmptyState';
 import type { Prospect, CrmInteraction, CrmTask, CrmTrigger, User, ProspectStatus, ProspectStage } from '@/lib/types';
 
 interface Props {
@@ -333,8 +334,23 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
           </thead>
           <tbody>
             {sorted.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-10 text-center text-[13px]" style={{ color: 'var(--ink-4)' }}>
-                {search ? 'No se encontraron resultados' : 'Sin prospectos. Crea el primero o importa desde CSV.'}
+              <tr key="empty"><td colSpan={9}>
+                {prospects.length === 0 ? (
+                  <EmptyState
+                    icon={<Target size={24} />}
+                    title="Todavía no hay prospectos"
+                    hint="Cargá tu pipeline: creá el primer prospecto a mano o importá una lista desde CSV."
+                    action={{ label: 'Nuevo prospecto', onClick: onCreateProspect }}
+                    compact
+                  />
+                ) : (
+                  <EmptyState
+                    icon={<Search size={24} />}
+                    title="Sin resultados"
+                    hint="Ningún prospecto coincide con la búsqueda o el filtro de estado."
+                    compact
+                  />
+                )}
               </td></tr>
             )}
             {sorted.map(p => {

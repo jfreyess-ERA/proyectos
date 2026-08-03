@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
-import { Search } from 'lucide-react';
+import { useState, Fragment } from 'react';
+import { Search, MessageSquare } from 'lucide-react';
+import { EmptyState } from './EmptyState';
 import type { CrmInteraction, Prospect, InteractionChannel, InteractionOutcome } from '@/lib/types';
 
 interface Props {
@@ -123,8 +124,22 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-[13px]" style={{ color: 'var(--ink-4)' }}>
-                Sin resultados
+              <tr key="empty"><td colSpan={7}>
+                {interactions.length === 0 ? (
+                  <EmptyState
+                    icon={<MessageSquare size={24} />}
+                    title="Todavía no hay interacciones"
+                    hint="Cada llamada, correo o reunión que registres en un prospecto aparece acá."
+                    compact
+                  />
+                ) : (
+                  <EmptyState
+                    icon={<Search size={24} />}
+                    title="Sin resultados"
+                    hint="Ninguna interacción coincide con la búsqueda o los filtros."
+                    compact
+                  />
+                )}
               </td></tr>
             )}
             {filtered.map(i => {
@@ -132,9 +147,8 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
               const os = i.outcome ? OUTCOME_STYLE[i.outcome] : null;
               const isExpanded = expanded === i.id;
               return (
-                <>
+                <Fragment key={i.id}>
                   <tr
-                    key={i.id}
                     onClick={() => setExpanded(isExpanded ? null : i.id)}
                     className="cursor-pointer transition-colors"
                     style={{ borderBottom: '1px solid var(--line)', background: isExpanded ? 'var(--bg-2)' : '' }}
@@ -181,7 +195,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
                     </td>
                   </tr>
                   {isExpanded && (
-                    <tr key={`${i.id}-exp`} style={{ borderBottom: '1px solid var(--line)', background: 'var(--bg-2)' }}>
+                    <tr style={{ borderBottom: '1px solid var(--line)', background: 'var(--bg-2)' }}>
                       <td colSpan={7} className="px-6 py-3">
                         <div className="flex gap-8 text-[12.5px]">
                           {i.summary && (
@@ -200,7 +214,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </tbody>

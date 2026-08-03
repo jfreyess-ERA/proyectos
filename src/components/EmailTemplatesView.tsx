@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { Plus, Copy, Edit2, Trash2, X, Check } from 'lucide-react';
+import { Plus, Copy, Edit2, Trash2, X, Check, Mail } from 'lucide-react';
 import { insertEmailTemplate, updateEmailTemplate, deleteEmailTemplate } from '@/lib/db';
+import { EmptyState } from './EmptyState';
 import type { EmailTemplate } from '@/lib/types';
 
 import type { Prospect } from '@/lib/types';
@@ -108,9 +109,13 @@ export function EmailTemplatesView({ templates, prospects = [], onTemplatesChang
 
         <div className="flex-1 overflow-y-auto py-2">
           {templates.length === 0 && (
-            <div className="px-4 py-6 text-center text-[12px]" style={{ color: 'var(--ink-4)' }}>
-              Sin plantillas. Crea la primera.
-            </div>
+            <EmptyState
+              icon={<Mail size={24} />}
+              title="Todavía no hay plantillas"
+              hint="Guardá tus mensajes de contacto para reutilizarlos y personalizarlos por prospecto."
+              action={{ label: 'Nueva plantilla', onClick: openCreate }}
+              compact
+            />
           )}
           {templates.map(t => (
             <button

@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Zap } from 'lucide-react';
 import { updateCrmTrigger } from '@/lib/db';
+import { EmptyState } from './EmptyState';
 import type { CrmTrigger, Prospect } from '@/lib/types';
 
 interface Props {
@@ -74,9 +75,20 @@ export function TriggersView({ triggers, prospects, onOpenProspect, onTriggersCh
 
       <div className="flex flex-col gap-3">
         {filtered.length === 0 && (
-          <div className="text-center py-10 text-[13px]" style={{ color: 'var(--ink-4)' }}>
-            Sin triggers en esta categoría
-          </div>
+          triggers.length === 0 ? (
+            <EmptyState
+              icon={<Zap size={26} />}
+              title="Todavía no hay triggers"
+              hint="Registrá señales de compra (noticias, cambios de management, aperturas) desde el detalle de un prospecto para actuar en el momento justo."
+            />
+          ) : (
+            <EmptyState
+              icon={<Zap size={26} />}
+              title={`Ningún trigger en “${statusFilter}”`}
+              hint="Probá con otro estado en las pestañas de arriba."
+              compact
+            />
+          )
         )}
         {filtered.map(trigger => {
           const prospect = prospectMap[trigger.prospect_id];

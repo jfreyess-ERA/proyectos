@@ -1,8 +1,9 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { ArrowUp, ArrowDown, Download } from 'lucide-react';
+import { ArrowUp, ArrowDown, Download, Filter } from 'lucide-react';
 import type { Task, Project, User } from '@/lib/types';
 import { avatarBg } from '@/lib/data';
+import { EmptyState } from './EmptyState';
 
 interface Props {
   tasks: Task[];
@@ -398,9 +399,14 @@ export function StatsView({ tasks, projects, users, onOpenProject }: Props) {
                 </tr>
               ))}
               {sortedProjectRows.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="py-8 text-center" style={{ color: 'var(--ink-4)' }}>
-                    Sin proyectos que coincidan con los filtros.
+                <tr key="empty">
+                  <td colSpan={9}>
+                    <EmptyState
+                      icon={<Filter size={24} />}
+                      title="Ningún proyecto coincide"
+                      hint="Ajustá o limpiá los filtros de arriba para ver resultados."
+                      compact
+                    />
                   </td>
                 </tr>
               )}
