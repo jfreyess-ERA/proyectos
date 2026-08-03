@@ -1,27 +1,30 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Trash2, ExternalLink, Mail, Phone, ChevronDown } from 'lucide-react';
+import { X, Plus, Trash2, ExternalLink, Mail, Phone, ChevronDown, Pencil } from 'lucide-react';
 import {
   updateProspect, fetchProspect,
-  fetchInteractions, insertInteraction, deleteInteraction,
+  fetchInteractions, insertInteraction, updateInteraction, deleteInteraction,
   fetchCrmTasks, insertCrmTask, updateCrmTask, deleteCrmTask,
   fetchCrmTriggers, insertCrmTrigger, updateCrmTrigger,
 } from '@/lib/db';
 import type {
   Prospect, ProspectStatus, ProspectStage, ProspectPriority,
-  CrmInteraction, CrmTask, CrmTrigger, InteractionChannel, InteractionOutcome,
+  CrmInteraction, CrmTask, CrmTrigger, InteractionChannel,
   CrmTaskType, CrmTaskStatus, TriggerType, ResponseType,
   PlaybookNode, PlaybookEdge,
 } from '@/lib/types';
 import { RESPONSE_LABELS } from '@/lib/types';
 import { PlaybookPanel, validResponses, edgeTarget, anchorHint } from './PlaybookPanel';
 import { PRIORITY_STYLE, STATUS_STYLE, STAGE_STYLE } from './ProspectsView';
+import {
+  channelEs, outcomeEs, stageEs, statusEs, priorityEs, taskTypeEs, taskStatusEs, triggerTypeEs,
+  OUTCOME_FROM_RESPONSE, STAGE_FROM_RESPONSE,
+} from '@/lib/crm-labels';
 
 const STAGES: ProspectStage[] = ['New', 'Contacted', 'Meeting Requested', 'Meeting Held', 'Proposal', 'Negotiation', 'Won'];
 const STATUSES: ProspectStatus[] = ['Active', 'Warm', 'Paused', 'Nurture', 'Closed Won', 'Closed Lost', 'Dormant'];
 const PRIORITIES: ProspectPriority[] = ['High', 'Medium', 'Low', 'Strategic', 'Watchlist'];
 const CHANNELS: InteractionChannel[] = ['Email', 'LinkedIn', 'Phone', 'WhatsApp', 'Meeting', 'Event', 'Referral'];
-const OUTCOMES: InteractionOutcome[] = ['No response', 'Positive', 'Interested', 'Meeting booked', 'Not now', 'Lost'];
 const TASK_TYPES: CrmTaskType[] = ['Follow-up', 'Research', 'Send case study', 'Call', 'Meeting', 'Reconnect', 'Proposal'];
 const TASK_STATUSES: CrmTaskStatus[] = ['Pending', 'In Progress', 'Waiting', 'Done', 'Deferred', 'Cancelled'];
 const TRIGGER_TYPES: TriggerType[] = ['News', 'Hiring', 'Expansion', 'Regulation', 'Leadership change', 'Earnings', 'Results'];
@@ -59,7 +62,7 @@ interface Props {
 
 type Tab = 'info' | 'interactions' | 'tasks' | 'triggers' | 'timeline';
 
-function Sel({ value, onChange, options, placeholder }: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string }) {
+function Sel({ value, onChange, options, placeholder, render }: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string; render?: (v: string) => string }) {
   return (
     <div className="relative inline-flex items-center">
       <select
@@ -69,7 +72,7 @@ function Sel({ value, onChange, options, placeholder }: { value: string; onChang
         style={{ background: 'var(--bg-3)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
       >
         {placeholder && <option value="">{placeholder}</option>}
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        {options.map(o => <option key={o} value={o}>{render ? render(o) : o}</option>)}
       </select>
       <ChevronDown size={10} className="absolute right-1 pointer-events-none" style={{ color: 'var(--ink-4)' }} />
     </div>
@@ -136,8 +139,10 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
   const [triggers, setTriggers] = useState<CrmTrigger[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // New interaction form
+  // New / edit interaction form. editingIntId != null ⇒ estamos editando una
+  // interacción existente (sólo campos descriptivos; no se re-dispara la cadencia).
   const [newIntForm, setNewIntForm] = useState(false);
+  const [editingIntId, setEditingIntId] = useState<string | null>(null);
   const [intDraft, setIntDraft] = useState<Partial<CrmInteraction>>({ date: new Date().toISOString().slice(0, 10) });
   const [playbookHint, setPlaybookHint] = useState<string | null>(null);
   const [reconnectPreset, setReconnectPreset] = useState<number | null>(null);
@@ -176,7 +181,6 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
     ? playbookNodes.find(n => n.node_key === prospect.playbook_node)
     : undefined;
   const responseOptions = validResponses(prospect, playbookEdges);
-  const nodeLabel = (key: string) => playbookNodes.find(n => n.node_key === key)?.label ?? key;
 
   // Qué fecha hay que pedir la decide el ancla del nodo al que lleva la respuesta
   // elegida, no una lista de respuestas hardcodeada.
@@ -204,8 +208,56 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
     onClose();
   }
 
+  function resetIntForm() {
+    setNewIntForm(false);
+    setEditingIntId(null);
+    setIntDraft({ date: new Date().toISOString().slice(0, 10) });
+    setReconnectPreset(null);
+  }
+
+  function startEditInteraction(i: CrmInteraction) {
+    setEditingIntId(i.id);
+    setIntDraft({ ...i });
+    setNewIntForm(true);
+  }
+
+  // La etapa sólo avanza (nunca retrocede). Registrar cualquier interacción en un
+  // prospecto "New" ya lo lleva como mínimo a "Contacted"; una respuesta de
+  // cadencia puede empujarlo más lejos, y un canal "Meeting" marca reunión hecha.
+  function nextStage(current: ProspectStage): ProspectStage {
+    let target: ProspectStage = current === 'New' ? 'Contacted' : current;
+    if (intDraft.response_type && STAGE_FROM_RESPONSE[intDraft.response_type]) {
+      target = STAGE_FROM_RESPONSE[intDraft.response_type];
+    }
+    if (intDraft.channel === 'Meeting') target = 'Meeting Held';
+    // Sólo hacia adelante.
+    return STAGES.indexOf(target) > STAGES.indexOf(current) ? target : current;
+  }
+
   async function submitInteraction() {
     if (!prospect || !intDraft.date) return;
+
+    // Editar: sólo actualiza los campos descriptivos. No re-dispara la cadencia
+    // (la respuesta ya generó sus tareas cuando se registró por primera vez).
+    if (editingIntId) {
+      await updateInteraction(editingIntId, {
+        date: intDraft.date,
+        channel: intDraft.channel,
+        type: intDraft.type,
+        summary: intDraft.summary,
+        next_step: intDraft.next_step,
+        follow_up_due: intDraft.follow_up_due,
+      });
+      resetIntForm();
+      await reload(prospect.id);
+      return;
+    }
+
+    // El outcome ya no se pide a mano: se deriva de la respuesta de cadencia.
+    const derivedOutcome = intDraft.response_type
+      ? OUTCOME_FROM_RESPONSE[intDraft.response_type]
+      : intDraft.outcome;
+
     await insertInteraction({
       prospect_id: prospect.id,
       date: intDraft.date,
@@ -213,7 +265,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
       direction: intDraft.direction,
       type: intDraft.type,
       summary: intDraft.summary,
-      outcome: intDraft.outcome,
+      outcome: derivedOutcome,
       next_step: intDraft.next_step,
       follow_up_due: intDraft.follow_up_due,
       trigger_mentioned: intDraft.trigger_mentioned ?? false,
@@ -222,10 +274,16 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
       meeting_at: intDraft.meeting_at,
       reconnect_at: intDraft.reconnect_at,
     });
-    setNewIntForm(false);
-    setIntDraft({ date: new Date().toISOString().slice(0, 10) });
-    setReconnectPreset(null);
+
+    // Auto-avance de etapa (sólo hacia adelante), antes de resetear el draft.
+    const stageTarget = nextStage(prospect.stage);
+    resetIntForm();
     await reload(prospect.id);
+
+    if (stageTarget !== prospect.stage) {
+      const updated = await updateProspect(prospect.id, { stage: stageTarget });
+      onUpdated(updated);
+    }
 
     // Con tipo de respuesta el trigger ya avanzó la cadencia del lado del servidor:
     // hay que releer el prospecto para que el panel muestre el nodo nuevo.
@@ -284,22 +342,22 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
   const overdueTaskCount = tasks.filter(t => (t.status === 'Pending' || t.status === 'In Progress') && t.due_date && t.due_date < today).length;
 
   return (
-    <>
-      {/* Backdrop */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"
+      style={{ background: 'rgba(0,0,0,0.35)' }}
+      onClick={onClose}
+    >
+      {/* Modal grande centrado */}
       <div
-        className="fixed inset-0 z-40"
-        style={{ background: 'rgba(0,0,0,0.25)' }}
-        onClick={onClose}
-      />
-
-      {/* Panel */}
-      <div
-        className="fixed top-0 right-0 h-full z-50 flex flex-col overflow-hidden"
+        className="flex flex-col overflow-hidden w-full"
+        onClick={e => e.stopPropagation()}
         style={{
-          width: 580,
+          maxWidth: 1000,
+          height: '90vh',
           background: 'var(--bg)',
-          borderLeft: '1px solid var(--line)',
-          boxShadow: '-4px 0 24px rgba(0,0,0,0.10)',
+          border: '1px solid var(--line)',
+          borderRadius: 14,
+          boxShadow: '0 12px 48px rgba(0,0,0,0.22)',
         }}
       >
         {/* Header */}
@@ -311,12 +369,20 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
               placeholder="Nombre empresa"
             />
             <div className="mt-1 flex items-center gap-2 flex-wrap">
-              <Sel value={prospect.status} onChange={v => save({ status: v as ProspectStatus })} options={STATUSES} />
-              <Sel value={prospect.priority} onChange={v => save({ priority: v as ProspectPriority })} options={PRIORITIES} />
+              <Sel value={prospect.status} onChange={v => save({ status: v as ProspectStatus })} options={STATUSES} render={statusEs} />
+              <Sel value={prospect.priority} onChange={v => save({ priority: v as ProspectPriority })} options={PRIORITIES} render={priorityEs} />
               {saving && <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Guardando…</span>}
             </div>
           </div>
           <div className="flex items-center gap-1 ml-3 flex-shrink-0">
+            <button
+              onClick={() => { setTab('interactions'); resetIntForm(); setNewIntForm(true); }}
+              className="h-7 px-3 rounded-[6px] text-[12px] font-medium border-0 flex items-center gap-1 flex-shrink-0"
+              style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+              title="Registrar una interacción"
+            >
+              <Plus size={13} /> Registrar interacción
+            </button>
             {(prospect.stage === 'Won' || prospect.status === 'Closed Won') && (
               <a
                 href={`/viabilidad/index.html?prospect_id=${prospect.id}&prospect_name=${encodeURIComponent(prospect.company)}`}
@@ -359,7 +425,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                   key={s}
                   onClick={() => save({ stage: s })}
                   className="flex-1 flex flex-col items-center gap-[3px] transition-all"
-                  title={s}
+                  title={stageEs(s)}
                 >
                   <div
                     className="w-full h-[4px] rounded-full transition-all"
@@ -369,7 +435,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                     className="text-[9.5px] font-medium whitespace-nowrap hidden sm:block"
                     style={{ color: isCurrent ? STAGE_STYLE[s] : isDone ? 'var(--ink-3)' : 'var(--ink-4)' }}
                   >
-                    {s}
+                    {stageEs(s)}
                   </span>
                 </button>
               );
@@ -524,19 +590,24 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="text-[12px]" style={{ color: 'var(--ink-3)' }}>{interactions.length} interacciones</div>
-                <button
-                  onClick={() => setNewIntForm(v => !v)}
-                  className="h-7 px-3 rounded-[6px] text-[12px] font-medium flex items-center gap-1 border-0"
-                  style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
-                >
-                  <Plus size={13} />
-                  Nueva
-                </button>
+                {!newIntForm && (
+                  <button
+                    onClick={() => { resetIntForm(); setNewIntForm(true); }}
+                    className="h-7 px-3 rounded-[6px] text-[12px] font-medium flex items-center gap-1 border-0"
+                    style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+                  >
+                    <Plus size={13} />
+                    Registrar interacción
+                  </button>
+                )}
               </div>
 
               {newIntForm && (
                 <div className="mb-4 p-4 rounded-[10px]" style={{ background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="text-[12px] font-semibold mb-3" style={{ color: 'var(--ink)' }}>
+                    {editingIntId ? 'Editar interacción' : 'Nueva interacción'}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                     <div>
                       <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Fecha</label>
                       <input type="date" value={intDraft.date ?? ''} onChange={e => setIntDraft(d => ({ ...d, date: e.target.value }))}
@@ -549,47 +620,43 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                         className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
                         style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
                         <option value="">— Canal —</option>
-                        {CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
+                        {CHANNELS.map(c => <option key={c} value={c}>{channelEs(c)}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Tipo</label>
                       <input value={intDraft.type ?? ''} onChange={e => setIntDraft(d => ({ ...d, type: e.target.value }))}
-                        placeholder="Intro email, Follow-up, Call…"
+                        placeholder="Email intro, Seguimiento…"
                         className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
                         style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
                     </div>
-                    <div>
-                      <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Outcome</label>
-                      <select value={intDraft.outcome ?? ''} onChange={e => setIntDraft(d => ({ ...d, outcome: e.target.value as InteractionOutcome }))}
-                        className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
-                        style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
-                        <option value="">— Outcome —</option>
-                        {OUTCOMES.map(o => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    </div>
                   </div>
+                  {editingIntId ? (
+                    <div className="mb-3 px-3 py-2 rounded-[8px] text-[11.5px]" style={{ background: 'var(--bg-3)', color: 'var(--ink-3)' }}>
+                      Estás editando el registro. La respuesta y su cadencia no cambian desde acá.
+                    </div>
+                  ) : (
                   <div className="mb-3 p-2.5 rounded-[8px]" style={{ background: 'var(--bg-3)', border: '1px dashed var(--line)' }}>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>
-                          ¿Qué respondió? {currentNode && <span style={{ color: 'var(--ink-4)' }}>· desde “{currentNode.label}”</span>}
+                          ¿Qué respondió el prospecto?
                         </label>
                         <select value={intDraft.response_type ?? ''} onChange={e => setIntDraft(d => ({ ...d, response_type: (e.target.value || undefined) as ResponseType | undefined, response_detail: undefined }))}
                           className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
                           style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
-                          <option value="">— Sin cadencia —</option>
+                          <option value="">— Todavía nada / solo registro —</option>
                           {responseOptions.contextual.length > 0 && (
-                            <optgroup label={currentNode ? 'Según la cadencia' : 'Respuesta al contacto inicial'}>
-                              {responseOptions.contextual.map(({ response, to }) => (
+                            <optgroup label={currentNode ? 'Continúa la cadencia' : 'Respuesta'}>
+                              {responseOptions.contextual.map(({ response }) => (
                                 <option key={response} value={response}>
-                                  {RESPONSE_LABELS[response]} → {nodeLabel(to)}
+                                  {RESPONSE_LABELS[response]}
                                 </option>
                               ))}
                             </optgroup>
                           )}
                           {responseOptions.initial.length > 0 && (
-                            <optgroup label="Se salió del guion — arranca otra rama">
+                            <optgroup label={currentNode ? 'Otra cosa (cambia de rama)' : 'Respuesta'}>
                               {responseOptions.initial.map(r => (
                                 <option key={r} value={r}>{RESPONSE_LABELS[r]}</option>
                               ))}
@@ -656,9 +723,10 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                         ? targetNode.tasks.length > 1
                           ? `Se van a crear ${targetNode.tasks.length} tareas con vencimiento ${anchorHint(targetNode)}.`
                           : `Se va a crear 1 tarea con vencimiento ${anchorHint(targetNode)}.`
-                        : 'Al elegir un tipo de respuesta, el sistema crea automáticamente la próxima tarea con su fecha según la cadencia de seguimiento.'}
+                        : 'Al elegir qué respondió, el sistema crea solo la próxima tarea con su fecha según la cadencia.'}
                     </p>
                   </div>
+                  )}
                   <div className="mb-3">
                     <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Resumen</label>
                     <textarea value={intDraft.summary ?? ''} onChange={e => setIntDraft(d => ({ ...d, summary: e.target.value }))}
@@ -666,28 +734,32 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                       className="w-full px-2 py-1 rounded-[6px] text-[13px] outline-none resize-none"
                       style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Próximo paso</label>
-                      <input value={intDraft.next_step ?? ''} onChange={e => setIntDraft(d => ({ ...d, next_step: e.target.value }))}
-                        placeholder="Acción siguiente"
-                        className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
-                        style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
+                  {/* Próximo paso manual: sólo cuando NO hay respuesta de cadencia.
+                      Si elegiste qué respondió, la tarea siguiente la genera el sistema. */}
+                  {!intDraft.response_type && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Próximo paso</label>
+                        <input value={intDraft.next_step ?? ''} onChange={e => setIntDraft(d => ({ ...d, next_step: e.target.value }))}
+                          placeholder="Acción siguiente"
+                          className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
+                          style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
+                      </div>
+                      <div>
+                        <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Recordar para</label>
+                        <input type="date" value={intDraft.follow_up_due ?? ''} onChange={e => setIntDraft(d => ({ ...d, follow_up_due: e.target.value }))}
+                          className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
+                          style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[11px] mb-1 block" style={{ color: 'var(--ink-3)' }}>Follow-up para</label>
-                      <input type="date" value={intDraft.follow_up_due ?? ''} onChange={e => setIntDraft(d => ({ ...d, follow_up_due: e.target.value }))}
-                        className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
-                        style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
-                    </div>
-                  </div>
+                  )}
                   <div className="flex gap-2">
                     <button onClick={submitInteraction}
                       className="h-7 px-4 rounded-[6px] text-[12px] font-medium border-0"
                       style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
-                      Guardar
+                      {editingIntId ? 'Guardar cambios' : 'Guardar'}
                     </button>
-                    <button onClick={() => setNewIntForm(false)}
+                    <button onClick={resetIntForm}
                       className="h-7 px-3 rounded-[6px] text-[12px] border-0"
                       style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}>
                       Cancelar
@@ -708,7 +780,9 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                   <div className="text-[13px] text-center py-6" style={{ color: 'var(--ink-4)' }}>Sin interacciones aún</div>
                 )}
                 {interactions.map(i => (
-                  <InteractionCard key={i.id} interaction={i} onDelete={async () => {
+                  <InteractionCard key={i.id} interaction={i}
+                    onEdit={() => startEditInteraction(i)}
+                    onDelete={async () => {
                     await deleteInteraction(i.id);
                     setInteractions(prev => prev.filter(x => x.id !== i.id));
                   }} />
@@ -742,7 +816,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                         className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
                         style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
                         <option value="">— Tipo —</option>
-                        {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        {TASK_TYPES.map(t => <option key={t} value={t}>{taskTypeEs(t)}</option>)}
                       </select>
                     </div>
                     <div>
@@ -828,7 +902,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                         className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
                         style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
                         <option value="">— Tipo —</option>
-                        {TRIGGER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        {TRIGGER_TYPES.map(t => <option key={t} value={t}>{triggerTypeEs(t)}</option>)}
                       </select>
                     </div>
                     <div>
@@ -896,11 +970,11 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
-function InteractionCard({ interaction: i, onDelete }: { interaction: CrmInteraction; onDelete: () => void }) {
+function InteractionCard({ interaction: i, onDelete, onEdit }: { interaction: CrmInteraction; onDelete: () => void; onEdit: () => void }) {
   const [open, setOpen] = useState(false);
   return (
     <div
@@ -913,7 +987,7 @@ function InteractionCard({ interaction: i, onDelete }: { interaction: CrmInterac
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-[12.5px] font-medium" style={{ color: 'var(--ink)' }}>
-              {i.type ?? i.channel ?? 'Interacción'}
+              {i.type ?? channelEs(i.channel) ?? 'Interacción'}
             </span>
             <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{fmtDate(i.date)}</span>
           </div>
@@ -926,7 +1000,7 @@ function InteractionCard({ interaction: i, onDelete }: { interaction: CrmInterac
             className="text-[10px] px-[6px] py-[2px] rounded-full flex-shrink-0"
             style={{ background: outcomeBg(i.outcome), color: outcomeFg(i.outcome) }}
           >
-            {i.outcome}
+            {outcomeEs(i.outcome)}
           </span>
         )}
       </div>
@@ -937,11 +1011,16 @@ function InteractionCard({ interaction: i, onDelete }: { interaction: CrmInterac
             <div className="text-[12px] mb-1"><span style={{ color: 'var(--ink-4)' }}>Próximo paso: </span><span style={{ color: 'var(--ink)' }}>{i.next_step}</span></div>
           )}
           {i.follow_up_due && (
-            <div className="text-[12px] mb-2"><span style={{ color: 'var(--ink-4)' }}>Follow-up: </span><span style={{ color: 'var(--ink)' }}>{i.follow_up_due}</span></div>
+            <div className="text-[12px] mb-2"><span style={{ color: 'var(--ink-4)' }}>Recordatorio: </span><span style={{ color: 'var(--ink)' }}>{fmtDate(i.follow_up_due)}</span></div>
           )}
-          <button onClick={onDelete} className="mt-2 text-[11px] flex items-center gap-1 border-0 bg-transparent" style={{ color: 'oklch(0.55 0.18 25)' }}>
-            <Trash2 size={11} /> Eliminar
-          </button>
+          <div className="mt-2 flex items-center gap-3">
+            <button onClick={onEdit} className="text-[11px] flex items-center gap-1 border-0 bg-transparent" style={{ color: 'var(--accent)' }}>
+              <Pencil size={11} /> Editar
+            </button>
+            <button onClick={onDelete} className="text-[11px] flex items-center gap-1 border-0 bg-transparent" style={{ color: 'oklch(0.55 0.18 25)' }}>
+              <Trash2 size={11} /> Eliminar
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -970,7 +1049,7 @@ function CrmTaskCard({ task, today, onToggle, onDelete }: { task: CrmTask; today
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-[13px]" style={{ color: isDone ? 'var(--ink-4)' : 'var(--ink)', textDecoration: isDone ? 'line-through' : 'none' }}>
-            {task.task_type ?? 'Tarea CRM'}
+            {taskTypeEs(task.task_type) || 'Tarea CRM'}
           </span>
           {task.due_date && (
             <span className="text-[11px]" style={{ color: isOverdue ? 'oklch(0.55 0.18 25)' : 'var(--ink-4)', fontWeight: isOverdue ? 600 : 400 }}>
@@ -1000,7 +1079,7 @@ function TriggerCard({ trigger, onStatusChange }: { trigger: CrmTrigger; onStatu
         <span className="text-[15px] mt-[-1px]">⚡</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[12.5px] font-medium" style={{ color: 'var(--ink)' }}>{trigger.trigger_type ?? 'Trigger'}</span>
+            <span className="text-[12.5px] font-medium" style={{ color: 'var(--ink)' }}>{triggerTypeEs(trigger.trigger_type) || 'Trigger'}</span>
             <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{fmtDate(trigger.date_detected)}</span>
             <span
               className="ml-auto text-[10px] px-[6px] py-[2px] rounded-full cursor-pointer"
@@ -1104,7 +1183,7 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                           <div className="flex items-center gap-2 mb-1">
                             <span>{channelEmoji(i.channel)}</span>
                             <span className="text-[12.5px] font-medium" style={{ color: 'var(--ink)' }}>
-                              {i.type ?? i.channel ?? 'Interacción'}
+                              {i.type ?? channelEs(i.channel) ?? 'Interacción'}
                             </span>
                             <span className="text-[11px] ml-auto" style={{ color: 'var(--ink-4)' }}>
                               {fmtDate(i.date)}
@@ -1114,7 +1193,7 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                             <span
                               className="inline-block text-[10px] px-[6px] py-[2px] rounded-full mb-1"
                               style={{ background: outcomeBg(i.outcome), color: outcomeFg(i.outcome) }}
-                            >{i.outcome}</span>
+                            >{outcomeEs(i.outcome)}</span>
                           )}
                           {i.summary && <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>{i.summary}</p>}
                           {i.next_step && (
@@ -1138,7 +1217,7 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                               className="text-[12.5px]"
                               style={{ color: isDone ? 'var(--ink-4)' : 'var(--ink)', textDecoration: isDone ? 'line-through' : 'none' }}
                             >
-                              {t.task_type}
+                              {taskTypeEs(t.task_type)}
                             </span>
                             {t.notes && <div className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>{t.notes}</div>}
                           </div>
@@ -1149,7 +1228,7 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                               color: isDone ? 'oklch(0.38 0.12 160)' : isOverdue ? 'oklch(0.45 0.18 25)' : 'var(--ink-3)',
                             }}
                           >
-                            {isDone ? 'Hecho' : isOverdue ? 'Vencida' : t.status}
+                            {isDone ? 'Hecho' : isOverdue ? 'Vencida' : taskStatusEs(t.status)}
                           </span>
                         </div>
                       );
@@ -1163,7 +1242,7 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-[12.5px] font-medium" style={{ color: 'var(--ink)' }}>
-                                {tr.trigger_type}
+                                {triggerTypeEs(tr.trigger_type)}
                               </span>
                               <span
                                 className="text-[10px] px-[5px] py-[2px] rounded-full"

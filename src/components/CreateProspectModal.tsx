@@ -2,7 +2,12 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { insertProspect } from '@/lib/db';
+import { priorityEs, statusEs, stageEs } from '@/lib/crm-labels';
 import type { Prospect, ProspectPriority, ProspectStatus, ProspectStage } from '@/lib/types';
+
+const ES_BY_FIELD: Record<string, (v: string) => string> = {
+  priority: priorityEs, status: statusEs, stage: stageEs,
+};
 
 interface Props {
   open: boolean;
@@ -144,7 +149,7 @@ export function CreateProspectModal({ open, onClose, onCreated, existingProspect
                       className="w-full h-8 px-2 rounded-[7px] text-[13px] outline-none"
                       style={inpStyle}
                     >
-                      {opts.map(o => <option key={o} value={o}>{o}</option>)}
+                      {opts.map(o => <option key={o} value={o}>{ES_BY_FIELD[field]?.(o) ?? o}</option>)}
                     </select>
                   </div>
                 ))}

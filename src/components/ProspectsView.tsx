@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Search, Upload, ChevronUp, ChevronDown, X, Check, Target } from 'lucide-react';
 import { updateProspect } from '@/lib/db';
 import { EmptyState } from './EmptyState';
+import { stageEs, statusEs, priorityEs } from '@/lib/crm-labels';
 import type { Prospect, CrmInteraction, CrmTask, CrmTrigger, User, ProspectStatus, ProspectStage } from '@/lib/types';
 
 interface Props {
@@ -247,7 +248,7 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
             <button onClick={() => { setStatusFilter('Todos'); setSearch(''); }}
               className="flex flex-col items-center px-4 py-1">
               <span className="text-[18px] font-bold tabular-nums" style={{ color: STAGE_STYLE[s.stage] }}>{s.count}</span>
-              <span className="text-[10.5px] whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>{s.stage}</span>
+              <span className="text-[10.5px] whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>{stageEs(s.stage)}</span>
             </button>
             {i < stageCounts.length - 1 && <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>›</span>}
           </div>
@@ -270,7 +271,7 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
             <button key={tab} onClick={() => setStatusFilter(tab)}
               className="h-7 px-2 rounded-[6px] text-[11.5px] border-0 transition-colors"
               style={{ background: statusFilter === tab ? 'var(--accent)' : 'var(--bg-3)', color: statusFilter === tab ? 'var(--on-accent)' : 'var(--ink-2)', fontWeight: statusFilter === tab ? 600 : 400 }}>
-              {tab}
+              {tab === 'Todos' ? tab : statusEs(tab)}
             </button>
           ))}
         </div>
@@ -392,20 +393,20 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
 
                   <td className="px-4 py-[10px]">
                     <span className="inline-block text-[11px] font-medium px-[7px] py-[2px] rounded-full" style={{ background: priStyle.bg, color: priStyle.fg }}>
-                      {p.priority}
+                      {priorityEs(p.priority)}
                     </span>
                   </td>
 
                   <td className="px-4 py-[10px]">
                     <div className="flex items-center gap-[6px]">
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STAGE_STYLE[p.stage] ?? 'var(--ink-4)' }} />
-                      <span className="text-[12.5px]" style={{ color: 'var(--ink-2)' }}>{p.stage}</span>
+                      <span className="text-[12.5px]" style={{ color: 'var(--ink-2)' }}>{stageEs(p.stage)}</span>
                     </div>
                   </td>
 
                   <td className="px-4 py-[10px]">
                     <span className="inline-block text-[11px] font-medium px-[7px] py-[2px] rounded-full" style={{ background: statStyle.bg, color: statStyle.fg }}>
-                      {p.status}
+                      {statusEs(p.status)}
                     </span>
                   </td>
 
@@ -456,7 +457,7 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
             style={{ background: 'rgba(255,255,255,.15)', color: 'white', fontFamily: 'var(--font)' }}>
             <option value="">Cambiar…</option>
             {(['New','Contacted','Meeting Requested','Meeting Held','Proposal','Negotiation','Won'] as ProspectStage[]).map(s =>
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>{stageEs(s)}</option>
             )}
           </select>
 
@@ -468,7 +469,7 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
             style={{ background: 'rgba(255,255,255,.15)', color: 'white', fontFamily: 'var(--font)' }}>
             <option value="">Cambiar…</option>
             {(['Active','Warm','Paused','Nurture','Closed Won','Closed Lost','Dormant'] as ProspectStatus[]).map(s =>
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>{statusEs(s)}</option>
             )}
           </select>
 

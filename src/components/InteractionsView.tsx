@@ -2,6 +2,7 @@
 import { useState, Fragment } from 'react';
 import { Search, MessageSquare } from 'lucide-react';
 import { EmptyState } from './EmptyState';
+import { channelEs, outcomeEs } from '@/lib/crm-labels';
 import type { CrmInteraction, Prospect, InteractionChannel, InteractionOutcome } from '@/lib/types';
 
 interface Props {
@@ -94,7 +95,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
             <button key={ch} onClick={() => setChannelF(ch)}
               className="h-7 px-2 rounded-[6px] text-[11.5px] border-0 transition-colors"
               style={{ background: channelF === ch ? 'var(--accent)' : 'var(--bg-3)', color: channelF === ch ? 'var(--on-accent)' : 'var(--ink-2)', fontWeight: channelF === ch ? 600 : 400 }}>
-              {ch === 'Todos' ? ch : `${CHANNEL_EMOJI[ch]} ${ch}`}
+              {ch === 'Todos' ? ch : `${CHANNEL_EMOJI[ch]} ${channelEs(ch)}`}
             </button>
           ))}
         </div>
@@ -104,7 +105,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
             <button key={o} onClick={() => setOutcomeF(o)}
               className="h-7 px-2 rounded-[6px] text-[11.5px] border-0 transition-colors"
               style={{ background: outcomeF === o ? 'var(--accent)' : 'var(--bg-3)', color: outcomeF === o ? 'var(--on-accent)' : 'var(--ink-2)', fontWeight: outcomeF === o ? 600 : 400 }}>
-              {o}
+              {o === 'Todos' ? o : outcomeEs(o)}
             </button>
           ))}
         </div>
@@ -171,7 +172,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
                     </td>
                     <td className="px-4 py-[9px] whitespace-nowrap">
                       {i.channel ? (
-                        <span>{CHANNEL_EMOJI[i.channel] ?? '📋'} <span style={{ color: 'var(--ink-2)' }}>{i.channel}</span></span>
+                        <span>{CHANNEL_EMOJI[i.channel] ?? '📋'} <span style={{ color: 'var(--ink-2)' }}>{channelEs(i.channel)}</span></span>
                       ) : <span style={{ color: 'var(--ink-4)' }}>—</span>}
                     </td>
                     <td className="px-4 py-[9px]" style={{ color: 'var(--ink-2)' }}>
@@ -181,7 +182,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
                       {i.outcome && os ? (
                         <span className="inline-block text-[11px] font-medium px-[7px] py-[2px] rounded-full whitespace-nowrap"
                           style={{ background: os.bg, color: os.fg }}>
-                          {i.outcome}
+                          {outcomeEs(i.outcome)}
                         </span>
                       ) : <span style={{ color: 'var(--ink-4)' }}>—</span>}
                     </td>
