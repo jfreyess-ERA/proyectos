@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shell } from '@/components/Shell';
 import { Dashboard } from '@/components/Dashboard';
@@ -90,6 +90,68 @@ export default function Home() {
   useEffect(() => {
     if (!authLoading && !session) router.replace('/login');
   }, [authLoading, session, router]);
+
+  // ── Estado en la URL: sección activa + tarea/prospecto abiertos ──
+  // Permite compartir un link a una tarea/prospecto puntual, refrescar sin perder
+  // el lugar, y back/forward. Se usa history nativo (query only) para no recargar.
+  const urlReady = useRef(false);
+  const applyingFromUrl = useRef(false);
+  const [pendingOpen, setPendingOpen] = useState<{ task?: string; prospect?: string }>({});
+
+  // Leer la URL una vez al montar. (setState-en-effect intencional: sincroniza URL → estado.)
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const nav = p.get('nav');
+    if (nav) setActiveNav(nav); // eslint-disable-line react-hooks/set-state-in-effect
+    const task = p.get('task');
+    const prospect = p.get('prospect');
+    if (task || prospect) setPendingOpen({ task: task ?? undefined, prospect: prospect ?? undefined });
+    urlReady.current = true;
+  }, []);
+
+  // Abrir la tarea/prospecto pendiente cuando los datos ya cargaron.
+  useEffect(() => {
+    if (!pendingOpen.task || !allTasks.length) return;
+    const t = allTasks.find(x => x.id === pendingOpen.task);
+    if (t) setSelectedTask(t); // eslint-disable-line react-hooks/set-state-in-effect
+    setPendingOpen(o => ({ ...o, task: undefined }));
+  }, [pendingOpen.task, allTasks]);
+  useEffect(() => {
+    if (!pendingOpen.prospect || !allProspects.length) return;
+    const pr = allProspects.find(x => x.id === pendingOpen.prospect);
+    if (pr) setSelectedProspect(pr); // eslint-disable-line react-hooks/set-state-in-effect
+    setPendingOpen(o => ({ ...o, prospect: undefined }));
+  }, [pendingOpen.prospect, allProspects]);
+
+  // Escribir la URL cuando cambia la sección o lo abierto (push → back/forward funciona).
+  useEffect(() => {
+    if (!urlReady.current || applyingFromUrl.current) return;
+    const p = new URLSearchParams();
+    if (activeNav && activeNav !== 'dashboard') p.set('nav', activeNav);
+    if (selectedTask) p.set('task', selectedTask.id);
+    if (selectedProspect) p.set('prospect', selectedProspect.id);
+    const qs = p.toString();
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    if (url !== window.location.pathname + window.location.search) {
+      window.history.pushState(null, '', url);
+    }
+  }, [activeNav, selectedTask, selectedProspect]);
+
+  // Back/forward: re-aplicar la URL al estado.
+  useEffect(() => {
+    function onPop() {
+      applyingFromUrl.current = true;
+      const p = new URLSearchParams(window.location.search);
+      setActiveNav(p.get('nav') ?? 'dashboard');
+      const task = p.get('task');
+      setSelectedTask(task ? (allTasks.find(x => x.id === task) ?? null) : null);
+      const prospect = p.get('prospect');
+      setSelectedProspect(prospect ? (allProspects.find(x => x.id === prospect) ?? null) : null);
+      setTimeout(() => { applyingFromUrl.current = false; }, 0);
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [allTasks, allProspects]);
 
   const isProjectView = activeNav.startsWith('project:');
   const isSprintView  = activeNav.startsWith('sprint:');
