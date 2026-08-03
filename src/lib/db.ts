@@ -511,6 +511,23 @@ export async function deleteInteraction(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Borra una interacción y las tareas de cadencia que había generado y que aún
+ * están pendientes. Las tareas ya completadas se conservan (son historia). Se
+ * borran las tareas primero porque la FK es ON DELETE SET NULL: si borráramos la
+ * interacción antes, perderíamos el vínculo para saber cuáles quitar.
+ */
+export async function deleteInteractionWithPendingTasks(id: string): Promise<void> {
+  const { error: taskErr } = await supabase
+    .from('crm_tasks')
+    .delete()
+    .eq('interaction_id', id)
+    .neq('status', 'Done');
+  if (taskErr) throw taskErr;
+  const { error } = await supabase.from('crm_interactions').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // ── CRM: Tasks ────────────────────────────────────────────────────
 
 export async function fetchCrmTasks(prospectId?: string): Promise<CrmTask[]> {

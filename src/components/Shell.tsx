@@ -478,18 +478,22 @@ export function Shell({
             onOpenProspect={onOpenProspect}
           />
 
-          <button
-            onClick={onCreateTask}
-            className="h-8 px-3 rounded-[7px] text-[13px] font-medium flex items-center gap-[6px] border-0"
-            style={{
-              background: 'var(--accent)',
-              color: 'var(--on-accent)',
-              boxShadow: '0 1px 0 rgba(255,255,255,.2) inset, var(--shadow-1)',
-            }}
-          >
-            <Plus size={14} />
-            <span>{isCrmView ? 'Nueva tarea CRM' : 'Nueva tarea'}</span>
-          </button>
+          {/* En el CRM las tareas nacen dentro del prospecto o de la cadencia,
+              así que no mostramos el botón global de "nueva tarea" acá. */}
+          {!isCrmView && (
+            <button
+              onClick={onCreateTask}
+              className="h-8 px-3 rounded-[7px] text-[13px] font-medium flex items-center gap-[6px] border-0"
+              style={{
+                background: 'var(--accent)',
+                color: 'var(--on-accent)',
+                boxShadow: '0 1px 0 rgba(255,255,255,.2) inset, var(--shadow-1)',
+              }}
+            >
+              <Plus size={14} />
+              <span>Nueva tarea</span>
+            </button>
+          )}
         </header>
 
         {/* Subheader (only for project views) */}

@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Trash2, ExternalLink, Mail, Phone, ChevronDown, Pencil } from 'lucide-react';
 import {
   updateProspect, fetchProspect,
-  fetchInteractions, insertInteraction, updateInteraction, deleteInteraction,
+  fetchInteractions, insertInteraction, updateInteraction, deleteInteractionWithPendingTasks,
   fetchCrmTasks, insertCrmTask, updateCrmTask, deleteCrmTask,
   fetchCrmTriggers, insertCrmTrigger, updateCrmTrigger,
 } from '@/lib/db';
@@ -415,16 +415,17 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
 
         {/* Stage progress */}
         <div className="px-5 py-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--line)', background: 'var(--bg-2)' }}>
+          {/* Solo lectura: la etapa avanza sola al registrar interacciones
+              (ver nextStage). No se clickea, para no pisar la automatización. */}
           <div className="flex items-center gap-0">
             {STAGES.map((s, i) => {
               const stageIdx = STAGES.indexOf(prospect.stage);
               const isDone = i < stageIdx;
               const isCurrent = i === stageIdx;
               return (
-                <button
+                <div
                   key={s}
-                  onClick={() => save({ stage: s })}
-                  className="flex-1 flex flex-col items-center gap-[3px] transition-all"
+                  className="flex-1 flex flex-col items-center gap-[3px]"
                   title={stageEs(s)}
                 >
                   <div
@@ -437,7 +438,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                   >
                     {stageEs(s)}
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -783,8 +784,10 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                   <InteractionCard key={i.id} interaction={i}
                     onEdit={() => startEditInteraction(i)}
                     onDelete={async () => {
-                    await deleteInteraction(i.id);
+                    // Borra la interacción y sus tareas de cadencia pendientes.
+                    await deleteInteractionWithPendingTasks(i.id);
                     setInteractions(prev => prev.filter(x => x.id !== i.id));
+                    if (prospect) await reload(prospect.id);
                   }} />
                 ))}
               </div>
