@@ -14,6 +14,7 @@ import type {
   PlaybookNode, PlaybookEdge,
 } from '@/lib/types';
 import { RESPONSE_LABELS } from '@/lib/types';
+import { useToast } from '@/lib/toast-context';
 import { PlaybookPanel, validResponses, edgeTarget, anchorHint } from './PlaybookPanel';
 import { PRIORITY_STYLE, STATUS_STYLE, STAGE_STYLE } from './ProspectsView';
 import {
@@ -133,6 +134,7 @@ function EditableText({ value, onSave, placeholder, multiline }: {
 }
 
 export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projects = [], playbookNodes = [], playbookEdges = [] }: Props) {
+  const { deleteWithUndo } = useToast();
   const [tab, setTab] = useState<Tab>('info');
   const [interactions, setInteractions] = useState<CrmInteraction[]>([]);
   const [tasks, setTasks] = useState<CrmTask[]>([]);
@@ -219,6 +221,24 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
     setEditingIntId(i.id);
     setIntDraft({ ...i });
     setNewIntForm(true);
+  }
+
+  // Deshacer, mismo patrón que tareas/prospectos: se oculta al instante y el
+  // DELETE real (con la cascada a sus tareas pendientes) recién corre si expira
+  // la ventana sin deshacer. Mientras tanto las tareas siguen visibles en su
+  // pestaña — todavía no se borraron.
+  function requestDeleteInteraction(i: CrmInteraction) {
+    setInteractions(prev => prev.filter(x => x.id !== i.id));
+    deleteWithUndo({
+      message: `Interacción "${i.type || channelEs(i.channel) || 'sin tipo'}" eliminada`,
+      onCommit: async () => {
+        await deleteInteractionWithPendingTasks(i.id);
+        if (prospect) await reload(prospect.id);
+      },
+      onUndo: () => {
+        setInteractions(prev => [...prev, i].sort((a, b) => b.date.localeCompare(a.date)));
+      },
+    });
   }
 
   // La etapa sólo avanza (nunca retrocede). Registrar cualquier interacción en un
@@ -783,12 +803,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                 {interactions.map(i => (
                   <InteractionCard key={i.id} interaction={i}
                     onEdit={() => startEditInteraction(i)}
-                    onDelete={async () => {
-                    // Borra la interacción y sus tareas de cadencia pendientes.
-                    await deleteInteractionWithPendingTasks(i.id);
-                    setInteractions(prev => prev.filter(x => x.id !== i.id));
-                    if (prospect) await reload(prospect.id);
-                  }} />
+                    onDelete={() => requestDeleteInteraction(i)} />
                 ))}
               </div>
             </div>
