@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Task, Project, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem, SubtaskLite, Sprint, Prospect, CrmInteraction, CrmTask, CrmTrigger, EmailTemplate, PlaybookNode, PlaybookEdge } from './types';
+import type { Task, Project, Client, User, Label, Comment, Activity, Notification, Attachment, SubtaskItem, SubtaskLite, Sprint, Prospect, CrmInteraction, CrmTask, CrmTrigger, EmailTemplate, PlaybookNode, PlaybookEdge } from './types';
 
 // ── Row types from Supabase ────────────────────────────────────────
 
@@ -71,6 +71,37 @@ export async function fetchProjects(): Promise<Project[]> {
   return data as Project[];
 }
 
+// ── Clientes ───────────────────────────────────────────────────────
+
+/**
+ * Falla en blando a propósito: si la migración de `clients` todavía no corrió,
+ * devolvemos lista vacía en vez de tumbar toda la carga inicial. Sin filas, cada
+ * cliente se considera abierto, que es exactamente el comportamiento previo.
+ */
+export async function fetchClients(): Promise<Client[]> {
+  const { data, error } = await supabase
+    .from('clients')
+    .select('*')
+    .order('name');
+  if (error) {
+    console.warn('No se pudo leer clients (¿falta la migración?):', error.message);
+    return [];
+  }
+  return (data ?? []) as Client[];
+}
+
+/**
+ * Abre o cierra un cliente. Usa upsert porque un proyecto puede tener un cliente
+ * escrito a mano que todavía no exista como fila (la migración sólo sembró los
+ * que había al momento de correrla).
+ */
+export async function setClientActive(name: string, active: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('clients')
+    .upsert({ name, active, closed_at: active ? null : new Date().toISOString() }, { onConflict: 'name' });
+  if (error) throw error;
+}
+
 export async function fetchUsers(): Promise<User[]> {
   const { data, error } = await supabase
     .from('users')
@@ -109,8 +140,20 @@ export interface NewTaskInput {
   status: Task['status'];
   priority: Task['priority'];
   assignees: string[];
+  start_date?: string;
   due_date?: string;
   description?: string;
+  /** Hito / fase de la metodología ERA a la que pertenece la tarea. */
+  project_stage?: Task['project_stage'];
+  /** Horas estimadas. */
+  estimate?: number;
+}
+
+/** Una subtarea a crear junto con la tarea, desde el modal de alta. */
+export interface NewSubtaskInput {
+  title: string;
+  due_date?: string | null;
+  assignee?: string | null;
 }
 
 export async function updateTask(
@@ -278,9 +321,11 @@ export async function insertTask(input: NewTaskInput): Promise<Task> {
       priority:    input.priority,
       assignees:   input.assignees,
       label_ids:   [],
+      start_date:  input.start_date ?? null,
       due_date:    input.due_date ?? null,
       description: input.description ?? null,
-      estimate:    0,
+      project_stage: input.project_stage ?? null,
+      estimate:    input.estimate ?? 0,
       spent:       0,
       subtasks_done:  0,
       subtasks_total: 0,
@@ -290,6 +335,26 @@ export async function insertTask(input: NewTaskInput): Promise<Task> {
 
   if (error) throw error;
   return rowToTask(data as TaskRow);
+}
+
+/**
+ * Crea las subtareas de una tarea recién dada de alta, en un solo insert.
+ * Devuelve la tarea con los contadores ya sincronizados para que la lista no
+ * muestre "0/0" hasta el próximo refresco.
+ */
+export async function insertSubtasksBatch(taskId: string, items: NewSubtaskInput[]): Promise<void> {
+  if (items.length === 0) return;
+  const rows = items.map((s, i) => ({
+    task_id:   taskId,
+    title:     s.title,
+    done:      false,
+    position:  i,
+    due_date:  s.due_date ?? null,
+    assignee:  s.assignee ?? null,
+  }));
+  const { error } = await supabase.from('task_subtasks').insert(rows);
+  if (error) throw error;
+  await syncSubtaskCounts(taskId);
 }
 
 // ── Subtasks ───────────────────────────────────────────────────────

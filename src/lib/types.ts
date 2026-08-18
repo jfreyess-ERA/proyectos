@@ -12,6 +12,18 @@ export interface User {
   is_admin?: boolean;
 }
 
+/**
+ * Cliente con estado propio. Cerrar un cliente no borra nada: sus proyectos
+ * dejan de ofrecerse al crear tareas, pero el histórico queda intacto.
+ * La relación con projects es por nombre (projects.client = clients.name).
+ */
+export interface Client {
+  name: string;
+  active: boolean;
+  closed_at?: string | null;
+  created_at?: string;
+}
+
 export interface Project {
   id: string;
   name: string;

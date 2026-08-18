@@ -18,6 +18,7 @@ import { TeamWeekView } from '@/components/TeamWeekView';
 import { StatsView } from '@/components/StatsView';
 import { PhaseDurationView } from '@/components/PhaseDurationView';
 import { SubtaskStatsView } from '@/components/SubtaskStatsView';
+import { ClientsView } from '@/components/ClientsView';
 import { ReportsView } from '@/components/ReportsView';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProjectModal } from '@/components/ProjectModal';
@@ -49,13 +50,13 @@ import { getOrCreateShare, deleteTask, deleteProspect } from '@/lib/db';
 import { useToast } from '@/lib/toast-context';
 import type { Task, Project, Sprint, Prospect } from '@/lib/types';
 
-type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | 'admin:team-week' | 'admin:stats' | 'admin:durations' | 'admin:subtasks' | string;
+type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | 'admin:team-week' | 'admin:clients' | 'admin:stats' | 'admin:durations' | 'admin:subtasks' | string;
 type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
 
 export default function Home() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
-  const { tasks: allTasks, projects, users, labels, sprints, subtasks, datedSubtasks, loading, error, refetch } = useNorteData();
+  const { tasks: allTasks, projects, clients, openProjects, users, labels, sprints, subtasks, datedSubtasks, loading, error, refetch } = useNorteData();
   const { prospects: allProspects, interactions, crmTasks, triggers, templates, playbookNodes, playbookEdges, refetch: crmRefetch } = useCrmData();
   const { deleteWithUndo } = useToast();
 
@@ -175,6 +176,7 @@ export default function Home() {
 
   const ADMIN_LABELS: Record<string, string> = {
     'admin:team-week': 'Panel del equipo',
+    'admin:clients':   'Clientes',
     'admin:stats':     'Estadísticas',
     'admin:durations': 'Tiempos por fase',
     'admin:subtasks':  'Subtareas',
@@ -315,6 +317,10 @@ export default function Home() {
         case 'admin:team-week':
           return profile?.is_admin
             ? <TeamWeekView tasks={tasks} projects={projects} users={users} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />
+            : <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
+        case 'admin:clients':
+          return profile?.is_admin
+            ? <ClientsView clients={clients} projects={projects} tasks={tasks} onChanged={refetch} onOpenProject={id => handleNav('project:' + id)} />
             : <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
         case 'admin:stats':
           return profile?.is_admin
@@ -490,11 +496,18 @@ export default function Home() {
         prospects={prospects}
       />
 
+      {/* Trabajo nuevo sólo sobre clientes abiertos. Si estás parado dentro de un
+          proyecto de un cliente cerrado, ese proyecto se mantiene disponible para
+          no dejarte sin opción en el contexto en el que estás. */}
       <CreateTaskModal
         open={createOpen}
         defaultStatus={createDefaultStatus}
         defaultProjectId={projectId}
-        projects={projects}
+        projects={
+          projectId && !openProjects.some(p => p.id === projectId) && project
+            ? [project, ...openProjects]
+            : openProjects
+        }
         users={users}
         onClose={() => setCreateOpen(false)}
         onCreated={() => refetch()}
@@ -520,7 +533,7 @@ export default function Home() {
 
       <SprintModal
         open={sprintModalOpen}
-        projects={projects}
+        projects={openProjects}
         defaultProjectId={projectId}
         onClose={() => setSprintModalOpen(false)}
         onSaved={s => { setLocalSprints(prev => [...prev, s]); setActiveNav('sprint:' + s.id); }}

@@ -1,12 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { fetchTasks, fetchProjects, fetchUsers, fetchLabels, fetchAllSprints, fetchAllSubtasks, taskRowToTask } from './db';
+import { fetchTasks, fetchProjects, fetchClients, fetchUsers, fetchLabels, fetchAllSprints, fetchAllSubtasks, taskRowToTask } from './db';
 import { supabase } from './supabase';
-import type { Task, Project, User, Label, Sprint, DatedSubtask, SubtaskLite } from './types';
+import type { Task, Project, Client, User, Label, Sprint, DatedSubtask, SubtaskLite } from './types';
 
 interface NorteData {
   tasks: Task[];
   projects: Project[];
+  clients: Client[];
+  /** Proyectos de clientes abiertos — lo que se ofrece al crear tareas. */
+  openProjects: Project[];
   users: User[];
   labels: Label[];
   sprints: Sprint[];
@@ -20,6 +23,7 @@ interface NorteData {
 export function useNorteData(): NorteData {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
@@ -34,8 +38,8 @@ export function useNorteData(): NorteData {
     setLoading(true);
     setError(null);
 
-    Promise.all([fetchTasks(), fetchProjects(), fetchUsers(), fetchLabels(), fetchAllSprints(), fetchAllSubtasks()])
-      .then(([t, p, u, l, s, st]) => {
+    Promise.all([fetchTasks(), fetchProjects(), fetchUsers(), fetchLabels(), fetchAllSprints(), fetchAllSubtasks(), fetchClients()])
+      .then(([t, p, u, l, s, st, c]) => {
         if (cancelled) return;
         setTasks(t);
         setProjects(p);
@@ -43,6 +47,7 @@ export function useNorteData(): NorteData {
         setLabels(l);
         setSprints(s);
         setSubtasks(st);
+        setClients(c);
       })
       .catch(err => {
         if (!cancelled) setError(err.message ?? 'Error conectando a Supabase');
@@ -84,5 +89,11 @@ export function useNorteData(): NorteData {
   // Las subtareas con fecha se derivan de todas — evita una segunda query.
   const datedSubtasks = subtasks.filter(s => s.due_date) as DatedSubtask[];
 
-  return { tasks, projects, users, labels, sprints, subtasks, datedSubtasks, loading, error, refetch: () => setTick(t => t + 1) };
+  // Proyectos que se pueden elegir al crear trabajo nuevo: los de clientes
+  // abiertos. Un proyecto sin cliente, o con un cliente que todavía no está en
+  // la tabla, se considera abierto (no escondemos nada por omisión).
+  const closedClients = new Set(clients.filter(c => !c.active).map(c => c.name));
+  const openProjects = projects.filter(p => !p.client || !closedClients.has(p.client));
+
+  return { tasks, projects, clients, openProjects, users, labels, sprints, subtasks, datedSubtasks, loading, error, refetch: () => setTick(t => t + 1) };
 }
