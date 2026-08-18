@@ -12,6 +12,8 @@ export interface User {
   is_admin?: boolean;
   /** Horas disponibles por semana, para comparar contra la carga asignada. */
   weekly_capacity_hours?: number;
+  /** Token secreto para el feed .ics de solo lectura (suscripción de calendario). */
+  calendar_token?: string;
 }
 
 /**

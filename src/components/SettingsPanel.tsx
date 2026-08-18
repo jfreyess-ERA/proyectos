@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, LogOut, Moon, Sun, Trash2, UserPlus, Pencil, Check,
          ChevronDown, Mail, Eye, EyeOff, RefreshCw, KeyRound, Copy, Tag, Plus } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -156,6 +156,8 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
   const [profileRole, setProfileRole] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileOk, setProfileOk] = useState(false);
+  const [calendarLinkCopied, setCalendarLinkCopied] = useState(false);
+  const calendarLinkRef = useRef<HTMLInputElement>(null);
 
   // User list
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -468,6 +470,53 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                   </button>
                 </form>
               </div>
+
+              {profile?.calendar_token && (
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--ink-4)' }}>
+                    Sincronizar con Outlook / Calendar
+                  </div>
+                  <div className="flex flex-col gap-2 p-3 rounded-[10px]" style={{ background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
+                    <p className="text-[12px]" style={{ color: 'var(--ink-2)' }}>
+                      Suscribite a este link desde Outlook o Google Calendar y vas a ver ahí tus tareas y
+                      subtareas con fecha, sin tener que abrir el sistema.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={calendarLinkRef}
+                        readOnly
+                        value={`webcal://proyectos.nciconsultores.com/api/calendar/${profile.calendar_token}.ics`}
+                        onFocus={e => e.target.select()}
+                        className="flex-1 h-8 px-2 rounded-[6px] text-[11.5px] outline-none"
+                        style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink-3)', fontFamily: 'var(--font-mono)' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const plainUrl = `https://proyectos.nciconsultores.com/api/calendar/${profile.calendar_token}.ics`;
+                          try {
+                            await navigator.clipboard.writeText(plainUrl);
+                            setCalendarLinkCopied(true);
+                          } catch {
+                            // Sin permiso de portapapeles (política del navegador/entorno): dejamos el
+                            // texto seleccionado para que Cmd/Ctrl+C funcione igual, en vez de fallar mudo.
+                            calendarLinkRef.current?.select();
+                          }
+                          setTimeout(() => setCalendarLinkCopied(false), 2000);
+                        }}
+                        className="h-8 px-3 rounded-[6px] text-[11.5px] font-medium border-0 flex items-center gap-1 flex-shrink-0"
+                        style={{ background: calendarLinkCopied ? 'oklch(0.55 0.14 160)' : 'var(--accent)', color: 'white' }}
+                      >
+                        <Copy size={11} /> {calendarLinkCopied ? 'Copiado' : 'Copiar'}
+                      </button>
+                    </div>
+                    <p className="text-[10.5px]" style={{ color: 'var(--ink-4)' }}>
+                      💡 Es de solo lectura y Outlook lo actualiza cada 3 a 24 horas, no al instante — sirve
+                      para ver el panorama, no para avisos urgentes. Este link es personal: no lo compartas.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--ink-4)' }}>Cambiar contraseña</div>
