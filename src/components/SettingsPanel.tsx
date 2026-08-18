@@ -162,7 +162,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState('');
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
-  const [editForms, setEditForms] = useState<Record<string, { name: string; role: string; is_admin: boolean }>>({});
+  const [editForms, setEditForms] = useState<Record<string, { name: string; role: string; is_admin: boolean; weekly_capacity_hours: number }>>({});
   const [savingUser, setSavingUser] = useState<string | null>(null);
 
   // Per-user password change (admin panel)
@@ -256,9 +256,9 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
       }
       if (Array.isArray(data)) {
         setUsers(data);
-        const forms: Record<string, { name: string; role: string; is_admin: boolean }> = {};
+        const forms: Record<string, { name: string; role: string; is_admin: boolean; weekly_capacity_hours: number }> = {};
         data.forEach((u: UserRow) => {
-          forms[u.id] = { name: u.name, role: u.role ?? '', is_admin: u.is_admin ?? false };
+          forms[u.id] = { name: u.name, role: u.role ?? '', is_admin: u.is_admin ?? false, weekly_capacity_hours: u.weekly_capacity_hours ?? 40 };
         });
         setEditForms(forms);
       }
@@ -732,7 +732,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                   <div className="flex flex-col gap-2">
                     {users.map(u => {
                       const isExpanded = expandedUser === u.id;
-                      const ef = editForms[u.id] ?? { name: u.name, role: u.role ?? '', is_admin: u.is_admin ?? false };
+                      const ef = editForms[u.id] ?? { name: u.name, role: u.role ?? '', is_admin: u.is_admin ?? false, weekly_capacity_hours: u.weekly_capacity_hours ?? 40 };
                       const isSelf = u.id === profile?.id;
                       const userPwErr = pwErr[u.id] ?? '';
                       const isChangingPw = !!pwForms[u.id];
@@ -787,6 +787,13 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                                     <label className="text-[11px] font-medium" style={{ color: 'var(--ink-3)' }}>Cargo</label>
                                     <input type="text" value={ef.role}
                                       onChange={e => setEditForms(p => ({ ...p, [u.id]: { ...ef, role: e.target.value } }))}
+                                      className="h-7 px-2 rounded-[6px] text-[12px] outline-none"
+                                      style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
+                                  </div>
+                                  <div className="flex flex-col gap-[3px]" style={{ width: 96 }}>
+                                    <label className="text-[11px] font-medium" style={{ color: 'var(--ink-3)' }}>Horas/semana</label>
+                                    <input type="number" min={0} max={80} value={ef.weekly_capacity_hours}
+                                      onChange={e => setEditForms(p => ({ ...p, [u.id]: { ...ef, weekly_capacity_hours: Number(e.target.value) } }))}
                                       className="h-7 px-2 rounded-[6px] text-[12px] outline-none"
                                       style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
                                   </div>

@@ -10,6 +10,8 @@ export interface User {
   hue: number;
   email?: string;
   is_admin?: boolean;
+  /** Horas disponibles por semana, para comparar contra la carga asignada. */
+  weekly_capacity_hours?: number;
 }
 
 /**

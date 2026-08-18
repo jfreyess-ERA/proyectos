@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, Clock, Flag } from 'lucide-react';
 import { avatarBg, fmtDate, dueClass } from '@/lib/data';
 import { CalendarView } from './CalendarView';
-import { WeekGrid } from './WeekGrid';
+import { WeekGrid, computeWeeklyLoad } from './WeekGrid';
 import { TaskFilterBar, applyTaskFilters, applySubtaskFilters, EMPTY_FILTERS, type TaskFilterState } from './TaskFilterBar';
 import type { Task, Project, User, DatedSubtask } from '@/lib/types';
 
@@ -145,6 +145,7 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
   const totalOverdue = groupBy === 'person'
     ? personRows.reduce((s, r) => s + r.overdue.length, 0)
     : clientSections.reduce((s, sec) => s + sec.rows.reduce((ss, r) => ss + r.overdue.length, 0), 0);
+  const weeklyLoad = useMemo(() => computeWeeklyLoad(users, filteredTasks, weekStart), [users, filteredTasks, weekStart]);
   const visiblePersons = showEmpty ? personRows : personRows.filter(r => r.activeCount > 0 || r.completedThisWeek.length > 0);
   const visibleClientSections = groupBy === 'project'
     ? clientSections.map(sec => ({
@@ -166,6 +167,15 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
             {totalOverdue > 0 && (
               <span className="ml-2 font-medium" style={{ color: 'var(--danger)' }}>
                 · {totalOverdue} atrasadas
+              </span>
+            )}
+            {weeklyLoad.capacity > 0 && (
+              <span
+                className="ml-2 font-medium"
+                style={{ color: weeklyLoad.hours > weeklyLoad.capacity ? 'var(--danger)' : 'var(--ink-3)' }}
+                title="Horas estimadas de tareas activas con vencimiento hasta el domingo, vs. capacidad semanal del equipo"
+              >
+                · {weeklyLoad.hours}h / {weeklyLoad.capacity}h esta semana
               </span>
             )}
           </p>

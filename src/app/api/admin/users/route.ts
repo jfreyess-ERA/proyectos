@@ -93,7 +93,7 @@ export async function PATCH(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const body = await req.json();
-  const { id, name, role, is_admin, password } = body;
+  const { id, name, role, is_admin, weekly_capacity_hours, password } = body;
   if (!id) return NextResponse.json({ error: 'Falta id' }, { status: 400 });
 
   // If only changing password, skip profile update
@@ -101,13 +101,14 @@ export async function PATCH(req: NextRequest) {
     if (password.length < 6) return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 });
     const { error: pwErr } = await supabaseAdmin.auth.admin.updateUserById(id, { password });
     if (pwErr) return NextResponse.json({ error: pwErr.message }, { status: 400 });
-    if (!name && !role && is_admin === undefined) return NextResponse.json({ ok: true });
+    if (!name && !role && is_admin === undefined && weekly_capacity_hours === undefined) return NextResponse.json({ ok: true });
   }
 
   const fields: Record<string, unknown> = {};
   if (name  !== undefined) fields.name     = name;
   if (role  !== undefined) fields.role     = role;
   if (is_admin !== undefined) fields.is_admin = is_admin;
+  if (weekly_capacity_hours !== undefined) fields.weekly_capacity_hours = weekly_capacity_hours;
 
   // Recalculate initials if name changed
   if (name) {

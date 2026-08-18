@@ -1,5 +1,5 @@
 'use client';
-import { CornerDownRight, Flag } from 'lucide-react';
+import { CornerDownRight, Flag, TriangleAlert } from 'lucide-react';
 import { avatarBg } from '@/lib/data';
 import type { Task, Project, User, DatedSubtask } from '@/lib/types';
 
@@ -74,7 +74,9 @@ export function WeekGrid({ weekStart, users, tasks, subtaskEvents, projects, sho
     items.push({ key: 'task:' + t.id, title: t.title, due: t.due, priority: t.priority, isSubtask: false, parentTask: t, projectColor: projectById.get(t.project)?.color, assignees: t.assignees });
   }
   for (const { subtask, task } of subtaskEvents) {
-    if (subtask.done) continue;
+    // Una subtarea suelta bajo una tarea ya completada no es trabajo pendiente
+    // real — se ve así por datos viejos (la tarea se cerró sin tildar todo).
+    if (subtask.done || task.status === 'done') continue;
     items.push({ key: 'sub:' + subtask.id, title: subtask.title, due: subtask.due_date, priority: task.priority, isSubtask: true, parentTask: task, projectColor: projectById.get(task.project)?.color, assignees: subtask.assignee ? [subtask.assignee] : [] });
   }
 
@@ -87,7 +89,8 @@ export function WeekGrid({ weekStart, users, tasks, subtaskEvents, projects, sho
     });
     const weekend = mine.filter(it => it.due >= isoDate(weekendStart) && it.due <= weekendEndISO).sort(byPriorityThenTitle);
     const total = overdue.length + byDay.reduce((s, d) => s + d.length, 0) + weekend.length;
-    return { user: u, overdue, byDay, weekend, total };
+    const { hours, capacity } = weeklyLoadFor(u, tasks, weekStartISO, weekendEndISO);
+    return { user: u, overdue, byDay, weekend, total, hours, capacity };
   });
 
   const visibleRows = showEmpty ? rows : rows.filter(r => r.total > 0);
@@ -181,6 +184,7 @@ export function WeekGrid({ weekStart, users, tasks, subtaskEvents, projects, sho
                     </div>
                   </div>
                 </div>
+                <LoadBadge hours={row.hours} capacity={row.capacity} />
               </th>
 
               <Cell items={row.overdue} tint="oklch(0.985 0.008 25)" borderTop={i > 0} onOpenTask={onOpenTask} overdue />
@@ -205,6 +209,60 @@ function byPriorityThenTitle(a: GridItem, b: GridItem): number {
   const order: Record<string, number> = { urgent: 0, high: 1, med: 2, low: 3 };
   const p = (order[a.priority] ?? 9) - (order[b.priority] ?? 9);
   return p !== 0 ? p : a.title.localeCompare(b.title);
+}
+
+/**
+ * Horas comprometidas para "esta semana": tareas activas de la persona con
+ * vencimiento hasta el domingo, sin piso inferior — un atrasado de hace un mes
+ * sigue siendo trabajo que hay que sacar esta semana. Las subtareas no llevan
+ * hora propia (sólo la tarea), así que la cuenta va directo sobre `tasks` y no
+ * sobre los ítems ya aplanados de la grilla, para no arrastrar ese hueco.
+ */
+function weeklyLoadFor(u: User, tasks: Task[], weekStartISO: string, weekEndISO: string): { hours: number; capacity: number } {
+  const hours = tasks
+    .filter(t => t.status !== 'done' && t.due && t.due <= weekEndISO && t.assignees.includes(u.id))
+    .reduce((s, t) => s + (t.estimate || 0), 0);
+  return { hours, capacity: u.weekly_capacity_hours ?? 40 };
+}
+
+/** Igual cálculo que cada fila, pero sumado para todo el equipo — para el encabezado de Panel del equipo. */
+export function computeWeeklyLoad(users: User[], tasks: Task[], weekStart: Date): { hours: number; capacity: number } {
+  const weekStartISO = isoDate(weekStart);
+  const weekEndISO = isoDate(addDays(weekStart, 6));
+  let hours = 0, capacity = 0;
+  for (const u of users) {
+    const load = weeklyLoadFor(u, tasks, weekStartISO, weekEndISO);
+    hours += load.hours;
+    capacity += load.capacity;
+  }
+  return { hours, capacity };
+}
+
+/** Verde/ámbar/rojo según qué tan cerca o pasado esté de la capacidad — el texto siempre acompaña, nunca es sólo color. */
+function loadTone(hours: number, capacity: number): { fg: string; bg: string } {
+  if (capacity <= 0) return { fg: 'var(--ink-4)', bg: 'var(--bg-3)' };
+  const ratio = hours / capacity;
+  if (ratio > 1)    return { fg: 'oklch(0.5 0.18 25)',  bg: 'oklch(0.94 0.04 25)' };
+  if (ratio >= 0.8) return { fg: 'oklch(0.48 0.12 70)', bg: 'oklch(0.95 0.05 70)' };
+  return { fg: 'var(--ink-3)', bg: 'var(--bg-3)' };
+}
+
+/** "12h / 40h" con una barrita de progreso. Sobrecargado lleva ícono, no sólo color rojo. */
+function LoadBadge({ hours, capacity }: { hours: number; capacity: number }) {
+  const tone = loadTone(hours, capacity);
+  const overloaded = capacity > 0 && hours > capacity;
+  const fillPct = capacity > 0 ? Math.min(100, (hours / capacity) * 100) : 0;
+  return (
+    <div className="mt-[6px] flex items-center gap-[5px]" title={`${hours}h asignadas de ${capacity}h de capacidad esta semana`}>
+      <div className="flex-1 h-[4px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
+        <div className="h-full rounded-full" style={{ width: `${fillPct}%`, background: tone.fg }} />
+      </div>
+      <span className="flex-shrink-0 flex items-center gap-[3px] text-[10.5px] font-medium px-[5px] py-[1px] rounded-full" style={{ background: tone.bg, color: tone.fg }}>
+        {overloaded && <TriangleAlert size={9} />}
+        {hours}h/{capacity}h
+      </span>
+    </div>
+  );
 }
 
 const DOW_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
