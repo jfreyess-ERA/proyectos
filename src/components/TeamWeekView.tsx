@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, Clock, Flag } from 'lucide-react';
 import { avatarBg, fmtDate, dueClass } from '@/lib/data';
 import { CalendarView } from './CalendarView';
+import { WeekGrid } from './WeekGrid';
 import { TaskFilterBar, applyTaskFilters, applySubtaskFilters, EMPTY_FILTERS, type TaskFilterState } from './TaskFilterBar';
 import type { Task, Project, User, DatedSubtask } from '@/lib/types';
 
@@ -86,14 +87,14 @@ function computeBuckets(taskList: Task[], weekStartISO: string, weekEndISO: stri
 }
 
 type GroupBy = 'person' | 'project';
-type ViewMode = 'panel' | 'calendar-week' | 'calendar-month';
+type ViewMode = 'grid' | 'panel' | 'calendar-week' | 'calendar-month';
 
 export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask, onOpenProject }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [showEmpty, setShowEmpty] = useState(false);
   const [groupBy, setGroupBy]     = useState<GroupBy>('person');
-  const [viewMode, setViewMode]   = useState<ViewMode>('panel');
+  const [viewMode, setViewMode]   = useState<ViewMode>('grid');
   const [filters, setFilters]     = useState<TaskFilterState>(EMPTY_FILTERS);
 
   const filteredTasks = useMemo(() => applyTaskFilters(tasks, projects, filters), [tasks, projects, filters]);
@@ -106,7 +107,8 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
   const weekStartISO = isoDate(weekStart);
   const weekEndISO = isoDate(weekEnd);
   const todayISO = isoDate(new Date());
-  const isCalendar = viewMode !== 'panel';
+  const isCalendar = viewMode === 'calendar-week' || viewMode === 'calendar-month';
+  const isGrid = viewMode === 'grid';
 
   // ── Person rows ─────────────────────────────────────────────────
   const personRows = useMemo(() => {
@@ -215,7 +217,8 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
       {/* View toggle */}
       <div className={isCalendar ? 'px-6 pb-3' : 'mb-4'}>
         <div className="inline-flex rounded-[8px] border overflow-hidden" style={{ borderColor: 'var(--line)' }}>
-          <ViewTab active={viewMode === 'panel'}           onClick={() => setViewMode('panel')}>Panel</ViewTab>
+          <ViewTab active={viewMode === 'grid'}            onClick={() => setViewMode('grid')}>Grilla semanal</ViewTab>
+          <ViewTab active={viewMode === 'panel'}           onClick={() => setViewMode('panel')} border>Panel</ViewTab>
           <ViewTab active={viewMode === 'calendar-week'}   onClick={() => setViewMode('calendar-week')} border>Calendario · Semana</ViewTab>
           <ViewTab active={viewMode === 'calendar-month'}  onClick={() => setViewMode('calendar-month')} border>Calendario · Mes</ViewTab>
         </div>
@@ -231,7 +234,7 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
           trailing={!isCalendar ? (
             <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--ink-3)' }}>
               <input type="checkbox" checked={showEmpty} onChange={e => setShowEmpty(e.target.checked)} />
-              Mostrar {groupBy === 'person' ? 'personas' : 'proyectos'} sin tareas activas
+              Mostrar {isGrid || groupBy === 'person' ? 'personas' : 'proyectos'} sin tareas activas
             </label>
           ) : undefined}
         />
@@ -250,8 +253,21 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
         </div>
       )}
 
+      {/* Grilla semanal: persona × día */}
+      {isGrid && (
+        <WeekGrid
+          weekStart={weekStart}
+          users={users}
+          tasks={filteredTasks}
+          subtaskEvents={filteredSubtaskEvents}
+          projects={projects}
+          showEmpty={showEmpty}
+          onOpenTask={onOpenTask}
+        />
+      )}
+
       {/* Panel: group-by toggle */}
-      {!isCalendar && (
+      {viewMode === 'panel' && (
         <div className="mb-4">
           <div className="inline-flex rounded-[8px] border overflow-hidden" style={{ borderColor: 'var(--line)' }}>
             <button
@@ -282,7 +298,7 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
       )}
 
       {/* Body */}
-      {!isCalendar && groupBy === 'person' && (
+      {viewMode === 'panel' && groupBy === 'person' && (
         <div className="flex flex-col gap-3">
           {visiblePersons.map(row => (
             <EntityCard
@@ -306,7 +322,7 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
         </div>
       )}
 
-      {!isCalendar && groupBy === 'project' && (
+      {viewMode === 'panel' && groupBy === 'project' && (
         <div className="flex flex-col gap-6">
           {visibleClientSections.map(sec => (
             <section key={sec.client}>
