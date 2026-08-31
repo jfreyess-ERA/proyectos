@@ -102,6 +102,20 @@ export async function setClientStatus(name: string, status: Client['status']): P
   if (error) throw error;
 }
 
+/**
+ * Borra un cliente COMPLETO: sus proyectos y, en cascada por FK, todas sus
+ * tareas, subtareas, comentarios, adjuntos, actividad y sprints. Irreversible
+ * — no hay deshacer para algo de este tamaño, por eso la confirmación vive en
+ * la UI (escribir el nombre), no acá. Sólo se llama desde ClientsView, que ya
+ * está gateada a administradores.
+ */
+export async function deleteClientCascade(name: string): Promise<void> {
+  const { error: projErr } = await supabase.from('projects').delete().eq('client', name);
+  if (projErr) throw projErr;
+  const { error: clientErr } = await supabase.from('clients').delete().eq('name', name);
+  if (clientErr) throw clientErr;
+}
+
 export async function fetchUsers(): Promise<User[]> {
   const { data, error } = await supabase
     .from('users')
