@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { STATUSES, PRIORITIES, PEOPLE, avatarBg } from '@/lib/data';
+import { STATUSES, PRIORITIES, PEOPLE, avatarBg, shortName } from '@/lib/data';
 import { useUsers } from '@/lib/users-context';
 import type { Task, Project, User } from '@/lib/types';
 
@@ -841,7 +841,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-[4px]">
                           <span className="text-[12px] font-medium truncate" style={{ color: 'var(--ink)' }}>
-                            {u.name.split(' ')[0]}
+                            {shortName(u, allPeople)}
                           </span>
                           <span
                             className="text-[11px] font-semibold tabular-nums px-2 py-[1px] rounded-full ml-2 flex-shrink-0"
@@ -901,7 +901,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                           className="text-[12.5px] font-medium truncate"
                           style={{ color: 'var(--ink)' }}
                         >
-                          {u.name.split(' ')[0]}
+                          {shortName(u, allPeople)}
                         </span>
                         <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
                           {u.role}

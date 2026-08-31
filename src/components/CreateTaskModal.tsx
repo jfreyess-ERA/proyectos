@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { X, Check, Plus, Trash2, ListChecks } from 'lucide-react';
-import { STATUSES, PRIORITIES } from '@/lib/data';
+import { STATUSES, PRIORITIES, shortName } from '@/lib/data';
 import { insertTask, insertSubtasksBatch, type NewSubtaskInput } from '@/lib/db';
 import { Avatar } from './Avatar';
 import { ProjectPicker } from './ProjectPicker';
@@ -287,6 +287,7 @@ export function CreateTaskModal({
                     <button
                       key={u.id}
                       type="button"
+                      title={u.name}
                       onClick={() => toggleAssignee(u.id)}
                       className="flex items-center gap-[6px] h-8 px-[10px] rounded-full text-[12px] border transition-colors"
                       style={{
@@ -296,7 +297,7 @@ export function CreateTaskModal({
                       }}
                     >
                       <Avatar userId={u.id} size="sm" />
-                      {u.name.split(' ')[0]}
+                      {shortName(u, users)}
                       {selected && <Check size={11} />}
                     </button>
                   );
@@ -376,7 +377,7 @@ export function CreateTaskModal({
                       >
                         <option value="">Sin asignar</option>
                         {users.map(u => (
-                          <option key={u.id} value={u.id}>{u.name.split(' ')[0]}</option>
+                          <option key={u.id} value={u.id}>{shortName(u, users)}</option>
                         ))}
                       </select>
                       <button

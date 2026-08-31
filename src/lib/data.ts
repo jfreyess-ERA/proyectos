@@ -89,6 +89,31 @@ export function avatarBg(hue: number) {
   return `oklch(0.55 0.14 ${hue})`;
 }
 
+/**
+ * Nombre corto para mostrar junto a un avatar chico (chips, dropdowns). El
+ * primer nombre solo, salvo que otra persona del equipo lo comparta — ahí se
+ * agrega la inicial de la siguiente palabra ("José S." vs "José T.") para no
+ * dejar dos personas distintas mostrando el mismo texto.
+ */
+export function shortName(user: User, allUsers: User[]): string {
+  const parts = user.name.trim().split(/\s+/);
+  const first = parts[0];
+  const collides = allUsers.some(u => u.id !== user.id && u.name.trim().split(/\s+/)[0] === first);
+  if (!collides) return first;
+
+  const second = parts[1];
+  if (second) {
+    const withInitial = `${first} ${second[0]}.`;
+    const stillCollides = allUsers.some(u => {
+      if (u.id === user.id) return false;
+      const uParts = u.name.trim().split(/\s+/);
+      return uParts[0] === first && uParts[1]?.[0] === second[0];
+    });
+    if (!stillCollides) return withInitial;
+  }
+  return user.name;
+}
+
 export function fmtDate(dateStr: string, opts?: { relative?: boolean }): string {
   if (!dateStr) return '';
   const date = new Date(dateStr + 'T00:00:00');

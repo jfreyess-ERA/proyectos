@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Paperclip, Archive, MoreHorizontal, Plus, Send, Trash2, FileText, Image as ImageIcon, Upload, Check } from 'lucide-react';
+import { X, Paperclip, Archive, Plus, Send, Trash2, FileText, Image as ImageIcon, Upload, Check } from 'lucide-react';
 import {
   fmtDate, PEOPLE, STATUSES, PRIORITIES,
 } from '@/lib/data';
@@ -49,9 +49,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
   const [newSubtask, setNewSubtask] = useState('');
   const [addingSubtask, setAddingSubtask] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
-  const [showMenu, setShowMenu]     = useState(false);
   const labelPickerRef = useRef<HTMLDivElement>(null);
-  const menuRef         = useRef<HTMLDivElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
 
   // ── Timer ──────────────────────────────────────────────────────────
@@ -65,7 +63,6 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
     setEditingTitle(false);
     setEditingDesc(false);
     setShowLabelPicker(false);
-    setShowMenu(false);
     fetchComments(task.id).then(setComments).catch(() => {});
     fetchActivity(task.id).then(setActivity).catch(() => {});
     fetchAttachments(task.id).then(setAttachments).catch(() => {});
@@ -77,9 +74,6 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
     function handler(e: MouseEvent) {
       if (labelPickerRef.current && !labelPickerRef.current.contains(e.target as Node)) {
         setShowLabelPicker(false);
-      }
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false);
       }
     }
     document.addEventListener('mousedown', handler);
@@ -321,29 +315,10 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
             {saving && <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Guardando…</span>}
           </div>
           <div className="flex items-center gap-1">
-            <IconBtn onClick={() => fileInputRef.current?.click()}><Paperclip size={15} /></IconBtn>
-            <IconBtn><Archive size={15} /></IconBtn>
-            <div className="relative" ref={menuRef}>
-              <IconBtn onClick={() => setShowMenu(o => !o)}><MoreHorizontal size={15} /></IconBtn>
-              {showMenu && (
-                <div
-                  className="absolute right-0 top-[calc(100%+4px)] z-10 rounded-[10px] overflow-hidden flex flex-col py-1"
-                  style={{ width: 180, background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-pop)' }}
-                >
-                  <button
-                    onClick={() => { setShowMenu(false); handleDelete(); }}
-                    className="flex items-center gap-2 px-3 py-[7px] text-left text-[12.5px] border-0 bg-transparent transition-colors"
-                    style={{ color: 'var(--danger)' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--danger-bg)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <Trash2 size={13} />
-                    Eliminar tarea
-                  </button>
-                </div>
-              )}
-            </div>
-            <IconBtn onClick={onClose}><X size={15} /></IconBtn>
+            <IconBtn onClick={() => fileInputRef.current?.click()} title="Adjuntar archivo"><Paperclip size={15} /></IconBtn>
+            <IconBtn title="Archivar (próximamente)"><Archive size={15} /></IconBtn>
+            <IconBtn onClick={handleDelete} title="Eliminar tarea" danger><Trash2 size={15} /></IconBtn>
+            <IconBtn onClick={onClose} title="Cerrar"><X size={15} /></IconBtn>
           </div>
         </div>
 
@@ -880,9 +855,17 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
   );
 }
 
-function IconBtn({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
+function IconBtn({ children, onClick, title, danger }: { children: React.ReactNode; onClick?: () => void; title?: string; danger?: boolean }) {
   return (
-    <button onClick={onClick} className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors" style={{ color: 'var(--ink-2)' }}>
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors"
+      style={{ color: danger ? 'var(--ink-4)' : 'var(--ink-2)' }}
+      onMouseEnter={e => { if (danger) { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; } }}
+      onMouseLeave={e => { if (danger) { e.currentTarget.style.color = 'var(--ink-4)'; e.currentTarget.style.background = 'transparent'; } }}
+    >
       {children}
     </button>
   );
