@@ -89,11 +89,12 @@ export function useNorteData(): NorteData {
   // Las subtareas con fecha se derivan de todas — evita una segunda query.
   const datedSubtasks = subtasks.filter(s => s.due_date) as DatedSubtask[];
 
-  // Proyectos que se pueden elegir al crear trabajo nuevo: los de clientes
-  // abiertos. Un proyecto sin cliente, o con un cliente que todavía no está en
-  // la tabla, se considera abierto (no escondemos nada por omisión).
-  const closedClients = new Set(clients.filter(c => !c.active).map(c => c.name));
-  const openProjects = projects.filter(p => !p.client || !closedClients.has(p.client));
+  // Proyectos que se pueden elegir al crear trabajo nuevo: 'active' y 'paused'
+  // siguen disponibles (Detenido es una pausa, no un cierre); 'completed' y
+  // 'cancelled' se ocultan. Un proyecto sin cliente, o con un cliente que
+  // todavía no está en la tabla, se considera activo (no escondemos nada por omisión).
+  const hiddenClients = new Set(clients.filter(c => c.status === 'completed' || c.status === 'cancelled').map(c => c.name));
+  const openProjects = projects.filter(p => !p.client || !hiddenClients.has(p.client));
 
   return { tasks, projects, clients, openProjects, users, labels, sprints, subtasks, datedSubtasks, loading, error, refetch: () => setTick(t => t + 1) };
 }

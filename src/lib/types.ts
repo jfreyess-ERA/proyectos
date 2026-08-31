@@ -21,9 +21,16 @@ export interface User {
  * dejan de ofrecerse al crear tareas, pero el histórico queda intacto.
  * La relación con projects es por nombre (projects.client = clients.name).
  */
+/**
+ * 'active' recibe trabajo nuevo. 'paused' también — es una pausa, no un cierre,
+ * así que sigue disponible al crear tareas. 'completed' y 'cancelled' sí ocultan
+ * al cliente del selector: la relación terminó, de una forma o de otra.
+ */
+export type ClientStatus = 'active' | 'completed' | 'cancelled' | 'paused';
+
 export interface Client {
   name: string;
-  active: boolean;
+  status: ClientStatus;
   closed_at?: string | null;
   created_at?: string;
 }

@@ -91,14 +91,14 @@ export async function fetchClients(): Promise<Client[]> {
 }
 
 /**
- * Abre o cierra un cliente. Usa upsert porque un proyecto puede tener un cliente
- * escrito a mano que todavía no exista como fila (la migración sólo sembró los
- * que había al momento de correrla).
+ * Cambia el estado de un cliente. Usa upsert porque un proyecto puede tener un
+ * cliente escrito a mano que todavía no exista como fila (la migración sólo
+ * sembró los que había al momento de correrla).
  */
-export async function setClientActive(name: string, active: boolean): Promise<void> {
+export async function setClientStatus(name: string, status: Client['status']): Promise<void> {
   const { error } = await supabase
     .from('clients')
-    .upsert({ name, active, closed_at: active ? null : new Date().toISOString() }, { onConflict: 'name' });
+    .upsert({ name, status, closed_at: status === 'active' ? null : new Date().toISOString() }, { onConflict: 'name' });
   if (error) throw error;
 }
 

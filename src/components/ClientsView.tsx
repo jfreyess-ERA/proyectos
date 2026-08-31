@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
-import { Search, Building2, Check } from 'lucide-react';
-import { setClientActive } from '@/lib/db';
+import { Search, Building2, ChevronDown } from 'lucide-react';
+import { setClientStatus } from '@/lib/db';
 import { EmptyState } from './EmptyState';
-import type { Client, Project, Task } from '@/lib/types';
+import type { Client, ClientStatus, Project, Task } from '@/lib/types';
 
 interface Props {
   clients: Client[];
@@ -13,21 +13,31 @@ interface Props {
   onOpenProject: (projectId: string) => void;
 }
 
-type Filter = 'todos' | 'abiertos' | 'cerrados';
+type Filter = 'todos' | ClientStatus;
+
+/** Sólo 'active' y 'paused' pueden recibir trabajo nuevo — ver openProjects en useNorteData. */
+const STATUS_META: Record<ClientStatus, { label: string; fg: string; bg: string; border: string; hidesFromNewWork: boolean }> = {
+  active:    { label: 'Activo',             fg: 'var(--accent)',        bg: 'var(--accent-bg)',       border: 'var(--accent)',        hidesFromNewWork: false },
+  paused:    { label: 'Detenido',           fg: 'oklch(0.55 0.15 70)',  bg: 'oklch(0.96 0.05 70)',     border: 'oklch(0.75 0.1 70)',   hidesFromNewWork: false },
+  completed: { label: 'Contrato terminado', fg: 'var(--ink-3)',         bg: 'var(--bg-3)',             border: 'var(--line)',          hidesFromNewWork: true },
+  cancelled: { label: 'Cancelado',          fg: 'oklch(0.55 0.18 25)',  bg: 'oklch(0.96 0.04 25)',     border: 'oklch(0.78 0.1 25)',   hidesFromNewWork: true },
+};
+const STATUS_ORDER: ClientStatus[] = ['active', 'paused', 'completed', 'cancelled'];
 
 /**
- * ¿Qué clientes están activos y cuáles cerramos?
+ * ¿Qué clientes están activos y cuáles no, y por qué?
  *
- * Cerrar un cliente no borra nada: sus proyectos dejan de aparecer al crear
- * tareas nuevas, pero el trabajo histórico sigue visible en reportes y
- * estadísticas. Es la palanca para que el selector de proyecto no siga
- * creciendo con clientes que ya no están activos.
+ * "Activo" y "Detenido" siguen disponibles al crear tareas nuevas — Detenido
+ * es una pausa, no un cierre. "Contrato terminado" y "Cancelado" sí ocultan
+ * al cliente del selector. Ningún estado borra nada: el trabajo histórico
+ * sigue visible en reportes y estadísticas pase lo que pase acá.
  */
 export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject }: Props) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('todos');
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   // Los nombres de cliente viven en projects.client; la tabla clients sólo les
   // agrega estado. Unimos ambos para no perder un cliente escrito a mano que
@@ -39,13 +49,13 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
 
   const rows = names.map(name => {
     const record = clients.find(c => c.name === name);
-    const active = record?.active ?? true;
+    const status: ClientStatus = record?.status ?? 'active';
     const projs = projects.filter(p => p.client === name);
     const projIds = new Set(projs.map(p => p.id));
     const clientTasks = tasks.filter(t => projIds.has(t.project));
     return {
       name,
-      active,
+      status,
       projects: projs,
       activeTasks: clientTasks.filter(t => t.status !== 'done').length,
       totalTasks: clientTasks.length,
@@ -53,22 +63,22 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
   });
 
   const visible = rows.filter(r => {
-    if (filter === 'abiertos' && !r.active) return false;
-    if (filter === 'cerrados' && r.active) return false;
+    if (filter !== 'todos' && r.status !== filter) return false;
     if (search && !r.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const openCount = rows.filter(r => r.active).length;
+  const activeCount = rows.filter(r => r.status === 'active').length;
 
-  async function toggle(name: string, nextActive: boolean) {
+  async function changeStatus(name: string, status: ClientStatus) {
+    setOpenMenu(null);
     setSaving(name);
     setError(null);
     try {
-      await setClientActive(name, nextActive);
+      await setClientStatus(name, status);
       onChanged();
     } catch (err) {
-      setError(`No se pudo ${nextActive ? 'reabrir' : 'cerrar'} "${name}": ${(err as Error).message}`);
+      setError(`No se pudo actualizar "${name}": ${(err as Error).message}`);
     } finally {
       setSaving(null);
     }
@@ -79,8 +89,9 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
       <div className="mb-6">
         <h1 className="text-[24px] font-bold tracking-tight" style={{ color: 'var(--ink)' }}>Clientes</h1>
         <p className="text-[14px] mt-1" style={{ color: 'var(--ink-3)' }}>
-          {openCount} abierto{openCount !== 1 ? 's' : ''} de {rows.length} ·{' '}
-          los cerrados dejan de aparecer al crear tareas, pero conservan su historial.
+          {activeCount} activo{activeCount !== 1 ? 's' : ''} de {rows.length} ·{' '}
+          terminado, cancelado y detenido dejan de aparecer al crear tareas — salvo Detenido,
+          que sigue disponible por si hay que cargar algo puntual mientras está en pausa.
         </p>
       </div>
 
@@ -95,19 +106,30 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
             style={{ width: 240, border: '1px solid var(--line)', background: 'var(--bg-2)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
           />
         </div>
-        <div className="flex gap-[3px]">
-          {(['todos', 'abiertos', 'cerrados'] as Filter[]).map(f => (
+        <div className="flex gap-[3px] flex-wrap">
+          <button
+            onClick={() => setFilter('todos')}
+            className="h-8 px-3 rounded-[7px] text-[12.5px] border-0 transition-colors"
+            style={{
+              background: filter === 'todos' ? 'var(--accent)' : 'var(--bg-3)',
+              color: filter === 'todos' ? 'var(--on-accent)' : 'var(--ink-2)',
+              fontWeight: filter === 'todos' ? 600 : 400,
+            }}
+          >
+            Todos
+          </button>
+          {STATUS_ORDER.map(s => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="h-8 px-3 rounded-[7px] text-[12.5px] border-0 transition-colors capitalize"
+              key={s}
+              onClick={() => setFilter(s)}
+              className="h-8 px-3 rounded-[7px] text-[12.5px] border-0 transition-colors"
               style={{
-                background: filter === f ? 'var(--accent)' : 'var(--bg-3)',
-                color: filter === f ? 'var(--on-accent)' : 'var(--ink-2)',
-                fontWeight: filter === f ? 600 : 400,
+                background: filter === s ? 'var(--accent)' : 'var(--bg-3)',
+                color: filter === s ? 'var(--on-accent)' : 'var(--ink-2)',
+                fontWeight: filter === s ? 600 : 400,
               }}
             >
-              {f}
+              {STATUS_META[s].label}
             </button>
           ))}
         </div>
@@ -134,17 +156,11 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
             <div
               key={r.name}
               className="flex items-center gap-4 px-4 py-3"
-              style={{ borderTop: i > 0 ? '1px solid var(--line)' : 'none', opacity: r.active ? 1 : 0.62 }}
+              style={{ borderTop: i > 0 ? '1px solid var(--line)' : 'none', opacity: r.status === 'active' ? 1 : 0.75 }}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-[13.5px] font-semibold truncate" style={{ color: 'var(--ink)' }}>{r.name}</span>
-                  {!r.active && (
-                    <span className="text-[10.5px] font-medium px-[7px] py-[2px] rounded-full flex-shrink-0"
-                      style={{ background: 'var(--bg-3)', color: 'var(--ink-3)' }}>
-                      Cerrado
-                    </span>
-                  )}
                 </div>
                 <div className="text-[12px] mt-[2px] flex items-center gap-2 flex-wrap" style={{ color: 'var(--ink-4)' }}>
                   <span>{r.projects.length} proyecto{r.projects.length !== 1 ? 's' : ''}</span>
@@ -179,23 +195,50 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
                 )}
               </div>
 
-              {/* Abierto / cerrado. Botón con texto además del color: el estado no
-                  puede depender sólo del color. */}
-              <button
-                onClick={() => toggle(r.name, !r.active)}
-                disabled={saving === r.name}
-                className="h-8 px-3 rounded-[7px] text-[12.5px] font-medium flex items-center gap-[6px] flex-shrink-0 transition-colors"
-                style={{
-                  border: `1px solid ${r.active ? 'var(--accent)' : 'var(--line)'}`,
-                  background: r.active ? 'var(--accent-bg)' : 'var(--surface-2)',
-                  color: r.active ? 'var(--accent)' : 'var(--ink-3)',
-                  opacity: saving === r.name ? 0.5 : 1,
-                }}
-                title={r.active ? 'Cerrar cliente' : 'Reabrir cliente'}
-              >
-                {r.active && <Check size={12} />}
-                {saving === r.name ? 'Guardando…' : r.active ? 'Abierto' : 'Cerrado'}
-              </button>
+              {/* Selector de estado. Texto siempre visible además del color —
+                  el estado nunca depende sólo del color. */}
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={() => setOpenMenu(m => m === r.name ? null : r.name)}
+                  disabled={saving === r.name}
+                  className="h-8 px-3 rounded-[7px] text-[12.5px] font-medium flex items-center gap-[6px] transition-colors"
+                  style={{
+                    border: `1px solid ${STATUS_META[r.status].border}`,
+                    background: STATUS_META[r.status].bg,
+                    color: STATUS_META[r.status].fg,
+                    opacity: saving === r.name ? 0.5 : 1,
+                  }}
+                >
+                  {saving === r.name ? 'Guardando…' : STATUS_META[r.status].label}
+                  <ChevronDown size={12} />
+                </button>
+
+                {openMenu === r.name && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
+                    <div
+                      className="absolute right-0 top-[calc(100%+4px)] z-20 rounded-[8px] overflow-hidden"
+                      style={{ background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-pop)', minWidth: 170 }}
+                    >
+                      {STATUS_ORDER.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => changeStatus(r.name, s)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-[12.5px] text-left border-0"
+                          style={{
+                            background: s === r.status ? 'var(--bg-2)' : 'transparent',
+                            color: s === r.status ? 'var(--ink)' : 'var(--ink-2)',
+                            fontWeight: s === r.status ? 600 : 400,
+                          }}
+                        >
+                          <span className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: STATUS_META[s].fg }} />
+                          {STATUS_META[s].label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
