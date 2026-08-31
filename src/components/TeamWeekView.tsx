@@ -14,6 +14,8 @@ interface Props {
   datedSubtasks: DatedSubtask[];
   onOpenTask: (task: Task) => void;
   onOpenProject: (projectId: string) => void;
+  onOpenSubtask?: (subtask: DatedSubtask, task: Task) => void;
+  onToggleSubtask?: (subtask: DatedSubtask, task: Task, done: boolean) => void;
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -89,7 +91,7 @@ function computeBuckets(taskList: Task[], weekStartISO: string, weekEndISO: stri
 type GroupBy = 'person' | 'project';
 type ViewMode = 'grid' | 'panel' | 'calendar-week' | 'calendar-month';
 
-export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask, onOpenProject }: Props) {
+export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask, onOpenProject, onOpenSubtask, onToggleSubtask }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [showEmpty, setShowEmpty] = useState(false);
@@ -259,6 +261,8 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
             viewMode={viewMode === 'calendar-week' ? 'week' : 'month'}
             showAssignees
             subtaskEvents={filteredSubtaskEvents}
+            onOpenSubtask={onOpenSubtask}
+            onToggleSubtask={onToggleSubtask}
           />
         </div>
       )}
@@ -273,6 +277,8 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
           projects={projects}
           showEmpty={showEmpty}
           onOpenTask={onOpenTask}
+          onOpenSubtask={onOpenSubtask}
+          onToggleSubtask={onToggleSubtask}
         />
       )}
 

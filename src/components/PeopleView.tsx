@@ -12,11 +12,13 @@ interface Props {
   datedSubtasks: DatedSubtask[];
   onOpenTask: (task: Task) => void;
   onOpenProject: (projectId: string) => void;
+  onOpenSubtask?: (subtask: DatedSubtask, task: Task) => void;
+  onToggleSubtask?: (subtask: DatedSubtask, task: Task, done: boolean) => void;
 }
 
 type ViewMode = 'cards' | 'calendar-week' | 'calendar-month';
 
-export function PeopleView({ tasks, projects, users, datedSubtasks, onOpenTask, onOpenProject }: Props) {
+export function PeopleView({ tasks, projects, users, datedSubtasks, onOpenTask, onOpenProject, onOpenSubtask, onToggleSubtask }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [personFilter, setPersonFilter] = useState<string>('all');
   const [filters, setFilters] = useState<TaskFilterState>(EMPTY_FILTERS);
@@ -115,6 +117,8 @@ export function PeopleView({ tasks, projects, users, datedSubtasks, onOpenTask, 
             viewMode={viewMode === 'calendar-week' ? 'week' : 'month'}
             showAssignees={personFilter === 'all'}
             subtaskEvents={calendarSubtaskEvents}
+            onOpenSubtask={onOpenSubtask}
+            onToggleSubtask={onToggleSubtask}
           />
         </div>
       )}

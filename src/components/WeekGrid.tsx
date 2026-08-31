@@ -17,6 +17,8 @@ interface Props {
   projects: Project[];
   showEmpty: boolean;
   onOpenTask: (task: Task) => void;
+  onOpenSubtask?: (subtask: DatedSubtask, task: Task) => void;
+  onToggleSubtask?: (subtask: DatedSubtask, task: Task, done: boolean) => void;
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -49,6 +51,8 @@ interface GridItem {
   projectColor?: string;
   /** A quién se le puede asignar esta fila: varios en una tarea, uno en una subtarea. */
   assignees: string[];
+  /** Presente sólo si isSubtask — habilita tildarla y abrir su panel. */
+  subtask?: DatedSubtask;
 }
 
 /**
@@ -57,7 +61,7 @@ interface GridItem {
  * uno esta semana, y quién está libre tal día?" — la pregunta que una lista de
  * tareas por persona no contesta directamente.
  */
-export function WeekGrid({ weekStart, users, tasks, subtaskEvents, projects, showEmpty, onOpenTask }: Props) {
+export function WeekGrid({ weekStart, users, tasks, subtaskEvents, projects, showEmpty, onOpenTask, onOpenSubtask, onToggleSubtask }: Props) {
   const projectById = new Map(projects.map(p => [p.id, p]));
   const weekdays = WEEKDAY_LABELS.map((label, i) => ({ label, date: addDays(weekStart, i) }));
   const weekendStart = addDays(weekStart, 5);
@@ -77,7 +81,7 @@ export function WeekGrid({ weekStart, users, tasks, subtaskEvents, projects, sho
     // Una subtarea suelta bajo una tarea ya completada no es trabajo pendiente
     // real — se ve así por datos viejos (la tarea se cerró sin tildar todo).
     if (subtask.done || task.status === 'done') continue;
-    items.push({ key: 'sub:' + subtask.id, title: subtask.title, due: subtask.due_date, priority: task.priority, isSubtask: true, parentTask: task, projectColor: projectById.get(task.project)?.color, assignees: subtask.assignee ? [subtask.assignee] : [] });
+    items.push({ key: 'sub:' + subtask.id, title: subtask.title, due: subtask.due_date, priority: task.priority, isSubtask: true, parentTask: task, projectColor: projectById.get(task.project)?.color, assignees: subtask.assignee ? [subtask.assignee] : [], subtask });
   }
 
   const rows = users.map(u => {
@@ -187,16 +191,16 @@ export function WeekGrid({ weekStart, users, tasks, subtaskEvents, projects, sho
                 <LoadBadge hours={row.hours} capacity={row.capacity} />
               </th>
 
-              <Cell items={row.overdue} tint="oklch(0.985 0.008 25)" borderTop={i > 0} onOpenTask={onOpenTask} overdue />
+              <Cell items={row.overdue} tint="oklch(0.985 0.008 25)" borderTop={i > 0} onOpenTask={onOpenTask} onOpenSubtask={onOpenSubtask} onToggleSubtask={onToggleSubtask} overdue />
 
               {row.byDay.map((dayItems, di) => {
                 const iso = isoDate(weekdays[di].date);
                 return (
-                  <Cell key={iso} items={dayItems} tint={iso === todayISO ? 'var(--accent-bg)' : undefined} borderTop={i > 0} onOpenTask={onOpenTask} />
+                  <Cell key={iso} items={dayItems} tint={iso === todayISO ? 'var(--accent-bg)' : undefined} borderTop={i > 0} onOpenTask={onOpenTask} onOpenSubtask={onOpenSubtask} onToggleSubtask={onToggleSubtask} />
                 );
               })}
 
-              <Cell items={row.weekend} borderTop={i > 0} onOpenTask={onOpenTask} showDayTag />
+              <Cell items={row.weekend} borderTop={i > 0} onOpenTask={onOpenTask} onOpenSubtask={onOpenSubtask} onToggleSubtask={onToggleSubtask} showDayTag />
             </tr>
           ))}
         </tbody>
@@ -267,45 +271,69 @@ function LoadBadge({ hours, capacity }: { hours: number; capacity: number }) {
 
 const DOW_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-function Cell({ items, tint, borderTop, onOpenTask, overdue, showDayTag }: {
+function Cell({ items, tint, borderTop, onOpenTask, onOpenSubtask, onToggleSubtask, overdue, showDayTag }: {
   items: GridItem[];
   tint?: string;
   borderTop: boolean;
   onOpenTask: (t: Task) => void;
+  onOpenSubtask?: (subtask: DatedSubtask, task: Task) => void;
+  onToggleSubtask?: (subtask: DatedSubtask, task: Task, done: boolean) => void;
   overdue?: boolean;
   showDayTag?: boolean;
 }) {
+  const bg = overdue ? 'oklch(0.95 0.03 25)' : 'var(--bg-3)';
+  const fg = overdue ? 'oklch(0.42 0.16 25)' : 'var(--ink-2)';
   return (
     <td
       className="align-top px-[6px] py-[6px]"
       style={{ borderTop: borderTop ? '1px solid var(--line)' : 'none', background: tint ?? 'transparent', minHeight: 44 }}
     >
       <div className="flex flex-col gap-[4px]">
-        {items.map(it => (
-          <button
-            key={it.key}
-            onClick={() => onOpenTask(it.parentTask)}
-            title={it.isSubtask ? `${it.title} (subtarea de "${it.parentTask.title}")` : it.title}
-            className="w-full flex items-center gap-[5px] h-6 px-[6px] rounded-[5px] text-[11px] border-0 text-left"
-            style={{
-              background: overdue ? 'oklch(0.95 0.03 25)' : 'var(--bg-3)',
-              color: overdue ? 'oklch(0.42 0.16 25)' : 'var(--ink-2)',
-            }}
-          >
-            <span
-              className="rounded-[2px] flex-shrink-0"
-              style={{ width: 6, height: 6, background: it.projectColor ?? 'var(--ink-4)' }}
-            />
-            {it.isSubtask && <CornerDownRight size={10} className="flex-shrink-0" style={{ color: 'var(--ink-4)' }} />}
-            {it.priority === 'urgent' && <Flag size={10} className="flex-shrink-0" style={{ color: PRIORITY_COLORS.urgent }} />}
-            <span className="truncate flex-1">{it.title}</span>
-            {showDayTag && (
-              <span className="flex-shrink-0 text-[9.5px]" style={{ color: 'var(--ink-4)' }}>
-                {DOW_SHORT[new Date(it.due + 'T12:00:00').getDay()]}
-              </span>
-            )}
-          </button>
-        ))}
+        {items.map(it => {
+          const sub = it.subtask;
+          return (
+            <div
+              key={it.key}
+              className="w-full flex items-center gap-[5px] h-6 px-[6px] rounded-[5px] text-[11px]"
+              style={{ background: bg, color: fg }}
+            >
+              {/* La casilla reemplaza al punto de proyecto en las subtareas: es
+                  la señal de que se puede tildar sin abrir nada. */}
+              {sub && onToggleSubtask ? (
+                <button
+                  onClick={() => onToggleSubtask(sub, it.parentTask, !sub.done)}
+                  className="flex items-center justify-center flex-shrink-0 rounded-[3px] border"
+                  style={{ width: 11, height: 11, padding: 0, borderColor: 'var(--ink-4)', background: 'transparent' }}
+                  title="Marcar como hecha"
+                  aria-label={`Marcar como hecha: ${it.title}`}
+                />
+              ) : (
+                <span
+                  className="rounded-[2px] flex-shrink-0"
+                  style={{ width: 6, height: 6, background: it.projectColor ?? 'var(--ink-4)' }}
+                />
+              )}
+              {it.isSubtask && <CornerDownRight size={10} className="flex-shrink-0" style={{ color: 'var(--ink-4)' }} />}
+              {it.priority === 'urgent' && <Flag size={10} className="flex-shrink-0" style={{ color: PRIORITY_COLORS.urgent }} />}
+              <button
+                onClick={() => {
+                  if (sub && onOpenSubtask) onOpenSubtask(sub, it.parentTask);
+                  else onOpenTask(it.parentTask);
+                }}
+                title={it.isSubtask ? `${it.title} (subtarea de "${it.parentTask.title}")` : it.title}
+                className="truncate flex-1 min-w-0 text-left border-0 bg-transparent p-0 text-[11px]"
+                style={{ color: 'inherit' }}
+              >
+                {it.title}
+              </button>
+              {showDayTag && (
+                <span className="flex-shrink-0 text-[9.5px]" style={{ color: 'var(--ink-4)' }}>
+                  {DOW_SHORT[new Date(it.due + 'T12:00:00').getDay()]}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </td>
   );

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, X, Clock, CornerDownRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Clock, Check } from 'lucide-react';
 import { useProjects } from '@/lib/projects-context';
 import { useUsers } from '@/lib/users-context';
 import { avatarBg } from '@/lib/data';
@@ -19,6 +19,26 @@ interface Props {
   showAssignees?: boolean;
   /** Subtasks with a due_date, paired with their parent task — rendered alongside tasks. */
   subtaskEvents?: SubtaskEvent[];
+  /** Abre el panel de la subtarea. Sin esto, una subtarea abre su tarea padre. */
+  onOpenSubtask?: (subtask: DatedSubtask, task: Task) => void;
+  /** Marca hecha/pendiente sin abrir nada. Sin esto, no se muestra la casilla. */
+  onToggleSubtask?: (subtask: DatedSubtask, task: Task, done: boolean) => void;
+}
+
+/**
+ * Tareas y subtareas comparten la grilla en pie de igualdad: se mezclan en una
+ * sola lista por día y compiten por el mismo cupo. (Antes las subtareas sólo
+ * usaban el espacio sobrante, así que en un día con muchas tareas no se veían.)
+ */
+type DayItem =
+  | { kind: 'task'; key: string; title: string; priority: Task['priority']; task: Task }
+  | { kind: 'subtask'; key: string; title: string; priority: Task['priority']; task: Task; subtask: DatedSubtask };
+
+const PRIORITY_RANK: Record<string, number> = { urgent: 0, high: 1, med: 2, low: 3 };
+
+function byPriorityThenTitle(a: DayItem, b: DayItem): number {
+  const p = (PRIORITY_RANK[a.priority] ?? 9) - (PRIORITY_RANK[b.priority] ?? 9);
+  return p !== 0 ? p : a.title.localeCompare(b.title);
 }
 
 function todayISOStr(): string {
@@ -47,7 +67,7 @@ function startOfWeekMon(d: Date): Date {
   return date;
 }
 
-export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssignees = false, subtaskEvents = [] }: Props) {
+export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssignees = false, subtaskEvents = [], onOpenSubtask, onToggleSubtask }: Props) {
   const projects = useProjects();
   const users = useUsers();
   const todayBase = new Date(); todayBase.setHours(0, 0, 0, 0);
@@ -86,8 +106,16 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
     headerLabel = normalisedCursor.toLocaleDateString('es', { month: 'long', year: 'numeric' });
   }
 
-  const tasksOn = (d: Date) => tasks.filter(t => t.due === isoDate(d));
-  const subtasksOn = (d: Date) => subtaskEvents.filter(e => e.subtask.due_date === isoDate(d));
+  const itemsOn = (d: Date): DayItem[] => {
+    const iso = isoDate(d);
+    const out: DayItem[] = [
+      ...tasks.filter(t => t.due === iso)
+        .map((t): DayItem => ({ kind: 'task', key: 't:' + t.id, title: t.title, priority: t.priority, task: t })),
+      ...subtaskEvents.filter(e => e.subtask.due_date === iso)
+        .map(({ subtask, task }): DayItem => ({ kind: 'subtask', key: 's:' + subtask.id, title: subtask.title, priority: task.priority, task, subtask })),
+    ];
+    return out.sort(byPriorityThenTitle);
+  };
   const todayISO2 = todayISOStr();
 
   const prev = () => {
@@ -112,8 +140,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
   };
 
   const tasksWithDate = tasks.filter(t => t.due).length;
-  const selectedTasks = selectedISO ? tasks.filter(t => t.due === selectedISO) : [];
-  const selectedSubtasks = selectedISO ? subtaskEvents.filter(e => e.subtask.due_date === selectedISO) : [];
+  const selectedItems = selectedISO ? itemsOn(new Date(selectedISO + 'T12:00:00')) : [];
   const selectedLabel = selectedISO
     ? new Date(selectedISO + 'T00:00:00').toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })
     : '';
@@ -182,9 +209,8 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
         {cells.map((d, i) => {
           const inMonth = viewMode === 'week' ? true : d.getMonth() === normalisedCursor.getMonth();
           const isToday = d.getTime() === todayBase.getTime();
-          const dayTasks = tasksOn(d);
-          const daySubtasks = subtasksOn(d);
-          const dayCount = dayTasks.length + daySubtasks.length;
+          const dayItems = itemsOn(d);
+          const dayCount = dayItems.length;
           const cap = viewMode === 'week' ? 12 : 3;
           const isWeekend = d.getDay() === 0 || d.getDay() === 6;
           const dayISO = isoDate(d);
@@ -227,77 +253,79 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                 )}
               </div>
 
-              {/* Events */}
-              {dayTasks.slice(0, cap).map(t => {
-                const proj = projects.find(p => p.id === t.project);
+              {/* Eventos del día: tareas y subtareas mezcladas, mismo cupo */}
+              {dayItems.slice(0, cap).map(item => {
+                const proj = projects.find(p => p.id === item.task.project);
+                const isSub = item.kind === 'subtask';
+                const sub = isSub ? item.subtask : null;
+                const isOverdue = !!sub && !sub.done && sub.due_date < todayISO2;
+                const isDone = !!sub?.done;
+                const bg = isOverdue ? 'var(--danger-bg)' : 'var(--bg-2)';
+                // Una subtarea muestra su propio responsable; una tarea, los suyos.
+                const chipUsers = isSub
+                  ? (sub!.assignee ? users.filter(u => u.id === sub!.assignee) : [])
+                  : users.filter(u => item.task.assignees.includes(u.id)).slice(0, 2);
+
                 return (
-                  <button
-                    key={t.id}
-                    onClick={e => { e.stopPropagation(); onOpenTask(t); }}
-                    className="min-w-0 flex items-center gap-[6px] text-left rounded-[4px] px-[6px] py-[3px] border-0 border-l-[3px] text-[11.5px] transition-colors w-full"
+                  <div
+                    key={item.key}
+                    className="min-w-0 flex items-center gap-[5px] rounded-[4px] px-[6px] py-[3px] text-[11.5px] transition-colors w-full"
                     style={{
-                      borderLeftColor: proj?.color ?? 'var(--ink-3)',
-                      borderLeftStyle: 'solid',
-                      borderLeftWidth: 3,
-                      background: 'var(--bg-2)',
-                      color: 'var(--ink)',
+                      borderLeft: `3px ${isSub ? 'dashed' : 'solid'} ${proj?.color ?? 'var(--ink-3)'}`,
+                      background: bg,
+                      color: isOverdue ? 'var(--danger)' : isSub ? 'var(--ink-2)' : 'var(--ink)',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-3)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-2)')}
+                    onMouseEnter={e => { if (!isOverdue) e.currentTarget.style.background = 'var(--bg-3)'; }}
+                    onMouseLeave={e => { if (!isOverdue) e.currentTarget.style.background = bg; }}
                   >
-                    <span
-                      className="w-[6px] h-[6px] rounded-full flex-shrink-0"
-                      style={{ background: PRIORITY_COLORS[t.priority] }}
-                    />
-                    <span className="flex-1 min-w-0 truncate">{t.title}</span>
-                    {showAssignees && t.assignees.length > 0 && (
+                    {isSub && onToggleSubtask ? (
+                      <button
+                        onClick={e => { e.stopPropagation(); onToggleSubtask(sub!, item.task, !sub!.done); }}
+                        className="flex items-center justify-center flex-shrink-0 rounded-[3px] border"
+                        style={{
+                          width: 11, height: 11, padding: 0,
+                          borderColor: isDone ? 'oklch(0.55 0.14 160)' : 'var(--ink-4)',
+                          background: isDone ? 'oklch(0.55 0.14 160)' : 'transparent',
+                          color: 'white',
+                        }}
+                        title={isDone ? 'Marcar como pendiente' : 'Marcar como hecha'}
+                        aria-label={`${isDone ? 'Marcar como pendiente' : 'Marcar como hecha'}: ${item.title}`}
+                      >
+                        {isDone && <Check size={8} />}
+                      </button>
+                    ) : (
+                      <span
+                        className="rounded-full flex-shrink-0"
+                        style={{ width: 6, height: 6, background: PRIORITY_COLORS[item.priority] }}
+                      />
+                    )}
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (isSub && onOpenSubtask) onOpenSubtask(sub!, item.task);
+                        else onOpenTask(item.task);
+                      }}
+                      title={isSub ? `${item.title} — subtarea de: ${item.task.title}` : item.title}
+                      className="flex-1 min-w-0 truncate text-left border-0 bg-transparent p-0 text-[11.5px]"
+                      style={{ color: 'inherit', textDecoration: isDone ? 'line-through' : 'none', opacity: isDone ? 0.6 : 1 }}
+                    >
+                      {item.title}
+                    </button>
+                    {showAssignees && chipUsers.length > 0 && (
                       <span className="inline-flex flex-shrink-0">
-                        {t.assignees.slice(0, 2).map((id, ix) => {
-                          const u = users.find(x => x.id === id);
-                          if (!u) return null;
-                          return (
-                            <span
-                              key={id}
-                              className="w-[14px] h-[14px] rounded-full inline-flex items-center justify-center font-semibold text-white flex-shrink-0 border-[1.5px]"
-                              style={{
-                                background: avatarBg(u.hue),
-                                borderColor: 'var(--bg-2)',
-                                fontSize: 7.5,
-                                marginLeft: ix > 0 ? -5 : 0,
-                              }}
-                              title={u.name}
-                            >
-                              {u.initials}
-                            </span>
-                          );
-                        })}
+                        {chipUsers.map((u, ix) => (
+                          <span
+                            key={u.id}
+                            className="w-[14px] h-[14px] rounded-full inline-flex items-center justify-center font-semibold text-white flex-shrink-0 border-[1.5px]"
+                            style={{ background: avatarBg(u.hue), borderColor: bg, fontSize: 7.5, marginLeft: ix > 0 ? -5 : 0 }}
+                            title={u.name}
+                          >
+                            {u.initials}
+                          </span>
+                        ))}
                       </span>
                     )}
-                  </button>
-                );
-              })}
-              {daySubtasks.slice(0, Math.max(0, cap - dayTasks.length)).map(({ subtask, task }) => {
-                const proj = projects.find(p => p.id === task.project);
-                const isOverdue = !subtask.done && subtask.due_date < todayISO2;
-                return (
-                  <button
-                    key={subtask.id}
-                    onClick={e => { e.stopPropagation(); onOpenTask(task); }}
-                    title={`Subtarea de: ${task.title}`}
-                    className="min-w-0 flex items-center gap-[5px] text-left rounded-[4px] px-[6px] py-[3px] border-0 border-l-[3px] border-dashed text-[11.5px] transition-colors w-full"
-                    style={{
-                      borderLeftColor: proj?.color ?? 'var(--ink-3)',
-                      borderLeftStyle: 'dashed',
-                      borderLeftWidth: 3,
-                      background: isOverdue ? 'var(--danger-bg)' : 'var(--bg-2)',
-                      color: isOverdue ? 'var(--danger)' : 'var(--ink-2)',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = isOverdue ? 'var(--danger-bg)' : 'var(--bg-3)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = isOverdue ? 'var(--danger-bg)' : 'var(--bg-2)')}
-                  >
-                    <CornerDownRight size={10} className="flex-shrink-0" />
-                    <span className="flex-1 min-w-0 truncate">{subtask.title}</span>
-                  </button>
+                  </div>
                 );
               })}
               {dayCount > cap && (
@@ -326,7 +354,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                 {selectedLabel}
               </span>
               <span className="text-[11px] px-[7px] py-px rounded-full tabular-nums" style={{ background: 'var(--bg-3)', color: 'var(--ink-4)' }}>
-                {selectedTasks.length + selectedSubtasks.length}
+                {selectedItems.length}
               </span>
             </div>
             <button
@@ -338,92 +366,85 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
             </button>
           </div>
 
-          {selectedTasks.length === 0 && selectedSubtasks.length === 0 ? (
+          {selectedItems.length === 0 ? (
             <div className="px-6 py-6 text-center text-[13px]" style={{ color: 'var(--ink-4)' }}>
               Sin tareas este día
             </div>
           ) : (
             <div className="flex flex-col px-3 pb-3">
-              {selectedTasks.map((t, i) => {
-                const proj = projects.find(p => p.id === t.project);
+              {selectedItems.map((item, i) => {
+                const proj = projects.find(p => p.id === item.task.project);
+                const isSub = item.kind === 'subtask';
+                const sub = isSub ? item.subtask : null;
+                const isOverdue = !!sub && !sub.done && sub.due_date < todayISO2;
+                const isDone = !!sub?.done;
+                const rowUsers = isSub
+                  ? (sub!.assignee ? users.filter(u => u.id === sub!.assignee) : [])
+                  : users.filter(u => item.task.assignees.includes(u.id)).slice(0, 3);
+
                 return (
-                  <button
-                    key={t.id}
-                    onClick={() => onOpenTask(t)}
-                    className="flex items-center gap-3 px-3 py-[10px] text-left text-[13px] border-0 bg-transparent transition-colors w-full"
+                  <div
+                    key={item.key}
+                    className="flex items-center gap-3 px-3 py-[10px] text-[13px] transition-colors w-full"
                     style={{
                       borderTop: i > 0 ? '1px solid var(--line-2)' : 'none',
-                      color: 'var(--ink)',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <span className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: PRIORITY_COLORS[t.priority] }} />
-                    <span className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0" style={{ background: proj?.color }} />
-                    <span className="flex-1 min-w-0 truncate font-medium">{t.title}</span>
-                    <span className="text-[11px] flex-shrink-0 truncate max-w-[160px] hidden sm:inline" style={{ color: 'var(--ink-4)' }}>
-                      {proj?.client && `${proj.client} · `}{proj?.name}
-                    </span>
-                    {showAssignees && t.assignees.length > 0 && (
-                      <span className="inline-flex flex-shrink-0">
-                        {t.assignees.slice(0, 3).map((id, ix) => {
-                          const u = users.find(x => x.id === id);
-                          if (!u) return null;
-                          return (
-                            <span
-                              key={id}
-                              className="w-5 h-5 rounded-full inline-flex items-center justify-center font-semibold text-white text-[9px] flex-shrink-0 border-[1.5px]"
-                              style={{ background: avatarBg(u.hue), borderColor: 'var(--surface)', marginLeft: ix > 0 ? -6 : 0 }}
-                              title={u.name}
-                            >
-                              {u.initials}
-                            </span>
-                          );
-                        })}
-                      </span>
-                    )}
-                    <span className="text-[11px] flex-shrink-0 flex items-center gap-1" style={{ color: 'var(--ink-3)' }}>
-                      <Clock size={11} />
-                      {t.status === 'done' ? 'Completada' : t.status === 'doing' ? 'En curso' : t.status === 'review' ? 'En revisión' : t.status === 'todo' ? 'Por hacer' : 'Backlog'}
-                    </span>
-                  </button>
-                );
-              })}
-              {selectedSubtasks.map(({ subtask, task }, i) => {
-                const proj = projects.find(p => p.id === task.project);
-                const isOverdue = !subtask.done && subtask.due_date < todayISO2;
-                const assigneeUser = subtask.assignee ? users.find(u => u.id === subtask.assignee) : undefined;
-                return (
-                  <button
-                    key={subtask.id}
-                    onClick={() => onOpenTask(task)}
-                    className="flex items-center gap-3 px-3 py-[10px] text-left text-[13px] border-0 bg-transparent transition-colors w-full"
-                    style={{
-                      borderTop: (i > 0 || selectedTasks.length > 0) ? '1px solid var(--line-2)' : 'none',
                       color: isOverdue ? 'var(--danger)' : 'var(--ink)',
                     }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <CornerDownRight size={13} className="flex-shrink-0" style={{ color: 'var(--ink-4)' }} />
-                    <span className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0" style={{ background: proj?.color }} />
-                    <span className="flex-1 min-w-0 truncate font-medium">{subtask.title}</span>
-                    <span className="text-[11px] flex-shrink-0 truncate max-w-[160px] hidden sm:inline" style={{ color: 'var(--ink-4)' }}>
-                      {task.title}
-                    </span>
-                    {assigneeUser && (
-                      <span
-                        className="w-5 h-5 rounded-full inline-flex items-center justify-center font-semibold text-white text-[9px] flex-shrink-0 border-[1.5px]"
-                        style={{ background: avatarBg(assigneeUser.hue), borderColor: 'var(--surface)' }}
-                        title={assigneeUser.name}
+                    {isSub && onToggleSubtask ? (
+                      <button
+                        onClick={() => onToggleSubtask(sub!, item.task, !sub!.done)}
+                        className="w-5 h-5 rounded-[5px] border flex items-center justify-center flex-shrink-0"
+                        style={{
+                          borderColor: isDone ? 'oklch(0.55 0.14 160)' : 'var(--line)',
+                          background: isDone ? 'oklch(0.55 0.14 160)' : 'transparent',
+                          color: 'white',
+                        }}
+                        title={isDone ? 'Marcar como pendiente' : 'Marcar como hecha'}
+                        aria-label={`${isDone ? 'Marcar como pendiente' : 'Marcar como hecha'}: ${item.title}`}
                       >
-                        {assigneeUser.initials}
+                        {isDone && <Check size={12} />}
+                      </button>
+                    ) : (
+                      <span className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: PRIORITY_COLORS[item.priority] }} />
+                    )}
+                    <span className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0" style={{ background: proj?.color }} />
+                    <button
+                      onClick={() => {
+                        if (isSub && onOpenSubtask) onOpenSubtask(sub!, item.task);
+                        else onOpenTask(item.task);
+                      }}
+                      className="flex-1 min-w-0 truncate font-medium text-left border-0 bg-transparent p-0 text-[13px]"
+                      style={{ color: 'inherit', textDecoration: isDone ? 'line-through' : 'none', opacity: isDone ? 0.6 : 1 }}
+                    >
+                      {item.title}
+                    </button>
+                    <span className="text-[11px] flex-shrink-0 truncate max-w-[160px] hidden sm:inline" style={{ color: 'var(--ink-4)' }}>
+                      {isSub ? item.task.title : `${proj?.client ? `${proj.client} · ` : ''}${proj?.name ?? ''}`}
+                    </span>
+                    {(showAssignees || isSub) && rowUsers.length > 0 && (
+                      <span className="inline-flex flex-shrink-0">
+                        {rowUsers.map((u, ix) => (
+                          <span
+                            key={u.id}
+                            className="w-5 h-5 rounded-full inline-flex items-center justify-center font-semibold text-white text-[9px] flex-shrink-0 border-[1.5px]"
+                            style={{ background: avatarBg(u.hue), borderColor: 'var(--surface)', marginLeft: ix > 0 ? -6 : 0 }}
+                            title={u.name}
+                          >
+                            {u.initials}
+                          </span>
+                        ))}
                       </span>
                     )}
-                    <span className="text-[11px] flex-shrink-0" style={{ color: isOverdue ? 'var(--danger)' : 'var(--ink-3)' }}>
-                      {subtask.done ? 'Completada' : isOverdue ? 'Atrasada' : 'Subtarea'}
+                    <span className="text-[11px] flex-shrink-0 flex items-center gap-1" style={{ color: isOverdue ? 'var(--danger)' : 'var(--ink-3)' }}>
+                      {!isSub && <Clock size={11} />}
+                      {isSub
+                        ? (isDone ? 'Completada' : isOverdue ? 'Atrasada' : 'Subtarea')
+                        : item.task.status === 'done' ? 'Completada' : item.task.status === 'doing' ? 'En curso' : item.task.status === 'review' ? 'En revisión' : item.task.status === 'todo' ? 'Por hacer' : 'Backlog'}
                     </span>
-                  </button>
+                  </div>
                 );
               })}
             </div>

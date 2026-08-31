@@ -46,9 +46,10 @@ import { ProjectsContext } from '@/lib/projects-context';
 import { useNorteData } from '@/lib/useNorteData';
 import { useCrmData } from '@/lib/useCrmData';
 import { useAuth } from '@/lib/auth-context';
-import { getOrCreateShare, deleteTask, deleteProspect } from '@/lib/db';
+import { getOrCreateShare, deleteTask, deleteProspect, toggleSubtask } from '@/lib/db';
 import { useToast } from '@/lib/toast-context';
-import type { Task, Project, Sprint, Prospect } from '@/lib/types';
+import { SubtaskDetail } from '@/components/SubtaskDetail';
+import type { Task, Project, Sprint, Prospect, DatedSubtask } from '@/lib/types';
 
 type NavId = 'dashboard' | 'inbox' | 'mytasks' | 'people' | 'reports' | 'admin:team-week' | 'admin:clients' | 'admin:stats' | 'admin:durations' | 'admin:subtasks' | string;
 type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
@@ -56,7 +57,7 @@ type ViewId = 'board' | 'stages' | 'list' | 'timeline' | 'calendar';
 export default function Home() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
-  const { tasks: allTasks, projects, clients, openProjects, users, labels, sprints, subtasks, datedSubtasks, loading, error, refetch } = useNorteData();
+  const { tasks: allTasks, projects, clients, openProjects, users, labels, sprints, subtasks, datedSubtasks: rawDatedSubtasks, loading, error, refetch } = useNorteData();
   const { prospects: allProspects, interactions, crmTasks, triggers, templates, playbookNodes, playbookEdges, refetch: crmRefetch } = useCrmData();
   const { deleteWithUndo } = useToast();
 
@@ -67,6 +68,16 @@ export default function Home() {
   const tasks = useMemo(() => hiddenTaskIds.size ? allTasks.filter(t => !hiddenTaskIds.has(t.id)) : allTasks, [allTasks, hiddenTaskIds]);
   const prospects = useMemo(() => hiddenProspectIds.size ? allProspects.filter(p => !hiddenProspectIds.has(p.id)) : allProspects, [allProspects, hiddenProspectIds]);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
+  // Subtarea abierta desde un calendario, con su tarea padre para dar contexto.
+  const [selectedSubtask, setSelectedSubtask] = useState<{ subtask: DatedSubtask; task: Task } | null>(null);
+  // Tildado optimista: refetch tarda, y el check tiene que responder al instante.
+  const [subtaskDoneOverride, setSubtaskDoneOverride] = useState<Record<string, boolean>>({});
+  const datedSubtasks = useMemo(
+    () => Object.keys(subtaskDoneOverride).length === 0
+      ? rawDatedSubtasks
+      : rawDatedSubtasks.map(s => s.id in subtaskDoneOverride ? { ...s, done: subtaskDoneOverride[s.id] } : s),
+    [rawDatedSubtasks, subtaskDoneOverride],
+  );
   const [createProspectOpen, setCreateProspectOpen] = useState(false);
   const [importProspectOpen, setImportProspectOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -250,6 +261,15 @@ export default function Home() {
     });
   }
 
+  // Subtareas en los calendarios: se pueden abrir (panel propio) y tildar sin
+  // abrir nada. El optimismo local evita el parpadeo mientras refresca.
+  function toggleSubtaskDone(subtask: DatedSubtask, task: Task, done: boolean) {
+    setSubtaskDoneOverride(prev => ({ ...prev, [subtask.id]: done }));
+    toggleSubtask(subtask.id, done, task.id)
+      .then(refetch)
+      .catch(console.error);
+  }
+
   function requestDeleteProspect(prospect: Prospect) {
     setSelectedProspect(null);
     setHiddenProspectIds(s => new Set(s).add(prospect.id));
@@ -312,11 +332,11 @@ export default function Home() {
             crmTasks={crmTasks} prospects={prospects} onOpenProspect={setSelectedProspect}
           />
         );
-        case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} />;
-        case 'people':  return <PeopleView tasks={tasks} projects={projects} users={users} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />;
+        case 'mytasks': return <MyTasksView tasks={tasks} projects={projects} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} onOpenSubtask={(s, t) => setSelectedSubtask({ subtask: s, task: t })} onToggleSubtask={toggleSubtaskDone} />;
+        case 'people':  return <PeopleView tasks={tasks} projects={projects} users={users} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} onOpenSubtask={(s, t) => setSelectedSubtask({ subtask: s, task: t })} onToggleSubtask={toggleSubtaskDone} />;
         case 'admin:team-week':
           return profile?.is_admin
-            ? <TeamWeekView tasks={tasks} projects={projects} users={users} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} />
+            ? <TeamWeekView tasks={tasks} projects={projects} users={users} datedSubtasks={datedSubtasks} onOpenTask={setSelectedTask} onOpenProject={id => handleNav('project:' + id)} onOpenSubtask={(s, t) => setSelectedSubtask({ subtask: s, task: t })} onToggleSubtask={toggleSubtaskDone} />
             : <Dashboard tasks={tasks} projects={projects} onOpenTask={setSelectedTask} onCreateTask={() => openCreateTask()} />;
         case 'admin:clients':
           return profile?.is_admin
@@ -407,6 +427,8 @@ export default function Home() {
           tasks={visibleTasks}
           onOpenTask={setSelectedTask}
           subtaskEvents={applySubtaskFilters(datedSubtasks, tasks, projects, { ...EMPTY_FILTERS, project: projectId ?? 'all' })}
+          onOpenSubtask={(s, t) => setSelectedSubtask({ subtask: s, task: t })}
+          onToggleSubtask={toggleSubtaskDone}
         />
       );
       case 'timeline': return <TimelineView tasks={visibleTasks} projects={projects} onOpenTask={setSelectedTask} />;
@@ -483,6 +505,16 @@ export default function Home() {
         onClose={() => setSelectedTask(null)}
         onUpdated={updated => { setSelectedTask(updated); refetch(); }}
         onDeleted={() => { if (selectedTask) requestDeleteTask(selectedTask); }}
+      />
+
+      <SubtaskDetail
+        subtask={selectedSubtask?.subtask ?? null}
+        task={selectedSubtask?.task ?? null}
+        project={selectedSubtask ? projects.find(p => p.id === selectedSubtask.task.project) : undefined}
+        users={users}
+        onClose={() => setSelectedSubtask(null)}
+        onChanged={refetch}
+        onOpenParent={t => { setSelectedSubtask(null); setSelectedTask(t); }}
       />
 
       <CommandPalette

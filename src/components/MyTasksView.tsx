@@ -13,6 +13,8 @@ interface Props {
   projects: Project[];
   datedSubtasks: DatedSubtask[];
   onOpenTask: (task: Task) => void;
+  onOpenSubtask?: (subtask: DatedSubtask, task: Task) => void;
+  onToggleSubtask?: (subtask: DatedSubtask, task: Task, done: boolean) => void;
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -24,7 +26,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 type ViewMode = 'list' | 'calendar-month' | 'calendar-week';
 
-export function MyTasksView({ tasks, projects, datedSubtasks, onOpenTask }: Props) {
+export function MyTasksView({ tasks, projects, datedSubtasks, onOpenTask, onOpenSubtask, onToggleSubtask }: Props) {
   const { profile } = useAuth();
   const me = profile ?? PEOPLE[0];
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -100,12 +102,12 @@ export function MyTasksView({ tasks, projects, datedSubtasks, onOpenTask }: Prop
 
       {viewMode === 'calendar-week' && (
         <div className="flex-1 min-h-0">
-          <CalendarView tasks={filtered} onOpenTask={onOpenTask} viewMode="week" subtaskEvents={mySubtaskEvents} />
+          <CalendarView tasks={filtered} onOpenTask={onOpenTask} viewMode="week" subtaskEvents={mySubtaskEvents} onOpenSubtask={onOpenSubtask} onToggleSubtask={onToggleSubtask} />
         </div>
       )}
       {viewMode === 'calendar-month' && (
         <div className="flex-1 min-h-0">
-          <CalendarView tasks={filtered} onOpenTask={onOpenTask} viewMode="month" subtaskEvents={mySubtaskEvents} />
+          <CalendarView tasks={filtered} onOpenTask={onOpenTask} viewMode="month" subtaskEvents={mySubtaskEvents} onOpenSubtask={onOpenSubtask} onToggleSubtask={onToggleSubtask} />
         </div>
       )}
 
