@@ -129,8 +129,8 @@ export function SubtaskDetail({ subtask, task, project, users, onClose, onChange
               onClick={toggleDone}
               className="w-5 h-5 rounded-[5px] border flex items-center justify-center flex-shrink-0 mt-[3px]"
               style={{
-                borderColor: draft.done ? 'oklch(0.55 0.14 160)' : 'var(--line)',
-                background: draft.done ? 'oklch(0.55 0.14 160)' : 'transparent',
+                borderColor: draft.done ? 'var(--sem-green)' : 'var(--line)',
+                background: draft.done ? 'var(--sem-green)' : 'transparent',
                 color: 'white',
               }}
               aria-label={draft.done ? 'Marcar como pendiente' : 'Marcar como hecha'}
@@ -157,7 +157,7 @@ export function SubtaskDetail({ subtask, task, project, users, onClose, onChange
               className="text-[11px] font-medium px-[8px] py-[2px] rounded-full"
               style={
                 draft.done
-                  ? { background: 'oklch(0.95 0.06 160)', color: 'oklch(0.38 0.12 160)' }
+                  ? { background: 'var(--sem-green-bg)', color: 'var(--sem-green-dark)' }
                   : isOverdue
                     ? { background: 'var(--danger-bg)', color: 'var(--danger)' }
                     : { background: 'var(--bg-3)', color: 'var(--ink-3)' }

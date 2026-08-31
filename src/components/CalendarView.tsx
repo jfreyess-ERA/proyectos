@@ -47,10 +47,10 @@ function todayISOStr(): string {
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  urgent: 'oklch(0.58 0.18 25)',
-  high:   'oklch(0.65 0.14 50)',
-  med:    'oklch(0.62 0.05 250)',
-  low:    'oklch(0.62 0.02 250)',
+  urgent: 'var(--sem-red-2)',
+  high:   'var(--sem-orange)',
+  med:    'var(--sem-blue-gray-med)',
+  low:    'var(--sem-blue-gray-low)',
 };
 
 const DOW = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -284,8 +284,8 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                         className="flex items-center justify-center flex-shrink-0 rounded-[3px] border"
                         style={{
                           width: 11, height: 11, padding: 0,
-                          borderColor: isDone ? 'oklch(0.55 0.14 160)' : 'var(--ink-4)',
-                          background: isDone ? 'oklch(0.55 0.14 160)' : 'transparent',
+                          borderColor: isDone ? 'var(--sem-green)' : 'var(--ink-4)',
+                          background: isDone ? 'var(--sem-green)' : 'transparent',
                           color: 'white',
                         }}
                         title={isDone ? 'Marcar como pendiente' : 'Marcar como hecha'}
@@ -398,8 +398,8 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                         onClick={() => onToggleSubtask(sub!, item.task, !sub!.done)}
                         className="w-5 h-5 rounded-[5px] border flex items-center justify-center flex-shrink-0"
                         style={{
-                          borderColor: isDone ? 'oklch(0.55 0.14 160)' : 'var(--line)',
-                          background: isDone ? 'oklch(0.55 0.14 160)' : 'transparent',
+                          borderColor: isDone ? 'var(--sem-green)' : 'var(--line)',
+                          background: isDone ? 'var(--sem-green)' : 'transparent',
                           color: 'white',
                         }}
                         title={isDone ? 'Marcar como pendiente' : 'Marcar como hecha'}

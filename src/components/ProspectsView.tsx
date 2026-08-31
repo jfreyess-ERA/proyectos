@@ -20,31 +20,31 @@ interface Props {
 const STATUS_TABS = ['Todos', 'Active', 'Warm', 'Nurture', 'Paused', 'Closed Won', 'Closed Lost', 'Dormant'];
 
 export const PRIORITY_STYLE: Record<string, { bg: string; fg: string }> = {
-  'High':       { bg: 'oklch(0.96 0.05 25)',  fg: 'oklch(0.45 0.18 25)'  },
+  'High':       { bg: 'oklch(0.96 0.05 25)',  fg: 'var(--sem-red-dark)'  },
   'Medium':     { bg: 'oklch(0.96 0.05 85)',  fg: 'oklch(0.45 0.12 85)'  },
-  'Low':        { bg: 'oklch(0.94 0.01 0)',   fg: 'oklch(0.50 0.01 0)'   },
+  'Low':        { bg: 'var(--sem-gray-bg)',   fg: 'var(--sem-gray-fg)'   },
   'Strategic':  { bg: 'oklch(0.95 0.06 300)', fg: 'oklch(0.40 0.18 300)' },
-  'Watchlist':  { bg: 'oklch(0.95 0.05 245)', fg: 'oklch(0.40 0.14 245)' },
+  'Watchlist':  { bg: 'var(--sem-blue-bg)', fg: 'var(--sem-blue-dark)' },
 };
 
 export const STATUS_STYLE: Record<string, { bg: string; fg: string; dot: string }> = {
-  'Active':      { bg: 'oklch(0.95 0.06 160)', fg: 'oklch(0.38 0.12 160)', dot: 'oklch(0.55 0.14 160)' },
-  'Warm':        { bg: 'oklch(0.96 0.06 55)',  fg: 'oklch(0.42 0.14 55)',  dot: 'oklch(0.65 0.16 55)'  },
-  'Paused':      { bg: 'oklch(0.94 0.01 0)',   fg: 'oklch(0.50 0.01 0)',   dot: 'oklch(0.60 0.01 0)'   },
-  'Nurture':     { bg: 'oklch(0.95 0.05 245)', fg: 'oklch(0.40 0.14 245)', dot: 'oklch(0.55 0.14 245)' },
-  'Closed Won':  { bg: 'oklch(0.95 0.06 160)', fg: 'oklch(0.32 0.14 160)', dot: 'oklch(0.45 0.18 160)' },
-  'Closed Lost': { bg: 'oklch(0.96 0.04 25)',  fg: 'oklch(0.45 0.18 25)',  dot: 'oklch(0.55 0.18 25)'  },
+  'Active':      { bg: 'var(--sem-green-bg)', fg: 'var(--sem-green-dark)', dot: 'var(--sem-green)' },
+  'Warm':        { bg: 'oklch(0.96 0.06 55)',  fg: 'oklch(0.42 0.14 55)',  dot: 'var(--sem-orange-2)'  },
+  'Paused':      { bg: 'var(--sem-gray-bg)',   fg: 'var(--sem-gray-fg)',   dot: 'oklch(0.60 0.01 0)'   },
+  'Nurture':     { bg: 'var(--sem-blue-bg)', fg: 'var(--sem-blue-dark)', dot: 'var(--sem-blue)' },
+  'Closed Won':  { bg: 'var(--sem-green-bg)', fg: 'oklch(0.32 0.14 160)', dot: 'var(--sem-green-dark-2)' },
+  'Closed Lost': { bg: 'var(--sem-red-bg-2)',  fg: 'var(--sem-red-dark)',  dot: 'var(--sem-red)'  },
   'Dormant':     { bg: 'oklch(0.92 0.01 0)',   fg: 'oklch(0.55 0.01 0)',   dot: 'oklch(0.65 0.01 0)'   },
 };
 
 export const STAGE_STYLE: Record<string, string> = {
-  'New':               'oklch(0.60 0.00 0)',
-  'Contacted':         'oklch(0.55 0.14 245)',
-  'Meeting Requested': 'oklch(0.70 0.14 85)',
-  'Meeting Held':      'oklch(0.65 0.16 55)',
-  'Proposal':          'oklch(0.58 0.18 300)',
-  'Negotiation':       'oklch(0.55 0.18 275)',
-  'Won':               'oklch(0.55 0.14 160)',
+  'New':               'var(--sem-gray-2)',
+  'Contacted':         'var(--sem-blue)',
+  'Meeting Requested': 'var(--sem-amber-3)',
+  'Meeting Held':      'var(--sem-orange-2)',
+  'Proposal':          'var(--sem-purple)',
+  'Negotiation':       'var(--sem-indigo-3)',
+  'Won':               'var(--sem-green)',
 };
 
 const STAGE_ORDER = ['New', 'Contacted', 'Meeting Requested', 'Meeting Held', 'Proposal', 'Negotiation', 'Won'];
@@ -92,7 +92,7 @@ export function calcWarmthScore(
 
 function warmthColor(score: number): { bar: string; label: string } {
   if (score >= 70) return { bar: 'oklch(0.55 0.18 160)', label: '🔥' };
-  if (score >= 45) return { bar: 'oklch(0.65 0.16 55)',  label: '🌡' };
+  if (score >= 45) return { bar: 'var(--sem-orange-2)',  label: '🌡' };
   if (score >= 20) return { bar: 'oklch(0.65 0.14 25)',  label: '❄' };
   return { bar: 'oklch(0.65 0.01 0)', label: '⬜' };
 }
@@ -421,17 +421,17 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
                   </td>
 
                   <td className="px-4 py-[10px]">
-                    <span className="text-[12px]" style={{ color: isStale ? 'oklch(0.55 0.18 25)' : 'var(--ink-3)', fontWeight: isStale ? 600 : 400 }}>
+                    <span className="text-[12px]" style={{ color: isStale ? 'var(--sem-red)' : 'var(--ink-3)', fontWeight: isStale ? 600 : 400 }}>
                       {fmtDate(lastC)}
                     </span>
                     {daysSince !== null && (
-                      <div className="text-[10.5px]" style={{ color: isStale ? 'oklch(0.55 0.18 25)' : 'var(--ink-4)' }}>
+                      <div className="text-[10.5px]" style={{ color: isStale ? 'var(--sem-red)' : 'var(--ink-4)' }}>
                         {daysSince}d atrás
                       </div>
                     )}
                   </td>
 
-                  <td className="px-4 py-[10px] text-[12px]" style={{ color: isOverdue ? 'oklch(0.55 0.18 25)' : 'var(--ink-3)', fontWeight: isOverdue ? 600 : 400 }}>
+                  <td className="px-4 py-[10px] text-[12px]" style={{ color: isOverdue ? 'var(--sem-red)' : 'var(--ink-3)', fontWeight: isOverdue ? 600 : 400 }}>
                     {fmtDate(nextF)}
                   </td>
                 </tr>

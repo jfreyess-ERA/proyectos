@@ -5,9 +5,9 @@ import { insertProject, updateProject, deleteProject } from '@/lib/db';
 import type { Project } from '@/lib/types';
 
 const COLOR_PALETTE = [
-  'oklch(0.55 0.18 265)',
+  'var(--sem-indigo-2)',
   'oklch(0.52 0.18 160)',
-  'oklch(0.55 0.18 25)',
+  'var(--sem-red)',
   'oklch(0.58 0.16 50)',
   'oklch(0.52 0.18 300)',
   'oklch(0.52 0.16 220)',

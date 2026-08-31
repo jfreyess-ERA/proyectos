@@ -234,7 +234,7 @@ export function Shell({
               )}
               {sprints.map(s => {
                 const sprintNav = 'sprint:' + s.id;
-                const statusDot = s.status === 'active' ? 'var(--accent)' : s.status === 'completed' ? 'oklch(0.60 0.14 160)' : 'var(--ink-4)';
+                const statusDot = s.status === 'active' ? 'var(--accent)' : s.status === 'completed' ? 'var(--sem-green-2)' : 'var(--ink-4)';
                 return (
                   <button
                     key={s.id}

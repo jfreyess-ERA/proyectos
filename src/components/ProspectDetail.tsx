@@ -468,7 +468,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
         <div className="flex gap-0 flex-shrink-0" style={{ borderBottom: '1px solid var(--line)', background: 'var(--bg-2)' }}>
           {[
             { label: 'Interacciones', value: interactions.length, color: 'var(--ink)' },
-            { label: 'Tareas activas', value: pendingTaskCount, color: overdueTaskCount > 0 ? 'oklch(0.55 0.18 25)' : 'var(--ink)' },
+            { label: 'Tareas activas', value: pendingTaskCount, color: overdueTaskCount > 0 ? 'var(--sem-red)' : 'var(--ink)' },
             { label: 'Triggers abiertos', value: triggers.filter(t => t.status === 'Open').length, color: 'var(--ink)' },
           ].map(stat => (
             <div key={stat.label} className="flex-1 text-center py-2 px-3" style={{ borderRight: '1px solid var(--line)' }}>
@@ -1035,7 +1035,7 @@ function InteractionCard({ interaction: i, onDelete, onEdit }: { interaction: Cr
             <button onClick={onEdit} className="text-[11px] flex items-center gap-1 border-0 bg-transparent" style={{ color: 'var(--accent)' }}>
               <Pencil size={11} /> Editar
             </button>
-            <button onClick={onDelete} className="text-[11px] flex items-center gap-1 border-0 bg-transparent" style={{ color: 'oklch(0.55 0.18 25)' }}>
+            <button onClick={onDelete} className="text-[11px] flex items-center gap-1 border-0 bg-transparent" style={{ color: 'var(--sem-red)' }}>
               <Trash2 size={11} /> Eliminar
             </button>
           </div>
@@ -1051,14 +1051,14 @@ function CrmTaskCard({ task, today, onToggle, onDelete }: { task: CrmTask; today
   return (
     <div
       className="rounded-[8px] p-3 flex items-start gap-3"
-      style={{ background: 'var(--surface)', border: `1px solid ${isOverdue ? 'oklch(0.80 0.08 25)' : 'var(--line)'}` }}
+      style={{ background: 'var(--surface)', border: `1px solid ${isOverdue ? 'var(--sem-red-border)' : 'var(--line)'}` }}
     >
       <button
         onClick={onToggle}
         className="w-4 h-4 rounded-[3px] border flex items-center justify-center flex-shrink-0 mt-[2px] transition-colors"
         style={{
-          borderColor: isDone ? 'oklch(0.55 0.14 160)' : 'var(--line)',
-          background: isDone ? 'oklch(0.55 0.14 160)' : 'transparent',
+          borderColor: isDone ? 'var(--sem-green)' : 'var(--line)',
+          background: isDone ? 'var(--sem-green)' : 'transparent',
           color: 'white',
         }}
       >
@@ -1070,7 +1070,7 @@ function CrmTaskCard({ task, today, onToggle, onDelete }: { task: CrmTask; today
             {taskTypeEs(task.task_type) || 'Tarea CRM'}
           </span>
           {task.due_date && (
-            <span className="text-[11px]" style={{ color: isOverdue ? 'oklch(0.55 0.18 25)' : 'var(--ink-4)', fontWeight: isOverdue ? 600 : 400 }}>
+            <span className="text-[11px]" style={{ color: isOverdue ? 'var(--sem-red)' : 'var(--ink-4)', fontWeight: isOverdue ? 600 : 400 }}>
               {fmtDate(task.due_date)}
             </span>
           )}
@@ -1086,9 +1086,9 @@ function CrmTaskCard({ task, today, onToggle, onDelete }: { task: CrmTask; today
 
 function TriggerCard({ trigger, onStatusChange }: { trigger: CrmTrigger; onStatusChange: (s: 'Open' | 'Monitoring' | 'Closed') => void }) {
   const statusColors: Record<string, { bg: string; fg: string }> = {
-    Open:       { bg: 'oklch(0.95 0.06 25)',  fg: 'oklch(0.45 0.18 25)'  },
-    Monitoring: { bg: 'oklch(0.95 0.06 85)',  fg: 'oklch(0.42 0.14 85)'  },
-    Closed:     { bg: 'oklch(0.94 0.01 0)',   fg: 'oklch(0.50 0.01 0)'   },
+    Open:       { bg: 'var(--sem-red-bg)',  fg: 'var(--sem-red-dark)'  },
+    Monitoring: { bg: 'oklch(0.95 0.06 85)',  fg: 'var(--sem-amber-dark)'  },
+    Closed:     { bg: 'var(--sem-gray-bg)',   fg: 'var(--sem-gray-fg)'   },
   };
   const sc = statusColors[trigger.status] ?? statusColors.Open;
   return (
@@ -1185,8 +1185,8 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                       borderColor: 'var(--bg)',
                       background:
                         entry.kind === 'interaction' ? 'var(--accent)' :
-                        entry.kind === 'task' ? 'oklch(0.55 0.14 245)' :
-                        'oklch(0.65 0.16 55)',
+                        entry.kind === 'task' ? 'var(--sem-blue)' :
+                        'var(--sem-orange-2)',
                     }}
                   />
 
@@ -1242,8 +1242,8 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                           <span
                             className="text-[10.5px] px-[6px] py-[2px] rounded-full flex-shrink-0"
                             style={{
-                              background: isDone ? 'oklch(0.95 0.06 160)' : isOverdue ? 'oklch(0.96 0.04 25)' : 'var(--bg-3)',
-                              color: isDone ? 'oklch(0.38 0.12 160)' : isOverdue ? 'oklch(0.45 0.18 25)' : 'var(--ink-3)',
+                              background: isDone ? 'var(--sem-green-bg)' : isOverdue ? 'var(--sem-red-bg-2)' : 'var(--bg-3)',
+                              color: isDone ? 'var(--sem-green-dark)' : isOverdue ? 'var(--sem-red-dark)' : 'var(--ink-3)',
                             }}
                           >
                             {isDone ? 'Hecho' : isOverdue ? 'Vencida' : taskStatusEs(t.status)}
@@ -1265,8 +1265,8 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                               <span
                                 className="text-[10px] px-[5px] py-[2px] rounded-full"
                                 style={{
-                                  background: tr.status === 'Open' ? 'oklch(0.95 0.06 25)' : tr.status === 'Monitoring' ? 'oklch(0.96 0.04 85)' : 'var(--bg-3)',
-                                  color: tr.status === 'Open' ? 'oklch(0.45 0.18 25)' : tr.status === 'Monitoring' ? 'oklch(0.42 0.14 85)' : 'var(--ink-4)',
+                                  background: tr.status === 'Open' ? 'var(--sem-red-bg)' : tr.status === 'Monitoring' ? 'oklch(0.96 0.04 85)' : 'var(--bg-3)',
+                                  color: tr.status === 'Open' ? 'var(--sem-red-dark)' : tr.status === 'Monitoring' ? 'var(--sem-amber-dark)' : 'var(--ink-4)',
                                 }}
                               >
                                 {tr.status}
@@ -1309,15 +1309,15 @@ function channelEmoji(channel?: string): string {
 }
 
 function outcomeBg(outcome: string): string {
-  if (['Positive', 'Interested', 'Meeting booked'].includes(outcome)) return 'oklch(0.95 0.06 160)';
+  if (['Positive', 'Interested', 'Meeting booked'].includes(outcome)) return 'var(--sem-green-bg)';
   if (['Not now', 'No response'].includes(outcome)) return 'oklch(0.94 0.02 85)';
-  if (outcome === 'Lost') return 'oklch(0.95 0.06 25)';
+  if (outcome === 'Lost') return 'var(--sem-red-bg)';
   return 'var(--bg-3)';
 }
 
 function outcomeFg(outcome: string): string {
-  if (['Positive', 'Interested', 'Meeting booked'].includes(outcome)) return 'oklch(0.38 0.12 160)';
+  if (['Positive', 'Interested', 'Meeting booked'].includes(outcome)) return 'var(--sem-green-dark)';
   if (['Not now', 'No response'].includes(outcome)) return 'oklch(0.45 0.05 85)';
-  if (outcome === 'Lost') return 'oklch(0.45 0.18 25)';
+  if (outcome === 'Lost') return 'var(--sem-red-dark)';
   return 'var(--ink-3)';
 }

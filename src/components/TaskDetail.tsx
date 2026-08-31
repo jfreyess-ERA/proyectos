@@ -752,7 +752,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                 <div
                   className="text-[20px] font-mono font-semibold tabular-nums text-center py-2 rounded-[8px]"
                   style={{
-                    background: timerRunning ? 'oklch(0.95 0.06 160)' : 'var(--bg-2)',
+                    background: timerRunning ? 'var(--sem-green-bg)' : 'var(--bg-2)',
                     color: timerRunning ? 'oklch(0.38 0.14 160)' : 'var(--ink)',
                     border: `1px solid ${timerRunning ? 'oklch(0.80 0.10 160)' : 'var(--line)'}`,
                     transition: 'all 0.2s',
@@ -774,7 +774,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                       <button
                         onClick={stopTimerAndLog}
                         className="flex-1 h-8 rounded-[7px] text-[12px] font-medium border-0"
-                        style={{ background: 'oklch(0.55 0.14 160)', color: 'white' }}
+                        style={{ background: 'var(--sem-green)', color: 'white' }}
                       >
                         ■ Parar y guardar
                       </button>

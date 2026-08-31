@@ -20,7 +20,7 @@ const STATUS_META: Record<ClientStatus, { label: string; fg: string; bg: string;
   active:    { label: 'Activo',             fg: 'var(--accent)',        bg: 'var(--accent-bg)',       border: 'var(--accent)',        hidesFromNewWork: false },
   paused:    { label: 'Detenido',           fg: 'oklch(0.55 0.15 70)',  bg: 'oklch(0.96 0.05 70)',     border: 'oklch(0.75 0.1 70)',   hidesFromNewWork: false },
   completed: { label: 'Contrato terminado', fg: 'var(--ink-3)',         bg: 'var(--bg-3)',             border: 'var(--line)',          hidesFromNewWork: true },
-  cancelled: { label: 'Cancelado',          fg: 'oklch(0.55 0.18 25)',  bg: 'oklch(0.96 0.04 25)',     border: 'oklch(0.78 0.1 25)',   hidesFromNewWork: true },
+  cancelled: { label: 'Cancelado',          fg: 'var(--sem-red)',  bg: 'var(--sem-red-bg-2)',     border: 'oklch(0.78 0.1 25)',   hidesFromNewWork: true },
 };
 const STATUS_ORDER: ClientStatus[] = ['active', 'paused', 'completed', 'cancelled'];
 
@@ -363,7 +363,7 @@ function DeleteClientModal({ target, deleting, onCancel, onConfirm }: {
             onClick={onConfirm}
             disabled={!matches || deleting}
             className="h-9 px-4 rounded-[8px] text-[13px] font-medium border-0 flex items-center gap-2 transition-opacity"
-            style={{ background: 'oklch(0.55 0.18 25)', color: 'white', opacity: !matches || deleting ? 0.45 : 1 }}
+            style={{ background: 'var(--sem-red)', color: 'white', opacity: !matches || deleting ? 0.45 : 1 }}
           >
             <Trash2 size={13} />
             {deleting ? 'Eliminando…' : 'Eliminar definitivamente'}

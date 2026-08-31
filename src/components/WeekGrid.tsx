@@ -22,10 +22,10 @@ interface Props {
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  urgent: 'oklch(0.58 0.18 25)',
-  high:   'oklch(0.65 0.14 50)',
-  med:    'oklch(0.62 0.05 250)',
-  low:    'oklch(0.62 0.02 250)',
+  urgent: 'var(--sem-red-2)',
+  high:   'var(--sem-orange)',
+  med:    'var(--sem-blue-gray-med)',
+  low:    'var(--sem-blue-gray-low)',
 };
 
 const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
@@ -246,7 +246,7 @@ export function computeWeeklyLoad(users: User[], tasks: Task[], weekStart: Date)
 function loadTone(hours: number, capacity: number): { fg: string; bg: string } {
   if (capacity <= 0) return { fg: 'var(--ink-4)', bg: 'var(--bg-3)' };
   const ratio = hours / capacity;
-  if (ratio > 1)    return { fg: 'oklch(0.5 0.18 25)',  bg: 'oklch(0.94 0.04 25)' };
+  if (ratio > 1)    return { fg: 'oklch(0.5 0.18 25)',  bg: 'var(--sem-red-bg-3)' };
   if (ratio >= 0.8) return { fg: 'oklch(0.48 0.12 70)', bg: 'oklch(0.95 0.05 70)' };
   return { fg: 'var(--ink-3)', bg: 'var(--bg-3)' };
 }

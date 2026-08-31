@@ -69,12 +69,12 @@ export function CrmTasksView({ crmTasks, prospects, onOpenProspect, onTasksChang
             {crmTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length} pendientes
           </p>
           {overdueCount > 0 && (
-            <span className="text-[12px] font-medium px-2 py-[2px] rounded-full" style={{ background: 'oklch(0.95 0.06 25)', color: 'oklch(0.45 0.18 25)' }}>
+            <span className="text-[12px] font-medium px-2 py-[2px] rounded-full" style={{ background: 'var(--sem-red-bg)', color: 'var(--sem-red-dark)' }}>
               {overdueCount} vencidas
             </span>
           )}
           {todayCount > 0 && (
-            <span className="text-[12px] font-medium px-2 py-[2px] rounded-full" style={{ background: 'oklch(0.95 0.05 245)', color: 'oklch(0.40 0.14 245)' }}>
+            <span className="text-[12px] font-medium px-2 py-[2px] rounded-full" style={{ background: 'var(--sem-blue-bg)', color: 'var(--sem-blue-dark)' }}>
               {todayCount} para hoy
             </span>
           )}
@@ -129,7 +129,7 @@ export function CrmTasksView({ crmTasks, prospects, onOpenProspect, onTasksChang
               className="rounded-[10px] p-4 flex items-start gap-3"
               style={{
                 background: 'var(--surface)',
-                border: `1px solid ${isOverdue ? 'oklch(0.80 0.08 25)' : 'var(--line)'}`,
+                border: `1px solid ${isOverdue ? 'var(--sem-red-border)' : 'var(--line)'}`,
                 boxShadow: 'var(--shadow-1)',
               }}
             >
@@ -138,8 +138,8 @@ export function CrmTasksView({ crmTasks, prospects, onOpenProspect, onTasksChang
                 onClick={() => toggleDone(task)}
                 className="w-[18px] h-[18px] rounded-[4px] border flex items-center justify-center flex-shrink-0 mt-[2px] transition-colors"
                 style={{
-                  borderColor: isDone ? 'oklch(0.55 0.14 160)' : isOverdue ? 'oklch(0.55 0.18 25)' : 'var(--line)',
-                  background: isDone ? 'oklch(0.55 0.14 160)' : 'transparent',
+                  borderColor: isDone ? 'var(--sem-green)' : isOverdue ? 'var(--sem-red)' : 'var(--line)',
+                  background: isDone ? 'var(--sem-green)' : 'transparent',
                   color: 'white',
                 }}
               >
@@ -170,7 +170,7 @@ export function CrmTasksView({ crmTasks, prospects, onOpenProspect, onTasksChang
                     <span
                       className="text-[11.5px]"
                       style={{
-                        color: isOverdue ? 'oklch(0.55 0.18 25)' : isToday ? 'oklch(0.55 0.14 245)' : 'var(--ink-4)',
+                        color: isOverdue ? 'var(--sem-red)' : isToday ? 'var(--sem-blue)' : 'var(--ink-4)',
                         fontWeight: isOverdue || isToday ? 600 : 400,
                       }}
                     >
@@ -182,8 +182,8 @@ export function CrmTasksView({ crmTasks, prospects, onOpenProspect, onTasksChang
                     <span
                       className="text-[10px] px-[5px] py-[1px] rounded-full"
                       style={{
-                        background: task.priority === 'High' ? 'oklch(0.95 0.06 25)' : 'oklch(0.95 0.05 245)',
-                        color: task.priority === 'High' ? 'oklch(0.45 0.18 25)' : 'oklch(0.40 0.14 245)',
+                        background: task.priority === 'High' ? 'var(--sem-red-bg)' : 'var(--sem-blue-bg)',
+                        color: task.priority === 'High' ? 'var(--sem-red-dark)' : 'var(--sem-blue-dark)',
                       }}
                     >
                       {task.priority}
@@ -201,7 +201,7 @@ export function CrmTasksView({ crmTasks, prospects, onOpenProspect, onTasksChang
                 onClick={() => handleDelete(task.id)}
                 className="flex-shrink-0 border-0 bg-transparent opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{ color: 'var(--ink-4)' }}
-                onMouseEnter={e => e.currentTarget.style.color = 'oklch(0.55 0.18 25)'}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--sem-red)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'var(--ink-4)'}
               >
                 ×

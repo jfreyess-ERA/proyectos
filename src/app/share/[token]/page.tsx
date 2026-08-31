@@ -4,18 +4,18 @@ import { useParams } from 'next/navigation';
 import { Clock, CheckSquare } from 'lucide-react';
 
 const STATUSES: Record<string, { label: string; tone: string }> = {
-  backlog: { label: 'Backlog',    tone: 'oklch(0.62 0.02 250)' },
-  todo:    { label: 'Por hacer',  tone: 'oklch(0.62 0.05 250)' },
-  doing:   { label: 'En curso',   tone: 'oklch(0.62 0.16 265)' },
-  review:  { label: 'Revisión',   tone: 'oklch(0.65 0.14 50)'  },
-  done:    { label: 'Completado', tone: 'oklch(0.60 0.14 160)' },
+  backlog: { label: 'Backlog',    tone: 'var(--sem-blue-gray-low)' },
+  todo:    { label: 'Por hacer',  tone: 'var(--sem-blue-gray-med)' },
+  doing:   { label: 'En curso',   tone: 'var(--sem-indigo)' },
+  review:  { label: 'Revisión',   tone: 'var(--sem-orange)'  },
+  done:    { label: 'Completado', tone: 'var(--sem-green-2)' },
 };
 
 const PRIORITIES: Record<string, string> = {
-  urgent: 'oklch(0.58 0.18 25)',
-  high:   'oklch(0.65 0.14 50)',
-  med:    'oklch(0.62 0.05 250)',
-  low:    'oklch(0.62 0.02 250)',
+  urgent: 'var(--sem-red-2)',
+  high:   'var(--sem-orange)',
+  med:    'var(--sem-blue-gray-med)',
+  low:    'var(--sem-blue-gray-low)',
 };
 
 interface TaskRow {

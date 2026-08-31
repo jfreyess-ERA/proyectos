@@ -116,7 +116,7 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
           { icon: <CheckCircle size={15} />, label: 'Completadas', value: `${done}`, sub: `${completionRate}% del total`, color: 'var(--accent)' },
           { icon: <Flag size={15} />,        label: 'Atrasadas',   value: `${overdue.length}`, sub: overdue.length > 0 ? 'Requieren atención' : 'Al día', color: overdue.length > 0 ? 'var(--danger)' : 'var(--accent)' },
           { icon: <Clock size={15} />,       label: 'Horas estimadas', value: `${totalEstimate}h`, sub: `${totalSpent}h registradas`, color: 'var(--ink-3)' },
-          { icon: <TrendingUp size={15} />,  label: 'En progreso', value: `${tasks.filter(t => t.status === 'doing' || t.status === 'review').length}`, sub: 'doing + revisión', color: 'oklch(0.65 0.14 50)' },
+          { icon: <TrendingUp size={15} />,  label: 'En progreso', value: `${tasks.filter(t => t.status === 'doing' || t.status === 'review').length}`, sub: 'doing + revisión', color: 'var(--sem-orange)' },
         ].map(kpi => (
           <div
             key={kpi.label}
@@ -272,10 +272,10 @@ function TaskRow({ task, onClick, children }: { task: Task; onClick?: () => void
 
 function PriorityDot({ priority }: { priority: string }) {
   const colors: Record<string, string> = {
-    urgent: 'oklch(0.58 0.18 25)',
-    high:   'oklch(0.65 0.14 50)',
-    med:    'oklch(0.62 0.05 250)',
-    low:    'oklch(0.62 0.02 250)',
+    urgent: 'var(--sem-red-2)',
+    high:   'var(--sem-orange)',
+    med:    'var(--sem-blue-gray-med)',
+    low:    'var(--sem-blue-gray-low)',
   };
   return <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: colors[priority] ?? colors.med }} />;
 }

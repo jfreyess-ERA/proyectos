@@ -106,10 +106,10 @@ export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }
   }
 
   const priorityColors: Record<string, string> = {
-    urgent: 'oklch(0.58 0.18 25)',
-    high:   'oklch(0.65 0.14 50)',
-    med:    'oklch(0.62 0.05 250)',
-    low:    'oklch(0.62 0.02 250)',
+    urgent: 'var(--sem-red-2)',
+    high:   'var(--sem-orange)',
+    med:    'var(--sem-blue-gray-med)',
+    low:    'var(--sem-blue-gray-low)',
   };
 
   return (
@@ -378,10 +378,10 @@ function TaskCard({
   const dueCls = dueClass(task.due, task.status);
 
   const priorityColors: Record<string, string> = {
-    urgent: 'oklch(0.58 0.18 25)',
-    high:   'oklch(0.65 0.14 50)',
-    med:    'oklch(0.62 0.05 250)',
-    low:    'oklch(0.62 0.02 250)',
+    urgent: 'var(--sem-red-2)',
+    high:   'var(--sem-orange)',
+    med:    'var(--sem-blue-gray-med)',
+    low:    'var(--sem-blue-gray-low)',
   };
 
   return (

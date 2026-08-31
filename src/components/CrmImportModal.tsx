@@ -300,7 +300,7 @@ export function CrmImportModal({ open, onClose, onImported, existingProspects }:
               </div>
 
               {!canImport && (
-                <div className="flex items-center gap-2 mb-3 text-[12px]" style={{ color: 'oklch(0.55 0.18 25)' }}>
+                <div className="flex items-center gap-2 mb-3 text-[12px]" style={{ color: 'var(--sem-red)' }}>
                   <AlertTriangle size={14} /> Asigna al menos la columna "Empresa"
                 </div>
               )}
@@ -380,13 +380,13 @@ export function CrmImportModal({ open, onClose, onImported, existingProspects }:
           {/* Step 4: Done */}
           {step === 'done' && (
             <div className="text-center py-6">
-              <CheckCircle size={40} className="mx-auto mb-3" style={{ color: 'oklch(0.55 0.14 160)' }} />
+              <CheckCircle size={40} className="mx-auto mb-3" style={{ color: 'var(--sem-green)' }} />
               <div className="text-[18px] font-bold mb-1" style={{ color: 'var(--ink)' }}>
                 {importedCount} prospecto{importedCount !== 1 ? 's' : ''} importado{importedCount !== 1 ? 's' : ''}
               </div>
               {errors.length > 0 && (
                 <div className="mt-4 text-left">
-                  <div className="text-[12px] font-semibold mb-2" style={{ color: 'oklch(0.55 0.18 25)' }}>{errors.length} errores:</div>
+                  <div className="text-[12px] font-semibold mb-2" style={{ color: 'var(--sem-red)' }}>{errors.length} errores:</div>
                   {errors.map((e, i) => <div key={i} className="text-[12px]" style={{ color: 'var(--ink-3)' }}>{e}</div>)}
                 </div>
               )}

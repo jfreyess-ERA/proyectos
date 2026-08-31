@@ -13,10 +13,10 @@ interface Props {
 
 const STAGES = ['New', 'Contacted', 'Meeting Requested', 'Meeting Held', 'Proposal', 'Negotiation', 'Won'];
 const STAGE_COLOR: Record<string, string> = {
-  'New': 'oklch(0.60 0.00 0)', 'Contacted': 'oklch(0.55 0.14 245)',
-  'Meeting Requested': 'oklch(0.70 0.14 85)', 'Meeting Held': 'oklch(0.65 0.16 55)',
-  'Proposal': 'oklch(0.58 0.18 300)', 'Negotiation': 'oklch(0.55 0.18 275)',
-  'Won': 'oklch(0.55 0.14 160)',
+  'New': 'var(--sem-gray-2)', 'Contacted': 'var(--sem-blue)',
+  'Meeting Requested': 'var(--sem-amber-3)', 'Meeting Held': 'var(--sem-orange-2)',
+  'Proposal': 'var(--sem-purple)', 'Negotiation': 'var(--sem-indigo-3)',
+  'Won': 'var(--sem-green)',
 };
 const CHANNELS = ['Email', 'LinkedIn', 'Phone', 'WhatsApp', 'Meeting', 'Event', 'Referral'];
 const CHANNEL_EMOJI: Record<string, string> = {
@@ -276,7 +276,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
         <Card>
           <div
             className="text-[28px] font-bold tabular-nums leading-none mb-1"
-            style={{ color: closingRate !== null && closingRate >= 50 ? 'oklch(0.45 0.18 160)' : 'oklch(0.55 0.18 25)' }}
+            style={{ color: closingRate !== null && closingRate >= 50 ? 'var(--sem-green-dark-2)' : 'var(--sem-red)' }}
           >
             {closingRate !== null ? `${closingRate}%` : '—'}
           </div>
@@ -290,7 +290,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
         <Card>
           <div
             className="text-[28px] font-bold tabular-nums leading-none mb-1"
-            style={{ color: 'oklch(0.55 0.14 245)' }}
+            style={{ color: 'var(--sem-blue)' }}
           >
             {avgWonCycle !== null ? `${avgWonCycle}d` : '—'}
           </div>
@@ -304,7 +304,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
         <Card>
           <div
             className="text-[28px] font-bold tabular-nums leading-none mb-1"
-            style={{ color: 'oklch(0.65 0.16 55)' }}
+            style={{ color: 'var(--sem-orange-2)' }}
           >
             {avgFirstContact !== null ? `${avgFirstContact}d` : '—'}
           </div>
@@ -332,7 +332,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
         <Card>
           <div
             className="text-[28px] font-bold tabular-nums leading-none mb-1"
-            style={{ color: positiveRate !== null && positiveRate >= 40 ? 'oklch(0.45 0.18 160)' : 'oklch(0.65 0.14 55)' }}
+            style={{ color: positiveRate !== null && positiveRate >= 40 ? 'var(--sem-green-dark-2)' : 'oklch(0.65 0.14 55)' }}
           >
             {positiveRate !== null ? `${positiveRate}%` : '—'}
           </div>
@@ -373,7 +373,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                       ? 'oklch(0.45 0.14 160)'
                       : funnelConvRates[i] >= 25
                       ? 'oklch(0.55 0.12 85)'
-                      : 'oklch(0.55 0.18 25)',
+                      : 'var(--sem-red)',
                   }}
                 >
                   {funnelConvRates[i]}%
@@ -384,7 +384,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
               {/* % abandona aquí */}
               <div className="w-[90px] text-[11px] text-right flex-shrink-0" style={{ color: 'var(--ink-4)' }}>
                 {s.lostHere > 0 ? (
-                  <span style={{ color: 'oklch(0.55 0.18 25)' }}>
+                  <span style={{ color: 'var(--sem-red)' }}>
                     {s.lostPct}% abandona ({s.lostHere})
                   </span>
                 ) : (
@@ -452,7 +452,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
           {wonLostByMonth.map(m => (
             <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
               {m.rate !== null && (
-                <div className="text-[11px] font-semibold" style={{ color: 'oklch(0.45 0.18 160)' }}>
+                <div className="text-[11px] font-semibold" style={{ color: 'var(--sem-green-dark-2)' }}>
                   {m.rate}%
                 </div>
               )}
@@ -461,13 +461,13 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                 <div className="flex-1 rounded-t-[3px] transition-all" style={{
                   height: `${(m.won / maxWonLost) * 72}px`,
                   minHeight: m.won > 0 ? 4 : 0,
-                  background: 'oklch(0.50 0.16 160)',
+                  background: 'var(--sem-green-3)',
                 }} />
                 {/* Lost bar */}
                 <div className="flex-1 rounded-t-[3px] transition-all" style={{
                   height: `${(m.lost / maxWonLost) * 72}px`,
                   minHeight: m.lost > 0 ? 4 : 0,
-                  background: 'oklch(0.55 0.18 25)',
+                  background: 'var(--sem-red)',
                 }} />
               </div>
               <div className="text-[11px] font-medium" style={{ color: 'var(--ink-3)' }}>{m.label}</div>
@@ -479,11 +479,11 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
         </div>
         <div className="mt-3 flex gap-4" style={{ color: 'var(--ink-4)' }}>
           <span className="flex items-center gap-1 text-[11px]">
-            <span className="w-3 h-3 rounded-[2px] inline-block" style={{ background: 'oklch(0.50 0.16 160)' }} />
+            <span className="w-3 h-3 rounded-[2px] inline-block" style={{ background: 'var(--sem-green-3)' }} />
             Ganados
           </span>
           <span className="flex items-center gap-1 text-[11px]">
-            <span className="w-3 h-3 rounded-[2px] inline-block" style={{ background: 'oklch(0.55 0.18 25)' }} />
+            <span className="w-3 h-3 rounded-[2px] inline-block" style={{ background: 'var(--sem-red)' }} />
             Perdidos
           </span>
         </div>
@@ -509,7 +509,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                       style={{
                         width: `${(b.won / maxCycleBucket) * 100}%`,
                         minWidth: b.won > 0 ? 6 : 0,
-                        background: 'oklch(0.50 0.16 160)',
+                        background: 'var(--sem-green-3)',
                       }}
                     />
                     {/* Lost */}
@@ -518,7 +518,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                       style={{
                         width: `${(b.lost / maxCycleBucket) * 100}%`,
                         minWidth: b.lost > 0 ? 6 : 0,
-                        background: 'oklch(0.55 0.18 25)',
+                        background: 'var(--sem-red)',
                       }}
                     />
                   </div>
@@ -531,11 +531,11 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
           )}
           <div className="mt-3 flex gap-4" style={{ color: 'var(--ink-4)' }}>
             <span className="flex items-center gap-1 text-[11px]">
-              <span className="w-3 h-2 rounded-full inline-block" style={{ background: 'oklch(0.50 0.16 160)' }} />
+              <span className="w-3 h-2 rounded-full inline-block" style={{ background: 'var(--sem-green-3)' }} />
               Ganados
             </span>
             <span className="flex items-center gap-1 text-[11px]">
-              <span className="w-3 h-2 rounded-full inline-block" style={{ background: 'oklch(0.55 0.18 25)' }} />
+              <span className="w-3 h-2 rounded-full inline-block" style={{ background: 'var(--sem-red)' }} />
               Perdidos
             </span>
           </div>
@@ -558,7 +558,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                       className="h-full rounded-full"
                       style={{
                         width: `${(s.avgDays / maxSourceDays) * 100}%`,
-                        background: 'oklch(0.65 0.16 55)',
+                        background: 'var(--sem-orange-2)',
                       }}
                     />
                   </div>
@@ -621,7 +621,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                       style={{
                         width: `${c.positiveRate}%`,
                         background: c.positiveRate >= 60
-                          ? 'oklch(0.45 0.18 160)'
+                          ? 'var(--sem-green-dark-2)'
                           : c.positiveRate >= 35
                           ? 'oklch(0.60 0.16 85)'
                           : 'oklch(0.65 0.14 25)',
@@ -729,13 +729,13 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                     <td className="py-2 px-2 tabular-nums text-center" style={{ color: 'var(--ink-2)' }}>
                       {o.total}
                     </td>
-                    <td className="py-2 px-2 tabular-nums text-center" style={{ color: 'oklch(0.55 0.14 245)' }}>
+                    <td className="py-2 px-2 tabular-nums text-center" style={{ color: 'var(--sem-blue)' }}>
                       {o.active}
                     </td>
-                    <td className="py-2 px-2 tabular-nums text-center" style={{ color: 'oklch(0.45 0.18 160)' }}>
+                    <td className="py-2 px-2 tabular-nums text-center" style={{ color: 'var(--sem-green-dark-2)' }}>
                       {o.won}
                     </td>
-                    <td className="py-2 px-2 tabular-nums text-center" style={{ color: 'oklch(0.55 0.18 25)' }}>
+                    <td className="py-2 px-2 tabular-nums text-center" style={{ color: 'var(--sem-red)' }}>
                       {o.lost}
                     </td>
                     <td className="py-2 px-2 tabular-nums text-center font-semibold">
@@ -743,10 +743,10 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                         <span
                           style={{
                             color: o.winRate >= 50
-                              ? 'oklch(0.45 0.18 160)'
+                              ? 'var(--sem-green-dark-2)'
                               : o.winRate >= 30
                               ? 'oklch(0.55 0.12 85)'
-                              : 'oklch(0.55 0.18 25)',
+                              : 'var(--sem-red)',
                           }}
                         >
                           {o.winRate}%
@@ -770,13 +770,13 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
           {
             label: 'Tareas completadas',
             value: `${taskPct}%`,
-            color: taskPct >= 70 ? 'oklch(0.45 0.18 160)' : 'oklch(0.65 0.16 55)',
+            color: taskPct >= 70 ? 'var(--sem-green-dark-2)' : 'var(--sem-orange-2)',
             sub: `${doneTasks} / ${crmTasks.length}`,
           },
           {
             label: 'Tareas vencidas',
             value: overdueTasks,
-            color: overdueTasks > 0 ? 'oklch(0.55 0.18 25)' : 'var(--ink-4)',
+            color: overdueTasks > 0 ? 'var(--sem-red)' : 'var(--ink-4)',
             sub: 'pendientes/en curso',
           },
           {

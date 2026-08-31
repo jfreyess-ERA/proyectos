@@ -18,19 +18,19 @@ const STAGE_LABELS: Record<string, string> = {
   none: 'Sin etapa',
 };
 const STAGE_COLORS: Record<string, string> = {
-  situacion: 'oklch(0.62 0.16 265)',
-  opciones: 'oklch(0.68 0.13 38)',
-  implementacion: 'oklch(0.60 0.14 340)',
-  seguimiento: 'oklch(0.60 0.14 160)',
+  situacion: 'var(--sem-indigo)',
+  opciones: 'var(--sem-amber)',
+  implementacion: 'var(--sem-pink)',
+  seguimiento: 'var(--sem-green-2)',
   none: 'var(--ink-4)',
 };
 
 // phase segments (between consecutive milestones)
 const SEGMENTS = [
-  { key: 'diag', label: 'Diagnóstico', sub: 'Kick off → Situación', from: 'kickoff_date', to: 'situacion_date', color: 'oklch(0.62 0.16 265)' },
-  { key: 'eval', label: 'Evaluación', sub: 'Situación → Opciones', from: 'situacion_date', to: 'opciones_date', color: 'oklch(0.68 0.13 38)' },
-  { key: 'impl', label: 'Implementación', sub: 'Opciones → Implementación', from: 'opciones_date', to: 'implementacion_date', color: 'oklch(0.60 0.14 340)' },
-  { key: 'seg', label: 'Seguimiento', sub: 'Implementación → 1er seguimiento', from: 'implementacion_date', to: 'seguimiento_date', color: 'oklch(0.60 0.14 160)' },
+  { key: 'diag', label: 'Diagnóstico', sub: 'Kick off → Situación', from: 'kickoff_date', to: 'situacion_date', color: 'var(--sem-indigo)' },
+  { key: 'eval', label: 'Evaluación', sub: 'Situación → Opciones', from: 'situacion_date', to: 'opciones_date', color: 'var(--sem-amber)' },
+  { key: 'impl', label: 'Implementación', sub: 'Opciones → Implementación', from: 'opciones_date', to: 'implementacion_date', color: 'var(--sem-pink)' },
+  { key: 'seg', label: 'Seguimiento', sub: 'Implementación → 1er seguimiento', from: 'implementacion_date', to: 'seguimiento_date', color: 'var(--sem-green-2)' },
 ] as const;
 
 const ORDERED_MS: (keyof Project)[] = ['kickoff_date', 'situacion_date', 'opciones_date', 'implementacion_date', 'seguimiento_date'];

@@ -20,12 +20,12 @@ const CHANNEL_EMOJI: Record<string, string> = {
 };
 
 const OUTCOME_STYLE: Record<string, { bg: string; fg: string }> = {
-  'Positive':       { bg: 'oklch(0.95 0.06 160)', fg: 'oklch(0.38 0.12 160)' },
-  'Interested':     { bg: 'oklch(0.95 0.06 160)', fg: 'oklch(0.38 0.12 160)' },
+  'Positive':       { bg: 'var(--sem-green-bg)', fg: 'var(--sem-green-dark)' },
+  'Interested':     { bg: 'var(--sem-green-bg)', fg: 'var(--sem-green-dark)' },
   'Meeting booked': { bg: 'oklch(0.93 0.08 160)', fg: 'oklch(0.32 0.14 160)' },
   'Not now':        { bg: 'oklch(0.95 0.04 85)',  fg: 'oklch(0.42 0.08 85)'  },
-  'No response':    { bg: 'oklch(0.94 0.01 0)',   fg: 'oklch(0.50 0.01 0)'   },
-  'Lost':           { bg: 'oklch(0.95 0.06 25)',  fg: 'oklch(0.45 0.18 25)'  },
+  'No response':    { bg: 'var(--sem-gray-bg)',   fg: 'var(--sem-gray-fg)'   },
+  'Lost':           { bg: 'var(--sem-red-bg)',  fg: 'var(--sem-red-dark)'  },
 };
 
 function fmtDate(d: string): string {
@@ -191,7 +191,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
                         {i.summary ?? '—'}
                       </span>
                     </td>
-                    <td className="px-4 py-[9px] whitespace-nowrap text-[12px]" style={{ color: i.follow_up_due && i.follow_up_due < new Date().toISOString().slice(0, 10) ? 'oklch(0.55 0.18 25)' : 'var(--ink-3)' }}>
+                    <td className="px-4 py-[9px] whitespace-nowrap text-[12px]" style={{ color: i.follow_up_due && i.follow_up_due < new Date().toISOString().slice(0, 10) ? 'var(--sem-red)' : 'var(--ink-3)' }}>
                       {i.follow_up_due ? fmtDate(i.follow_up_due) : '—'}
                     </td>
                   </tr>

@@ -116,7 +116,7 @@ export function InviteUserModal({ open, onClose, onInvited }: Props) {
         <div className="p-5">
           {success ? (
             <div className="flex flex-col items-center py-6 gap-3 text-center">
-              <CheckCircle size={40} style={{ color: 'oklch(0.55 0.14 160)' }} />
+              <CheckCircle size={40} style={{ color: 'var(--sem-green)' }} />
               <div className="text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>
                 ¡Invitación enviada!
               </div>

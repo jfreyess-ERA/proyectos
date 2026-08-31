@@ -122,7 +122,7 @@ export function PlaybookPanel({ prospect, nodes, edges }: Props) {
       {/* Estado actual */}
       <div className="flex items-start gap-2 mb-2">
         {current.is_terminal
-          ? <CheckCircle2 size={14} className="flex-shrink-0 mt-px" style={{ color: 'var(--ok, oklch(0.60 0.14 160))' }} />
+          ? <CheckCircle2 size={14} className="flex-shrink-0 mt-px" style={{ color: 'var(--ok, var(--sem-green-2))' }} />
           : <CornerDownRight size={14} className="flex-shrink-0 mt-px" style={{ color: 'var(--accent)' }} />}
         <div className="min-w-0">
           <div className="text-[13px] font-medium" style={{ color: 'var(--ink)' }}>{current.label}</div>

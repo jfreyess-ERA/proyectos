@@ -28,6 +28,50 @@
   --danger:    oklch(0.60 0.18 25);
   --danger-bg: oklch(0.97 0.03 25);
 
+  /* Tokens semánticos — Fase 1 del sistema ERA: consolida colores oklch()
+     hardcodeados repetidos en los componentes. Valores idénticos a los
+     literales que reemplazan; no cambia nada visualmente. La rationalización
+     de duplicados cercanos (p.ej. sem-red vs sem-red-2) queda para Fase 2. */
+  --sem-red:          oklch(0.55 0.18 25);
+  --sem-red-2:        oklch(0.58 0.18 25);
+  --sem-red-dark:      oklch(0.45 0.18 25);
+  --sem-red-dark-2:    oklch(0.42 0.14 25);
+  --sem-red-bg:        oklch(0.95 0.06 25);
+  --sem-red-bg-2:      oklch(0.96 0.04 25);
+  --sem-red-bg-3:      oklch(0.94 0.04 25);
+  --sem-red-border:    oklch(0.80 0.08 25);
+
+  --sem-green:         oklch(0.55 0.14 160);
+  --sem-green-2:       oklch(0.60 0.14 160);
+  --sem-green-dark:    oklch(0.38 0.12 160);
+  --sem-green-dark-2:  oklch(0.45 0.18 160);
+  --sem-green-3:       oklch(0.50 0.16 160);
+  --sem-green-bg:      oklch(0.95 0.06 160);
+  --sem-green-bg-2:    oklch(0.96 0.03 160);
+
+  --sem-orange:        oklch(0.65 0.14 50);
+  --sem-orange-2:      oklch(0.65 0.16 55);
+  --sem-amber:         oklch(0.68 0.13 38);
+  --sem-amber-2:       oklch(0.62 0.14 38);
+  --sem-amber-3:       oklch(0.70 0.14 85);
+  --sem-amber-dark:    oklch(0.42 0.14 85);
+
+  --sem-indigo:        oklch(0.62 0.16 265);
+  --sem-indigo-2:      oklch(0.55 0.18 265);
+  --sem-indigo-3:      oklch(0.55 0.18 275);
+  --sem-blue-gray-med: oklch(0.62 0.05 250);
+  --sem-blue-gray-low: oklch(0.62 0.02 250);
+  --sem-blue:          oklch(0.55 0.14 245);
+  --sem-blue-dark:     oklch(0.40 0.14 245);
+  --sem-blue-bg:       oklch(0.95 0.05 245);
+
+  --sem-gray-bg:       oklch(0.94 0.01 0);
+  --sem-gray-fg:       oklch(0.50 0.01 0);
+  --sem-gray-2:        oklch(0.60 0.00 0);
+
+  --sem-pink:          oklch(0.60 0.14 340);
+  --sem-purple:        oklch(0.58 0.18 300);
+
   --font:      var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
 

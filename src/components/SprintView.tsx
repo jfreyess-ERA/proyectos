@@ -29,7 +29,7 @@ export function SprintView({ sprint, tasks, projects, onOpenTask, onSprintUpdate
     planned: 'Planificado', active: 'Activo', completed: 'Completado',
   };
   const STATUS_COLOR: Record<string, string> = {
-    planned: 'var(--ink-4)', active: 'var(--accent)', completed: 'oklch(0.60 0.14 160)',
+    planned: 'var(--ink-4)', active: 'var(--accent)', completed: 'var(--sem-green-2)',
   };
 
   function fmtRange() {

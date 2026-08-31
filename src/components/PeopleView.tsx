@@ -186,7 +186,7 @@ export function PeopleView({ tasks, projects, users, datedSubtasks, onOpenTask, 
                 {done > 0 && (
                   <span
                     className="text-[11px] font-medium px-2 py-[3px] rounded-full"
-                    style={{ background: 'oklch(0.96 0.03 160)', color: 'oklch(0.45 0.12 160)' }}
+                    style={{ background: 'var(--sem-green-bg-2)', color: 'oklch(0.45 0.12 160)' }}
                   >
                     {done} completadas
                   </span>

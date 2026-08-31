@@ -20,13 +20,13 @@ interface Props {
 
 const STAGE_ORDER = ['New', 'Contacted', 'Meeting Requested', 'Meeting Held', 'Proposal', 'Negotiation', 'Won'];
 const STAGE_COLOR: Record<string, string> = {
-  'New': 'oklch(0.60 0.00 0)',
-  'Contacted': 'oklch(0.55 0.14 245)',
-  'Meeting Requested': 'oklch(0.70 0.14 85)',
-  'Meeting Held': 'oklch(0.65 0.16 55)',
-  'Proposal': 'oklch(0.58 0.18 300)',
-  'Negotiation': 'oklch(0.55 0.18 275)',
-  'Won': 'oklch(0.55 0.14 160)',
+  'New': 'var(--sem-gray-2)',
+  'Contacted': 'var(--sem-blue)',
+  'Meeting Requested': 'var(--sem-amber-3)',
+  'Meeting Held': 'var(--sem-orange-2)',
+  'Proposal': 'var(--sem-purple)',
+  'Negotiation': 'var(--sem-indigo-3)',
+  'Won': 'var(--sem-green)',
 };
 
 export function CrmDashboard({ prospects, interactions, crmTasks, triggers, onViewProspects }: Props) {
@@ -112,9 +112,9 @@ export function CrmDashboard({ prospects, interactions, crmTasks, triggers, onVi
       {/* KPI Grid */}
       <div className="grid grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Activos', value: active, color: 'oklch(0.55 0.14 245)', sub: 'status Active' },
-          { label: 'Warm', value: warm, color: 'oklch(0.65 0.16 55)', sub: 'status Warm' },
-          { label: 'Nurture', value: nurture, color: 'oklch(0.58 0.18 300)', sub: 'status Nurture' },
+          { label: 'Activos', value: active, color: 'var(--sem-blue)', sub: 'status Active' },
+          { label: 'Warm', value: warm, color: 'var(--sem-orange-2)', sub: 'status Warm' },
+          { label: 'Nurture', value: nurture, color: 'var(--sem-purple)', sub: 'status Nurture' },
           { label: 'Triggers abiertos', value: openTriggers, color: 'oklch(0.62 0.16 25)', sub: '' },
         ].map(kpi => (
           <button
@@ -139,16 +139,16 @@ export function CrmDashboard({ prospects, interactions, crmTasks, triggers, onVi
       <div className="grid grid-cols-4 gap-3 mb-6">
         {[
           { label: 'Tareas pendientes', value: pendingTasks.length, color: 'var(--ink)', warn: false },
-          { label: 'Tareas vencidas', value: overdueTasks.length, color: overdueTasks.length > 0 ? 'oklch(0.55 0.18 25)' : 'var(--ink)', warn: overdueTasks.length > 0 },
-          { label: 'Seguimientos hoy', value: followupsToday.length, color: followupsToday.length > 0 ? 'oklch(0.55 0.14 245)' : 'var(--ink)', warn: false },
+          { label: 'Tareas vencidas', value: overdueTasks.length, color: overdueTasks.length > 0 ? 'var(--sem-red)' : 'var(--ink)', warn: overdueTasks.length > 0 },
+          { label: 'Seguimientos hoy', value: followupsToday.length, color: followupsToday.length > 0 ? 'var(--sem-blue)' : 'var(--ink)', warn: false },
           { label: 'Sin contacto 30d+', value: stale30, color: stale30 > 0 ? 'oklch(0.60 0.14 85)' : 'var(--ink)', warn: stale30 > 0 },
         ].map(kpi => (
           <div
             key={kpi.label}
             className="rounded-[12px] p-4"
             style={{
-              background: kpi.warn ? 'color-mix(in oklch, var(--surface) 96%, oklch(0.55 0.18 25) 4%)' : 'var(--surface)',
-              border: `1px solid ${kpi.warn ? 'oklch(0.80 0.08 25)' : 'var(--line)'}`,
+              background: kpi.warn ? 'color-mix(in oklch, var(--surface) 96%, var(--sem-red) 4%)' : 'var(--surface)',
+              border: `1px solid ${kpi.warn ? 'var(--sem-red-border)' : 'var(--line)'}`,
               boxShadow: 'var(--shadow-1)',
             }}
           >
@@ -199,13 +199,13 @@ export function CrmDashboard({ prospects, interactions, crmTasks, triggers, onVi
                 <div key={task.id} className="flex items-start gap-2">
                   <div
                     className="w-[6px] h-[6px] rounded-full mt-[5px] flex-shrink-0"
-                    style={{ background: isOverdue ? 'oklch(0.55 0.18 25)' : isToday ? 'oklch(0.55 0.14 245)' : 'var(--ink-4)' }}
+                    style={{ background: isOverdue ? 'var(--sem-red)' : isToday ? 'var(--sem-blue)' : 'var(--ink-4)' }}
                   />
                   <div className="min-w-0">
                     <div className="text-[12px] truncate" style={{ color: 'var(--ink)' }}>
                       {task.task_type ?? 'Tarea'} — {prospect?.company ?? '…'}
                     </div>
-                    <div className="text-[11px]" style={{ color: isOverdue ? 'oklch(0.55 0.18 25)' : 'var(--ink-4)' }}>
+                    <div className="text-[11px]" style={{ color: isOverdue ? 'var(--sem-red)' : 'var(--ink-4)' }}>
                       {task.due_date ? fmtDate(task.due_date) : 'Sin fecha'}
                     </div>
                   </div>
@@ -274,16 +274,16 @@ function channelEmoji(channel?: string): string {
 
 function outcomeBg(outcome: string): string {
   if (outcome === 'Positive' || outcome === 'Interested' || outcome === 'Meeting booked')
-    return 'oklch(0.95 0.06 160)';
+    return 'var(--sem-green-bg)';
   if (outcome === 'Not now' || outcome === 'No response') return 'oklch(0.94 0.02 85)';
-  if (outcome === 'Lost') return 'oklch(0.95 0.06 25)';
+  if (outcome === 'Lost') return 'var(--sem-red-bg)';
   return 'var(--bg-3)';
 }
 
 function outcomeFg(outcome: string): string {
   if (outcome === 'Positive' || outcome === 'Interested' || outcome === 'Meeting booked')
-    return 'oklch(0.38 0.12 160)';
+    return 'var(--sem-green-dark)';
   if (outcome === 'Not now' || outcome === 'No response') return 'oklch(0.45 0.05 85)';
-  if (outcome === 'Lost') return 'oklch(0.45 0.18 25)';
+  if (outcome === 'Lost') return 'var(--sem-red-dark)';
   return 'var(--ink-3)';
 }

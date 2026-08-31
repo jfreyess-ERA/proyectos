@@ -171,7 +171,7 @@ export function EmailTemplatesView({ templates, prospects = [], onTemplatesChang
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button onClick={() => copyToClipboard(selected)}
                   className="h-8 px-3 rounded-[7px] text-[12px] flex items-center gap-1 border-0 font-medium"
-                  style={{ background: copied === selected.id ? 'oklch(0.95 0.06 160)' : 'var(--bg-3)', color: copied === selected.id ? 'oklch(0.38 0.12 160)' : 'var(--ink-2)' }}>
+                  style={{ background: copied === selected.id ? 'var(--sem-green-bg)' : 'var(--bg-3)', color: copied === selected.id ? 'var(--sem-green-dark)' : 'var(--ink-2)' }}>
                   {copied === selected.id ? <><Check size={13} /> Copiado</> : <><Copy size={13} /> Copiar</>}
                 </button>
                 <button onClick={() => openEdit(selected)}
@@ -181,7 +181,7 @@ export function EmailTemplatesView({ templates, prospects = [], onTemplatesChang
                 </button>
                 <button onClick={() => handleDelete(selected)}
                   className="h-8 px-3 rounded-[7px] text-[12px] flex items-center gap-1 border-0"
-                  style={{ background: 'var(--bg-3)', color: 'oklch(0.55 0.18 25)' }}>
+                  style={{ background: 'var(--bg-3)', color: 'var(--sem-red)' }}>
                   <Trash2 size={13} />
                 </button>
               </div>

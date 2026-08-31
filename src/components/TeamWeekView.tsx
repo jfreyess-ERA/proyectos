@@ -19,10 +19,10 @@ interface Props {
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  urgent: 'oklch(0.58 0.18 25)',
-  high:   'oklch(0.65 0.14 50)',
-  med:    'oklch(0.62 0.05 250)',
-  low:    'oklch(0.62 0.02 250)',
+  urgent: 'var(--sem-red-2)',
+  high:   'var(--sem-orange)',
+  med:    'var(--sem-blue-gray-med)',
+  low:    'var(--sem-blue-gray-low)',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -36,9 +36,9 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_TONES: Record<string, string> = {
   backlog: 'oklch(0.55 0.02 250)',
   todo:    'oklch(0.55 0.05 250)',
-  doing:   'oklch(0.62 0.16 265)',
-  review:  'oklch(0.68 0.13 38)',
-  done:    'oklch(0.60 0.14 160)',
+  doing:   'var(--sem-indigo)',
+  review:  'var(--sem-amber)',
+  done:    'var(--sem-green-2)',
 };
 
 function startOfWeek(d: Date): Date {
@@ -397,10 +397,10 @@ interface EntityCardProps {
 function EntityCard({ collapsed, onToggle, buckets, projects, users, onOpenTask, onOpenProject, todayISO, variant, user, project }: EntityCardProps) {
   const groups = [
     { key: 'overdue', title: 'Atrasadas', items: buckets.overdue, accent: 'var(--danger)' },
-    { key: 'week', title: 'Vencen esta semana', items: buckets.dueThisWeek, accent: 'oklch(0.62 0.16 265)' },
-    { key: 'doing', title: 'En curso', items: buckets.inProgress, accent: 'oklch(0.62 0.16 265)' },
+    { key: 'week', title: 'Vencen esta semana', items: buckets.dueThisWeek, accent: 'var(--sem-indigo)' },
+    { key: 'doing', title: 'En curso', items: buckets.inProgress, accent: 'var(--sem-indigo)' },
     { key: 'pending', title: 'Pendientes', items: buckets.pending, accent: 'var(--ink-3)' },
-    { key: 'done', title: 'Completadas esta semana', items: buckets.completedThisWeek, accent: 'oklch(0.60 0.14 160)' },
+    { key: 'done', title: 'Completadas esta semana', items: buckets.completedThisWeek, accent: 'var(--sem-green-2)' },
   ].filter(g => g.items.length > 0);
 
   const doingCount = buckets.inProgress.length + buckets.dueThisWeek.filter(t => t.status === 'doing').length;

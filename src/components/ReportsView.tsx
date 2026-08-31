@@ -80,9 +80,9 @@ function KpiCard({
   warn?: boolean;
 }) {
   const color = warn
-    ? 'oklch(0.62 0.14 38)'
+    ? 'var(--sem-amber-2)'
     : accent
-    ? 'oklch(0.60 0.14 160)'
+    ? 'var(--sem-green-2)'
     : 'var(--ink)';
   return (
     <div
@@ -364,9 +364,9 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
   // accuracy color helper
   function accuracyColor(ratio: number | null) {
     if (ratio === null) return 'var(--ink-4)';
-    if (ratio <= 1.0) return 'oklch(0.55 0.14 160)';
-    if (ratio <= 1.2) return 'oklch(0.62 0.14 38)';
-    return 'oklch(0.58 0.18 25)';
+    if (ratio <= 1.0) return 'var(--sem-green)';
+    if (ratio <= 1.2) return 'var(--sem-amber-2)';
+    return 'var(--sem-red-2)';
   }
 
   function accuracyLabel(ratio: number | null) {
@@ -633,7 +633,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                             <div style={{ flex: 1, maxWidth: 100 }}>
                               <HBar
                                 pct={row.doingDays / maxDoing}
-                                color="oklch(0.62 0.16 265)"
+                                color="var(--sem-indigo)"
                                 height={5}
                               />
                             </div>
@@ -652,7 +652,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                             <div style={{ flex: 1, maxWidth: 100 }}>
                               <HBar
                                 pct={row.reviewDays / maxReview}
-                                color="oklch(0.68 0.13 38)"
+                                color="var(--sem-amber)"
                                 height={5}
                               />
                             </div>
@@ -671,7 +671,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                             <div style={{ flex: 1, maxWidth: 120 }}>
                               <HBar
                                 pct={row.cycleDays / maxCycle}
-                                color="oklch(0.60 0.14 160)"
+                                color="var(--sem-green-2)"
                                 height={5}
                               />
                             </div>
@@ -699,10 +699,10 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                 const ratio = p.ratio ?? 0;
                 const spentColor =
                   ratio <= 1.0
-                    ? 'oklch(0.55 0.14 160)'
+                    ? 'var(--sem-green)'
                     : ratio <= 1.2
-                    ? 'oklch(0.62 0.14 38)'
-                    : 'oklch(0.58 0.18 25)';
+                    ? 'var(--sem-amber-2)'
+                    : 'var(--sem-red-2)';
                 const maxH = Math.max(p.totalEst, p.totalSpent);
                 return (
                   <div key={p.id} className="flex flex-col gap-[8px]">
@@ -790,7 +790,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                         </div>
                         <span
                           className="text-[12px] font-semibold tabular-nums px-2 py-[1px] rounded-full"
-                          style={{ background: 'oklch(0.94 0.04 25)', color: 'oklch(0.42 0.14 25)' }}
+                          style={{ background: 'var(--sem-red-bg-3)', color: 'var(--sem-red-dark-2)' }}
                         >
                           {pt.length}
                         </span>
@@ -809,7 +809,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                             >
                               {t.title.length > 45 ? t.title.slice(0, 45) + '…' : t.title}
                             </span>
-                            <span className="text-[10px] tabular-nums flex-shrink-0" style={{ color: 'oklch(0.58 0.18 25)' }}>
+                            <span className="text-[10px] tabular-nums flex-shrink-0" style={{ color: 'var(--sem-red-2)' }}>
                               {daysBetween(parseDate(t.due), today)}d
                             </span>
                           </div>
@@ -845,14 +845,14 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                           </span>
                           <span
                             className="text-[11px] font-semibold tabular-nums px-2 py-[1px] rounded-full ml-2 flex-shrink-0"
-                            style={{ background: 'oklch(0.94 0.04 25)', color: 'oklch(0.42 0.14 25)' }}
+                            style={{ background: 'var(--sem-red-bg-3)', color: 'var(--sem-red-dark-2)' }}
                           >
                             {ut.length}
                           </span>
                         </div>
                         <HBar
                           pct={ut.length / Math.max(...overdueByAssignee.map(g => g.tasks.length), 1)}
-                          color="oklch(0.58 0.18 25)"
+                          color="var(--sem-red-2)"
                           height={4}
                         />
                       </div>
@@ -925,8 +925,8 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                       pct={count / maxWorkload}
                       color={
                         urgentHigh > 0
-                          ? 'oklch(0.62 0.16 265)'
-                          : 'oklch(0.60 0.14 160)'
+                          ? 'var(--sem-indigo)'
+                          : 'var(--sem-green-2)'
                       }
                       height={5}
                     />
@@ -1012,8 +1012,8 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                         height: `${doneH}%`,
                         minHeight: w.done > 0 ? 4 : 0,
                         background: isCurrentWeek
-                          ? 'oklch(0.55 0.18 265)'
-                          : 'oklch(0.62 0.16 265)',
+                          ? 'var(--sem-indigo-2)'
+                          : 'var(--sem-indigo)',
                       }}
                     />
                   </div>
@@ -1029,7 +1029,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                   </div>
                   {/* count */}
                   {w.done > 0 && (
-                    <div className="text-[10px] tabular-nums font-semibold" style={{ color: 'oklch(0.55 0.18 265)' }}>
+                    <div className="text-[10px] tabular-nums font-semibold" style={{ color: 'var(--sem-indigo-2)' }}>
                       {w.done}
                     </div>
                   )}
@@ -1040,7 +1040,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
           {/* legend */}
           <div className="flex items-center gap-4 mt-3 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-[2px]" style={{ background: 'oklch(0.62 0.16 265)' }} />
+              <div className="w-3 h-3 rounded-[2px]" style={{ background: 'var(--sem-indigo)' }} />
               <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Completadas</span>
             </div>
             <div className="flex items-center gap-1">

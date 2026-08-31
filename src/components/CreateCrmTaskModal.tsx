@@ -90,7 +90,7 @@ export function CreateCrmTaskModal({ open, prospects, defaultProspectId, onClose
           {/* Prospect */}
           <div className="flex flex-col gap-1">
             <label className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>
-              Prospecto <span style={{ color: 'oklch(0.55 0.18 25)' }}>*</span>
+              Prospecto <span style={{ color: 'var(--sem-red)' }}>*</span>
             </label>
             <select
               value={prospectId}
@@ -111,7 +111,7 @@ export function CreateCrmTaskModal({ open, prospects, defaultProspectId, onClose
           {/* Task type */}
           <div className="flex flex-col gap-1">
             <label className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>
-              Tipo de tarea <span style={{ color: 'oklch(0.55 0.18 25)' }}>*</span>
+              Tipo de tarea <span style={{ color: 'var(--sem-red)' }}>*</span>
             </label>
             <select
               value={taskType}

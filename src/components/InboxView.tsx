@@ -118,7 +118,7 @@ export function InboxView({ tasks, projects, onOpenTask, crmTasks = [], prospect
       icon: <RotateCcw size={14} />,
       title: 'Prospectos para reactivar',
       rows: toReactivate,
-      accent: 'oklch(0.62 0.16 265)',
+      accent: 'var(--sem-indigo)',
       bg: 'var(--accent-bg)',
     },
     {
@@ -134,7 +134,7 @@ export function InboxView({ tasks, projects, onOpenTask, crmTasks = [], prospect
       icon: <Eye size={14} />,
       title: 'Esperando revisión',
       rows: inReview.map(taskRow),
-      accent: 'oklch(0.68 0.13 38)',
+      accent: 'var(--sem-amber)',
       bg: 'oklch(0.97 0.02 38)',
     },
     {

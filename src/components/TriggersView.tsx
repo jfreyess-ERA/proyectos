@@ -18,9 +18,9 @@ const TRIGGER_ICONS: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
-  'Open':       { bg: 'oklch(0.95 0.06 25)',  fg: 'oklch(0.45 0.18 25)'  },
-  'Monitoring': { bg: 'oklch(0.96 0.05 85)',  fg: 'oklch(0.42 0.14 85)'  },
-  'Closed':     { bg: 'oklch(0.94 0.01 0)',   fg: 'oklch(0.50 0.01 0)'   },
+  'Open':       { bg: 'var(--sem-red-bg)',  fg: 'var(--sem-red-dark)'  },
+  'Monitoring': { bg: 'oklch(0.96 0.05 85)',  fg: 'var(--sem-amber-dark)'  },
+  'Closed':     { bg: 'var(--sem-gray-bg)',   fg: 'var(--sem-gray-fg)'   },
 };
 
 function fmtDate(d: string): string {
@@ -160,8 +160,8 @@ export function TriggersView({ triggers, prospects, onOpenProspect, onTriggersCh
                       <span
                         className="text-[10px] px-[6px] py-[2px] rounded-full"
                         style={{
-                          background: trigger.priority === 'High' ? 'oklch(0.95 0.06 25)' : 'oklch(0.95 0.05 245)',
-                          color: trigger.priority === 'High' ? 'oklch(0.45 0.18 25)' : 'oklch(0.40 0.14 245)',
+                          background: trigger.priority === 'High' ? 'var(--sem-red-bg)' : 'var(--sem-blue-bg)',
+                          color: trigger.priority === 'High' ? 'var(--sem-red-dark)' : 'var(--sem-blue-dark)',
                         }}
                       >
                         {trigger.priority}

@@ -21,10 +21,10 @@ const STAGE_LABELS: Record<string, string> = {
   none: 'Sin etapa',
 };
 const STAGE_COLORS: Record<string, string> = {
-  situacion: 'oklch(0.62 0.16 265)',
-  opciones: 'oklch(0.68 0.13 38)',
-  implementacion: 'oklch(0.60 0.14 340)',
-  seguimiento: 'oklch(0.60 0.14 160)',
+  situacion: 'var(--sem-indigo)',
+  opciones: 'var(--sem-amber)',
+  implementacion: 'var(--sem-pink)',
+  seguimiento: 'var(--sem-green-2)',
   none: 'var(--ink-4)',
 };
 const STAGE_ORDER = ['situacion', 'opciones', 'implementacion', 'seguimiento', 'none'];
@@ -216,9 +216,9 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
           {/* KPIs */}
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
             <Kpi label="Subtareas" value={String(overall.total)} sub={`${overall.dated} con fecha`} />
-            <Kpi label="Cumplimiento" value={`${pct(overall)}%`} sub={`${overall.done} hechas`} tone="oklch(0.60 0.14 160)" />
+            <Kpi label="Cumplimiento" value={`${pct(overall)}%`} sub={`${overall.done} hechas`} tone="var(--sem-green-2)" />
             <Kpi label="Atrasadas" value={String(overall.overdue)} sub="pendientes y vencidas" tone={overall.overdue > 0 ? 'var(--danger)' : 'var(--ink)'} />
-            <Kpi label="Sin responsable" value={String(overall.unassigned)} sub="no monitoreables" tone={overall.unassigned > 0 ? 'oklch(0.68 0.13 38)' : 'var(--ink)'} />
+            <Kpi label="Sin responsable" value={String(overall.unassigned)} sub="no monitoreables" tone={overall.unassigned > 0 ? 'var(--sem-amber)' : 'var(--ink)'} />
           </div>
 
           {/* Por responsable */}
@@ -240,7 +240,7 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
                       </div>
                     </div>
                     <div className="flex-1 h-[7px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
-                      <div className="h-full rounded-full" style={{ width: `${pct(tally)}%`, background: 'oklch(0.60 0.14 160)' }} />
+                      <div className="h-full rounded-full" style={{ width: `${pct(tally)}%`, background: 'var(--sem-green-2)' }} />
                     </div>
                     <span className="text-[12.5px] w-[42px] text-right tabular-nums font-medium" style={{ color: 'var(--ink)' }}>{pct(tally)}%</span>
                   </div>
@@ -307,7 +307,7 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
                       <td className="py-2 pr-3 text-right tabular-nums font-semibold" style={{ color: 'var(--ink)' }}>{pct(r.tally)}%</td>
                       <td className="py-2">
                         <div className="h-[7px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)', maxWidth: 140 }}>
-                          <div className="h-full rounded-full" style={{ width: `${pct(r.tally)}%`, background: 'oklch(0.60 0.14 160)' }} />
+                          <div className="h-full rounded-full" style={{ width: `${pct(r.tally)}%`, background: 'var(--sem-green-2)' }} />
                         </div>
                       </td>
                     </tr>

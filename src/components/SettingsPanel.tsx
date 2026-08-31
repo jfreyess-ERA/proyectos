@@ -101,7 +101,7 @@ function PasswordField({
             type="button"
             onClick={copy}
             className="h-7 px-2 rounded-[6px] border-0 flex items-center gap-1 text-[11px] transition-colors"
-            style={{ background: copied ? 'oklch(0.95 0.06 160)' : 'var(--bg-3)', color: copied ? 'oklch(0.38 0.12 160)' : 'var(--ink-3)' }}
+            style={{ background: copied ? 'var(--sem-green-bg)' : 'var(--bg-3)', color: copied ? 'var(--sem-green-dark)' : 'var(--ink-3)' }}
             title="Copiar contraseña"
           >
             {copied ? <Check size={11} /> : <Copy size={11} />}
@@ -446,7 +446,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                 <div className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--ink-4)' }}>Editar perfil</div>
                 <form onSubmit={handleSaveProfile} className="flex flex-col gap-3">
                   {profileOk && (
-                    <div className="px-3 py-2 rounded-[8px] text-[12px]" style={{ background: 'oklch(0.96 0.03 160)', color: 'oklch(0.38 0.12 160)', border: '1px solid oklch(0.75 0.12 160)' }}>
+                    <div className="px-3 py-2 rounded-[8px] text-[12px]" style={{ background: 'var(--sem-green-bg-2)', color: 'var(--sem-green-dark)', border: '1px solid oklch(0.75 0.12 160)' }}>
                       Perfil actualizado.
                     </div>
                   )}
@@ -505,7 +505,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                           setTimeout(() => setCalendarLinkCopied(false), 2000);
                         }}
                         className="h-8 px-3 rounded-[6px] text-[11.5px] font-medium border-0 flex items-center gap-1 flex-shrink-0"
-                        style={{ background: calendarLinkCopied ? 'oklch(0.55 0.14 160)' : 'var(--accent)', color: 'white' }}
+                        style={{ background: calendarLinkCopied ? 'var(--sem-green)' : 'var(--accent)', color: 'white' }}
                       >
                         <Copy size={11} /> {calendarLinkCopied ? 'Copiado' : 'Copiar'}
                       </button>
@@ -528,7 +528,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                     label="Nueva contraseña"
                   />
                   {ownPwErr && <div className="text-[11.5px]" style={{ color: 'var(--danger)' }}>{ownPwErr}</div>}
-                  {ownPwOk && <div className="text-[11.5px]" style={{ color: 'oklch(0.55 0.14 160)' }}>✓ Contraseña actualizada</div>}
+                  {ownPwOk && <div className="text-[11.5px]" style={{ color: 'var(--sem-green)' }}>✓ Contraseña actualizada</div>}
                   <button
                     onClick={handleChangeOwnPassword}
                     disabled={savingOwnPw || ownPw.length < 6}
@@ -886,7 +886,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                                 </div>
 
                                 {pwOk === u.id && (
-                                  <div className="px-3 py-2 rounded-[7px] text-[11.5px]" style={{ background: 'oklch(0.96 0.03 160)', color: 'oklch(0.38 0.12 160)', border: '1px solid oklch(0.75 0.12 160)' }}>
+                                  <div className="px-3 py-2 rounded-[7px] text-[11.5px]" style={{ background: 'var(--sem-green-bg-2)', color: 'var(--sem-green-dark)', border: '1px solid oklch(0.75 0.12 160)' }}>
                                     ✓ Contraseña actualizada correctamente
                                   </div>
                                 )}
@@ -906,7 +906,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                                   onClick={() => handleChangePassword(u.id)}
                                   disabled={savingPw === u.id || !isChangingPw}
                                   className="h-7 rounded-[6px] text-[11.5px] font-semibold border-0 flex items-center justify-center gap-1 transition-opacity"
-                                  style={{ background: 'oklch(0.55 0.14 245)', color: 'white', opacity: savingPw === u.id || !isChangingPw ? 0.4 : 1 }}>
+                                  style={{ background: 'var(--sem-blue)', color: 'white', opacity: savingPw === u.id || !isChangingPw ? 0.4 : 1 }}>
                                   <KeyRound size={11} />
                                   {savingPw === u.id ? 'Actualizando…' : 'Actualizar contraseña'}
                                 </button>

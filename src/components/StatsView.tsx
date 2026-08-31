@@ -21,10 +21,10 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 const STAGE_COLORS: Record<string, string> = {
-  situacion: 'oklch(0.62 0.16 265)',
-  opciones: 'oklch(0.68 0.13 38)',
-  implementacion: 'oklch(0.60 0.14 340)',
-  seguimiento: 'oklch(0.60 0.14 160)',
+  situacion: 'var(--sem-indigo)',
+  opciones: 'var(--sem-amber)',
+  implementacion: 'var(--sem-pink)',
+  seguimiento: 'var(--sem-green-2)',
   none: 'var(--ink-4)',
 };
 
@@ -39,9 +39,9 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   backlog: 'oklch(0.55 0.02 250)',
   todo:    'oklch(0.55 0.05 250)',
-  doing:   'oklch(0.62 0.16 265)',
-  review:  'oklch(0.68 0.13 38)',
-  done:    'oklch(0.60 0.14 160)',
+  doing:   'var(--sem-indigo)',
+  review:  'var(--sem-amber)',
+  done:    'var(--sem-green-2)',
 };
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -464,10 +464,10 @@ export function StatsView({ tasks, projects, users, onOpenProject }: Props) {
           {(['urgent', 'high', 'med', 'low'] as const).map(p => {
             const n = filteredTasks.filter(t => t.priority === p && t.status !== 'done').length;
             const colors: Record<string, string> = {
-              urgent: 'oklch(0.58 0.18 25)',
-              high:   'oklch(0.65 0.14 50)',
-              med:    'oklch(0.62 0.05 250)',
-              low:    'oklch(0.62 0.02 250)',
+              urgent: 'var(--sem-red-2)',
+              high:   'var(--sem-orange)',
+              med:    'var(--sem-blue-gray-med)',
+              low:    'var(--sem-blue-gray-low)',
             };
             return (
               <div key={p} className="p-3 rounded-[10px]" style={{ background: 'var(--bg-2)', border: '1px solid var(--line-2)' }}>
