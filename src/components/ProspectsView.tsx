@@ -23,7 +23,7 @@ export const PRIORITY_STYLE: Record<string, { bg: string; fg: string }> = {
   'High':       { bg: 'oklch(0.96 0.05 25)',  fg: 'var(--sem-red-dark)'  },
   'Medium':     { bg: 'oklch(0.96 0.05 85)',  fg: 'oklch(0.45 0.12 85)'  },
   'Low':        { bg: 'var(--sem-gray-bg)',   fg: 'var(--sem-gray-fg)'   },
-  'Strategic':  { bg: 'oklch(0.95 0.06 300)', fg: 'oklch(0.40 0.18 300)' },
+  'Strategic':  { bg: 'var(--sem-purple-bg)', fg: 'var(--sem-purple-dark)' },
   'Watchlist':  { bg: 'var(--sem-blue-bg)', fg: 'var(--sem-blue-dark)' },
 };
 
@@ -32,7 +32,7 @@ export const STATUS_STYLE: Record<string, { bg: string; fg: string; dot: string 
   'Warm':        { bg: 'oklch(0.96 0.06 55)',  fg: 'oklch(0.42 0.14 55)',  dot: 'var(--sem-orange-2)'  },
   'Paused':      { bg: 'var(--sem-gray-bg)',   fg: 'var(--sem-gray-fg)',   dot: 'oklch(0.60 0.01 0)'   },
   'Nurture':     { bg: 'var(--sem-blue-bg)', fg: 'var(--sem-blue-dark)', dot: 'var(--sem-blue)' },
-  'Closed Won':  { bg: 'var(--sem-green-bg)', fg: 'oklch(0.32 0.14 160)', dot: 'var(--sem-green-dark-2)' },
+  'Closed Won':  { bg: 'var(--sem-green-bg)', fg: 'var(--sem-green-dark)', dot: 'var(--sem-green-dark-2)' },
   'Closed Lost': { bg: 'var(--sem-red-bg-2)',  fg: 'var(--sem-red-dark)',  dot: 'var(--sem-red)'  },
   'Dormant':     { bg: 'oklch(0.92 0.01 0)',   fg: 'oklch(0.55 0.01 0)',   dot: 'oklch(0.65 0.01 0)'   },
 };

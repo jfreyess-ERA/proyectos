@@ -318,7 +318,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
         <Card>
           <div
             className="text-[28px] font-bold tabular-nums leading-none mb-1"
-            style={{ color: 'oklch(0.55 0.18 300)' }}
+            style={{ color: 'var(--sem-purple)' }}
           >
             {avgInterPerClose !== null ? avgInterPerClose : '—'}
           </div>
@@ -370,9 +370,9 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                   className="w-[42px] text-[11px] text-right flex-shrink-0 font-medium"
                   style={{
                     color: funnelConvRates[i] >= 50
-                      ? 'oklch(0.45 0.14 160)'
+                      ? 'var(--sem-green-dark-2)'
                       : funnelConvRates[i] >= 25
-                      ? 'oklch(0.55 0.12 85)'
+                      ? 'var(--sem-amber-2)'
                       : 'var(--sem-red)',
                   }}
                 >
@@ -666,7 +666,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                   style={{
                     height: `${(d.interactions / maxTrendInter) * 90}px`,
                     minHeight: d.interactions > 0 ? 4 : 0,
-                    background: i === 5 ? 'oklch(0.55 0.18 300)' : 'oklch(0.75 0.12 300)',
+                    background: i === 5 ? 'var(--sem-purple)' : 'var(--sem-purple-2)',
                   }}
                 />
               </div>
@@ -683,7 +683,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
             Nuevos prospectos
           </span>
           <span className="flex items-center gap-1 text-[11px]">
-            <span className="w-3 h-3 rounded-[2px] inline-block" style={{ background: 'oklch(0.75 0.12 300)' }} />
+            <span className="w-3 h-3 rounded-[2px] inline-block" style={{ background: 'var(--sem-purple-2)' }} />
             Interacciones
           </span>
         </div>
@@ -745,7 +745,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                             color: o.winRate >= 50
                               ? 'var(--sem-green-dark-2)'
                               : o.winRate >= 30
-                              ? 'oklch(0.55 0.12 85)'
+                              ? 'var(--sem-amber-2)'
                               : 'var(--sem-red)',
                           }}
                         >
@@ -782,7 +782,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
           {
             label: 'Triggers abiertos',
             value: triggers.filter(t => t.status === 'Open').length,
-            color: 'oklch(0.55 0.14 85)',
+            color: 'var(--sem-amber-2)',
             sub: `${triggers.filter(t => t.status === 'Monitoring').length} monitoreando`,
           },
           {

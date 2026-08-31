@@ -25,7 +25,7 @@ export const PROJECT_STAGES: {
   { id: 'situacion',      label: 'Situación',     color: 'oklch(0.55 0.16 250)', description: 'Diagnóstico y análisis de la situación actual' },
   { id: 'opciones',       label: 'Opciones',       color: 'oklch(0.55 0.16 160)', description: 'Evaluación y selección de alternativas' },
   { id: 'implementacion', label: 'Implementación', color: 'oklch(0.58 0.16 50)',  description: 'Ejecución e implementación de la solución' },
-  { id: 'seguimiento',    label: 'Seguimiento',    color: 'oklch(0.55 0.12 300)', description: 'Seguimiento y monitoreo de resultados' },
+  { id: 'seguimiento',    label: 'Seguimiento',    color: 'var(--sem-purple)', description: 'Seguimiento y monitoreo de resultados' },
 ];
 
 // ── Main component ───────────────────────────────────────────────

@@ -1,76 +1,106 @@
 @import "tailwindcss";
 
-/* ── Norte design tokens ─────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════════
+   Sistema de diseño ERA Group · Fase 2 — identidad de marca
+   Paleta anclada en el canon ERA: teal #00C2A8, navy #0B1E38,
+   fondo frío #F2F5F9, bordes #DDE5EF.
+   Los ratios de contraste anotados son contra el fondo de su
+   contexto y cumplen WCAG AA (4.5:1) donde el token se usa como
+   texto. Ver referencias en los comentarios.
+   ════════════════════════════════════════════════════════════════ */
 :root {
-  --bg:         oklch(0.985 0.003 80);
-  --bg-2:       oklch(0.972 0.004 80);
-  --bg-3:       oklch(0.955 0.005 80);
-  --surface:    #ffffff;
-  --surface-2:  oklch(0.99 0.003 80);
-  --line:       oklch(0.92 0.004 80);
-  --line-2:     oklch(0.96 0.003 80);
+  /* ── Superficies (frías, ancladas en el canon ERA) ──────────── */
+  --bg:         #F2F5F9;   /* ERA canónico */
+  --bg-2:       #E9EEF6;
+  --bg-3:       #DEE6F0;
+  --surface:    #FFFFFF;   /* ERA canónico */
+  --surface-2:  #F8FAFD;
+  --line:       #DDE5EF;   /* ERA canónico */
+  --line-2:     #EBF0F7;
 
-  --ink:        oklch(0.22 0.012 80);
-  --ink-2:      oklch(0.40 0.010 80);
-  --ink-3:      oklch(0.55 0.008 80);
-  --ink-4:      oklch(0.70 0.006 80);
+  /* ── Texto: rampa navy. Conserva los escalones de luminosidad
+        de la rampa anterior, así ningún contraste empeora.      ── */
+  --ink:        #0B1E38;   /* ERA canónico · 16.7:1 sobre --surface */
+  --ink-2:      #33506F;   /* 7.6:1 sobre --bg */
+  --ink-3:      #566E89;   /* 4.8:1 sobre --bg */
+  --ink-4:      #6B8199;   /* 3.7:1 — ver nota de jerarquía, Fase 3 */
 
-  --accent:      oklch(0.55 0.18 270);
-  --accent-2:    oklch(0.62 0.16 270);
-  --accent-bg:   oklch(0.97 0.025 270);
-  --accent-line: oklch(0.90 0.045 270);
-  --on-accent:   #ffffff;
+  /* ── Marca: teal ERA en dos tiers ───────────────────────────────
+        --accent   teal profundo: seguro como TEXTO (5.6:1 sobre
+                   blanco) y como RELLENO con --on-accent blanco.
+                   Un swap directo a #00C2A8 daría 2.3:1 e
+                   inutilizaría los 28 usos como texto.
+        --accent-2 teal de marca ERA: marcas decorativas y de
+                   superficie grande, nunca texto pequeño.       ── */
+  --accent:      #007563;
+  --accent-2:    #00C2A8;   /* ERA canónico */
+  --accent-bg:   #E8F7F4;   /* --accent encima da 5.1:1 */
+  --accent-line: #A5E3D8;
+  --on-accent:   #FFFFFF;
 
-  --ok:        oklch(0.62 0.13 160);
-  --ok-bg:     oklch(0.96 0.03 160);
-  --warn:      oklch(0.70 0.14 75);
-  --warn-bg:   oklch(0.97 0.04 75);
-  --danger:    oklch(0.60 0.18 25);
-  --danger-bg: oklch(0.97 0.03 25);
+  /* ── Semánticos base (hues ERA, oscurecidos para ser legibles) ── */
+  --ok:        #0B7F33;    /* 5.1:1 · familia ERA #1DB954 */
+  --ok-bg:     #E6F5EA;
+  --warn:      #9A6108;    /* 5.1:1 · familia ERA #F5A623 */
+  --warn-bg:   #FBF0DC;
+  --danger:    #C0392B;    /* 5.4:1 · ERA canónico */
+  --danger-bg: #FBEAE8;
 
-  /* Tokens semánticos — Fase 1 del sistema ERA: consolida colores oklch()
-     hardcodeados repetidos en los componentes. Valores idénticos a los
-     literales que reemplazan; no cambia nada visualmente. La rationalización
-     de duplicados cercanos (p.ej. sem-red vs sem-red-2) queda para Fase 2. */
-  --sem-red:          oklch(0.55 0.18 25);
-  --sem-red-2:        oklch(0.58 0.18 25);
-  --sem-red-dark:      oklch(0.45 0.18 25);
-  --sem-red-dark-2:    oklch(0.42 0.14 25);
-  --sem-red-bg:        oklch(0.95 0.06 25);
-  --sem-red-bg-2:      oklch(0.96 0.04 25);
-  --sem-red-bg-3:      oklch(0.94 0.04 25);
-  --sem-red-border:    oklch(0.80 0.08 25);
+  /* ── Tokens semánticos de componente (Fase 1 los hizo
+        direccionables; la Fase 2 los realinea al canon ERA).
+        Se conserva la estructura de 3 tiers por familia
+        (bg claro / fg legible / punto saturado) y la distinción
+        categórica: los mapas de etapa del funnel CRM y de
+        prioridad dependen de que estos valores NO colapsen.   ── */
 
-  --sem-green:         oklch(0.55 0.14 160);
-  --sem-green-2:       oklch(0.60 0.14 160);
-  --sem-green-dark:    oklch(0.38 0.12 160);
-  --sem-green-dark-2:  oklch(0.45 0.18 160);
-  --sem-green-3:       oklch(0.50 0.16 160);
-  --sem-green-bg:      oklch(0.95 0.06 160);
-  --sem-green-bg-2:    oklch(0.96 0.03 160);
+  /* Rojo — vencido / urgente / cancelado / perdido */
+  --sem-red:          #C0392B;
+  --sem-red-2:        #CF4436;
+  --sem-red-dark:     #96271A;
+  --sem-red-dark-2:   #7E1F14;
+  --sem-red-bg:       #FBEAE8;
+  --sem-red-bg-2:     #FCEFED;
+  --sem-red-bg-3:     #F9E4E1;
+  --sem-red-border:   #F0B8B1;
 
-  --sem-orange:        oklch(0.65 0.14 50);
-  --sem-orange-2:      oklch(0.65 0.16 55);
-  --sem-amber:         oklch(0.68 0.13 38);
-  --sem-amber-2:       oklch(0.62 0.14 38);
-  --sem-amber-3:       oklch(0.70 0.14 85);
-  --sem-amber-dark:    oklch(0.42 0.14 85);
+  /* Verde — completado / ganado / positivo */
+  --sem-green:        #0F9C40;
+  --sem-green-2:      #12A847;
+  --sem-green-3:      #0D8F3A;
+  --sem-green-dark:   #06531F;
+  --sem-green-dark-2: #0A7530;
+  --sem-green-bg:     #E6F5EA;
+  --sem-green-bg-2:   #EEF9F1;
 
-  --sem-indigo:        oklch(0.62 0.16 265);
-  --sem-indigo-2:      oklch(0.55 0.18 265);
-  --sem-indigo-3:      oklch(0.55 0.18 275);
-  --sem-blue-gray-med: oklch(0.62 0.05 250);
-  --sem-blue-gray-low: oklch(0.62 0.02 250);
-  --sem-blue:          oklch(0.55 0.14 245);
-  --sem-blue-dark:     oklch(0.40 0.14 245);
-  --sem-blue-bg:       oklch(0.95 0.05 245);
+  /* Ámbar / naranja — prioridad alta, revisión, etapas medias */
+  --sem-orange:       #C87A0E;
+  --sem-orange-2:     #D4820F;
+  --sem-amber:        #B5730A;
+  --sem-amber-2:      #9A6108;
+  --sem-amber-3:      #E0A020;
+  --sem-amber-dark:   #6E4506;
 
-  --sem-gray-bg:       oklch(0.94 0.01 0);
-  --sem-gray-fg:       oklch(0.50 0.01 0);
-  --sem-gray-2:        oklch(0.60 0.00 0);
+  /* Azul / índigo — en curso, contactado, negociación */
+  --sem-blue:          #2E7FC4;
+  --sem-blue-dark:     #1F5C93;
+  --sem-blue-bg:       #E5F0FA;
+  --sem-indigo:        #4A6FD4;
+  --sem-indigo-2:      #3A5BC0;
+  --sem-indigo-3:      #4257B8;
+  --sem-blue-gray-med: #5A7A9A;
+  --sem-blue-gray-low: #7A8FA6;
 
-  --sem-pink:          oklch(0.60 0.14 340);
-  --sem-purple:        oklch(0.58 0.18 300);
+  /* Gris — cerrado / sin respuesta / nuevo */
+  --sem-gray-bg:      #E7EBF1;
+  --sem-gray-fg:      #566E89;
+  --sem-gray-2:       #8194A8;
+
+  /* Púrpura / rosa — propuesta, seguimiento, follow-up */
+  --sem-purple:       #8E4BA8;
+  --sem-purple-2:     #B07CC6;   /* serie secundaria en gráficos */
+  --sem-purple-dark:  #6B2E85;   /* 6.6:1 — legible como texto */
+  --sem-purple-bg:    #F2E8F7;
+  --sem-pink:         #A63A73;
 
   --font:      var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -79,9 +109,10 @@
   --gap:      10px;
   --radius:   8px;
   --radius-l: 12px;
-  --shadow-1: 0 1px 0 rgba(20,18,12,.04), 0 1px 2px rgba(20,18,12,.04);
-  --shadow-2: 0 1px 0 rgba(20,18,12,.04), 0 6px 20px rgba(20,18,12,.06);
-  --shadow-pop: 0 1px 0 rgba(20,18,12,.05), 0 24px 60px rgba(20,18,12,.18);
+  /* Sombras teñidas de navy ERA en lugar del tinte cálido anterior */
+  --shadow-1: 0 1px 0 rgba(11,30,56,.04), 0 1px 2px rgba(11,30,56,.05);
+  --shadow-2: 0 1px 0 rgba(11,30,56,.04), 0 6px 20px rgba(11,30,56,.08);
+  --shadow-pop: 0 1px 0 rgba(11,30,56,.06), 0 24px 60px rgba(11,30,56,.20);
 
   --sidebar-w: 240px;
   --header-h:  56px;
@@ -90,22 +121,77 @@
 [data-density="compact"] { --row-h: 30px; --gap: 6px; }
 [data-density="comfy"]   { --row-h: 42px; --gap: 14px; }
 
+/* ── Tema oscuro: rebasado sobre el navy ERA (antes violeta) ───── */
 [data-theme="dark"] {
-  --bg:        oklch(0.18 0.008 270);
-  --bg-2:      oklch(0.21 0.010 270);
-  --bg-3:      oklch(0.25 0.012 270);
-  --surface:   oklch(0.23 0.010 270);
-  --surface-2: oklch(0.26 0.012 270);
-  --line:      oklch(0.32 0.014 270);
-  --line-2:    oklch(0.28 0.012 270);
+  --bg:        #0B1E38;   /* ERA canónico */
+  --bg-2:      #0F2240;
+  --bg-3:      #14294B;
+  --surface:   #112845;   /* ERA canónico */
+  --surface-2: #16304F;
+  --line:      #1E3F6A;   /* ERA canónico */
+  --line-2:    #18355C;
 
-  --ink:       oklch(0.96 0.005 80);
-  --ink-2:     oklch(0.78 0.008 80);
-  --ink-3:     oklch(0.62 0.010 80);
-  --ink-4:     oklch(0.48 0.010 80);
+  --ink:       #FFFFFF;
+  --ink-2:     #A8BBC9;   /* 7.5:1 sobre --surface */
+  --ink-3:     #8FA6BB;   /* 5.9:1 */
+  --ink-4:     #7B93AB;   /* 4.7:1 — el #5A7A9A del canon ERA daba 3.3:1 */
 
-  --accent-bg:  oklch(0.30 0.06 270);
-  --accent-line:oklch(0.40 0.10 270);
+  /* Sobre navy el teal puede ser brillante: 8.0:1 sobre --surface */
+  --accent:     #14D6B8;
+  --accent-bg:  rgba(0,194,168,.14);
+  --accent-line:#1E5F55;
+  --on-accent:  #052F28;
+
+  /* Semánticos en oscuro: los valores de :root están oscurecidos para
+     ser legibles sobre fondo claro, así que sobre navy hay que
+     invertir la dirección — el tier "fuerte" pasa a ser el más CLARO.
+     Sin esto, un chip rojo #C0392B sobre #112845 da 2.7:1. */
+  --ok:        #3DD168;  --ok-bg:     rgba(29,185,84,.16);
+  --warn:      #F0A340;  --warn-bg:   rgba(245,166,35,.16);
+  --danger:    #E8776A;  --danger-bg: rgba(231,76,60,.16);
+
+  --sem-red:          #E8776A;
+  --sem-red-2:        #EE8879;
+  --sem-red-dark:     #F5A79B;
+  --sem-red-dark-2:   #F9BDB3;
+  --sem-red-bg:       rgba(231,76,60,.16);
+  --sem-red-bg-2:     rgba(231,76,60,.12);
+  --sem-red-bg-3:     rgba(231,76,60,.20);
+  --sem-red-border:   #8C3227;
+
+  --sem-green:        #3DD168;
+  --sem-green-2:      #4FD976;
+  --sem-green-3:      #35C75E;
+  --sem-green-dark:   #7BE79A;
+  --sem-green-dark-2: #62DF87;
+  --sem-green-bg:     rgba(29,185,84,.16);
+  --sem-green-bg-2:   rgba(29,185,84,.12);
+
+  --sem-orange:       #F0A340;
+  --sem-orange-2:     #F5AC4E;
+  --sem-amber:        #EDA338;
+  --sem-amber-2:      #E59B2E;
+  --sem-amber-3:      #F7BC60;
+  --sem-amber-dark:   #FAD199;
+
+  --sem-blue:          #63A8E8;
+  --sem-blue-dark:     #8CC1F0;
+  --sem-blue-bg:       rgba(74,144,226,.16);
+  --sem-indigo:        #8098E8;
+  --sem-indigo-2:      #93A8ED;
+  --sem-indigo-3:      #7C90E0;
+  --sem-blue-gray-med: #8EA5BC;
+  --sem-blue-gray-low: #7A8FA6;
+
+  --sem-gray-bg:      rgba(142,165,188,.16);
+  --sem-gray-fg:      #A8BBC9;
+  --sem-gray-2:       #8EA5BC;
+
+  --sem-purple:       #C08AD6;
+  --sem-purple-2:     #D3AAE3;
+  --sem-purple-dark:  #DCB8E9;
+  --sem-purple-bg:    rgba(155,89,182,.18);
+  --sem-pink:         #E086B4;
 
   --shadow-1: 0 1px 0 rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
   --shadow-2: 0 1px 0 rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.45);

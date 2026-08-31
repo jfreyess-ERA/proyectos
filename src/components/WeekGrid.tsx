@@ -246,7 +246,7 @@ export function computeWeeklyLoad(users: User[], tasks: Task[], weekStart: Date)
 function loadTone(hours: number, capacity: number): { fg: string; bg: string } {
   if (capacity <= 0) return { fg: 'var(--ink-4)', bg: 'var(--bg-3)' };
   const ratio = hours / capacity;
-  if (ratio > 1)    return { fg: 'oklch(0.5 0.18 25)',  bg: 'var(--sem-red-bg-3)' };
+  if (ratio > 1)    return { fg: 'var(--sem-red-dark)',  bg: 'var(--sem-red-bg-3)' };
   if (ratio >= 0.8) return { fg: 'oklch(0.48 0.12 70)', bg: 'oklch(0.95 0.05 70)' };
   return { fg: 'var(--ink-3)', bg: 'var(--bg-3)' };
 }

@@ -1000,7 +1000,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                         width: '42%',
                         height: `${dueH}%`,
                         minHeight: w.due > 0 ? 4 : 0,
-                        background: isCurrentWeek ? 'oklch(0.80 0.04 265)' : 'var(--bg-3)',
+                        background: isCurrentWeek ? 'var(--accent-line)' : 'var(--bg-3)',
                         border: '1px solid var(--line)',
                       }}
                     />

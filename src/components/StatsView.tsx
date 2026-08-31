@@ -269,8 +269,8 @@ export function StatsView({ tasks, projects, users, onOpenProject }: Props) {
         <Kpi label="Clientes" value={totalClients} />
         <Kpi label="Proyectos" value={totalProjects} />
         <Kpi label="Tareas totales" value={totalTasks} />
-        <Kpi label="Activas" value={activeTasks} tone="oklch(0.55 0.16 265)" />
-        <Kpi label="Completadas" value={doneTasks} tone="oklch(0.55 0.15 160)" sub={`${completionRate}% del total`} />
+        <Kpi label="Activas" value={activeTasks} tone="var(--accent)" />
+        <Kpi label="Completadas" value={doneTasks} tone="var(--sem-green)" sub={`${completionRate}% del total`} />
         <Kpi label="Atrasadas" value={overdueTasks} tone={overdueTasks > 0 ? 'var(--danger)' : undefined} />
       </div>
 

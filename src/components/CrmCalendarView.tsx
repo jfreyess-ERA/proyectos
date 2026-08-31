@@ -56,8 +56,8 @@ export function CrmCalendarView({ crmTasks, interactions, prospects, onOpenProsp
       type: 'followup',
       label: `Follow-up · ${prospectMap[i.prospect_id]?.company ?? '…'}`,
       prospect: prospectMap[i.prospect_id],
-      color: 'oklch(0.40 0.18 300)',
-      bg: 'oklch(0.96 0.05 300)',
+      color: 'var(--sem-purple-dark)',
+      bg: 'var(--sem-purple-bg)',
     });
   }
 
@@ -107,7 +107,7 @@ export function CrmCalendarView({ crmTasks, interactions, prospects, onOpenProsp
         {/* Legend */}
         <div className="flex items-center gap-3 ml-4">
           <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-[3px]" style={{ background: 'var(--sem-blue-bg)' }} /><span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Tarea CRM</span></div>
-          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-[3px]" style={{ background: 'oklch(0.96 0.05 300)' }} /><span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Follow-up</span></div>
+          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-[3px]" style={{ background: 'var(--sem-purple-bg)' }} /><span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Follow-up</span></div>
         </div>
       </div>
 

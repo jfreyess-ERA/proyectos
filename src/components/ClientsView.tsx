@@ -313,7 +313,7 @@ function DeleteClientModal({ target, deleting, onCancel, onConfirm }: {
       >
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'oklch(0.95 0.04 25)' }}>
-            <TriangleAlert size={17} style={{ color: 'oklch(0.5 0.18 25)' }} />
+            <TriangleAlert size={17} style={{ color: 'var(--sem-red-dark)' }} />
           </div>
           <div>
             <div className="text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>Eliminar {target.name}</div>

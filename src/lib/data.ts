@@ -20,18 +20,18 @@ export const PROJECTS: Project[] = [
 ];
 
 export const STATUSES: StatusDef[] = [
-  { id: 'backlog', label: 'Backlog',     tone: 'oklch(0.55 0.02 250)' },
-  { id: 'todo',    label: 'Por hacer',   tone: 'oklch(0.55 0.05 250)' },
-  { id: 'doing',   label: 'En curso',    tone: 'oklch(0.62 0.16 265)' },
-  { id: 'review',  label: 'En revisión', tone: 'oklch(0.68 0.13 38)'  },
-  { id: 'done',    label: 'Completado',  tone: 'oklch(0.60 0.14 160)' },
+  { id: 'backlog', label: 'Backlog',     tone: 'var(--ink-4)' },
+  { id: 'todo',    label: 'Por hacer',   tone: 'var(--sem-blue-gray-med)' },
+  { id: 'doing',   label: 'En curso',    tone: 'var(--accent)' },
+  { id: 'review',  label: 'En revisión', tone: 'var(--sem-amber)'  },
+  { id: 'done',    label: 'Completado',  tone: 'var(--sem-green)' },
 ];
 
 export const PRIORITIES: PriorityDef[] = [
-  { id: 'urgent', label: 'Urgente', tone: 'oklch(0.58 0.18 25)'  },
-  { id: 'high',   label: 'Alta',    tone: 'oklch(0.65 0.14 50)'  },
-  { id: 'med',    label: 'Media',   tone: 'oklch(0.62 0.05 250)' },
-  { id: 'low',    label: 'Baja',    tone: 'oklch(0.62 0.02 250)' },
+  { id: 'urgent', label: 'Urgente', tone: 'var(--sem-red-2)'  },
+  { id: 'high',   label: 'Alta',    tone: 'var(--sem-orange)'  },
+  { id: 'med',    label: 'Media',   tone: 'var(--sem-blue-gray-med)' },
+  { id: 'low',    label: 'Baja',    tone: 'var(--sem-blue-gray-low)' },
 ];
 
 export const LABELS: Label[] = [

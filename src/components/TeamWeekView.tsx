@@ -466,7 +466,7 @@ function EntityCard({ collapsed, onToggle, buckets, projects, users, onOpenTask,
             <Pill color="var(--danger)" bg="var(--danger-bg)" label={`${buckets.overdue.length} atrasada${buckets.overdue.length > 1 ? 's' : ''}`} />
           )}
           {doingCount > 0 && (
-            <Pill color="oklch(0.42 0.14 265)" bg="oklch(0.94 0.03 265)" label={`${doingCount} en curso`} />
+            <Pill color="var(--accent)" bg="var(--accent-bg)" label={`${doingCount} en curso`} />
           )}
           {pendingCount > 0 && (
             <Pill color="var(--ink-2)" bg="var(--bg-3)" label={`${pendingCount} pendientes`} />

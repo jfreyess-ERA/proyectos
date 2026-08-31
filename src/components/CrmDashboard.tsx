@@ -283,7 +283,7 @@ function outcomeBg(outcome: string): string {
 function outcomeFg(outcome: string): string {
   if (outcome === 'Positive' || outcome === 'Interested' || outcome === 'Meeting booked')
     return 'var(--sem-green-dark)';
-  if (outcome === 'Not now' || outcome === 'No response') return 'oklch(0.45 0.05 85)';
+  if (outcome === 'Not now' || outcome === 'No response') return 'var(--sem-gray-fg)';
   if (outcome === 'Lost') return 'var(--sem-red-dark)';
   return 'var(--ink-3)';
 }

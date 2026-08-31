@@ -22,7 +22,7 @@ const CHANNEL_EMOJI: Record<string, string> = {
 const OUTCOME_STYLE: Record<string, { bg: string; fg: string }> = {
   'Positive':       { bg: 'var(--sem-green-bg)', fg: 'var(--sem-green-dark)' },
   'Interested':     { bg: 'var(--sem-green-bg)', fg: 'var(--sem-green-dark)' },
-  'Meeting booked': { bg: 'oklch(0.93 0.08 160)', fg: 'oklch(0.32 0.14 160)' },
+  'Meeting booked': { bg: 'var(--sem-green-bg)', fg: 'var(--sem-green-dark)' },
   'Not now':        { bg: 'oklch(0.95 0.04 85)',  fg: 'oklch(0.42 0.08 85)'  },
   'No response':    { bg: 'var(--sem-gray-bg)',   fg: 'var(--sem-gray-fg)'   },
   'Lost':           { bg: 'var(--sem-red-bg)',  fg: 'var(--sem-red-dark)'  },

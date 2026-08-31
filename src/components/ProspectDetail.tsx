@@ -1317,7 +1317,7 @@ function outcomeBg(outcome: string): string {
 
 function outcomeFg(outcome: string): string {
   if (['Positive', 'Interested', 'Meeting booked'].includes(outcome)) return 'var(--sem-green-dark)';
-  if (['Not now', 'No response'].includes(outcome)) return 'oklch(0.45 0.05 85)';
+  if (['Not now', 'No response'].includes(outcome)) return 'var(--sem-gray-fg)';
   if (outcome === 'Lost') return 'var(--sem-red-dark)';
   return 'var(--ink-3)';
 }
