@@ -207,7 +207,7 @@ export function CreateTaskModal({
                 <select
                   value={stage}
                   onChange={e => setStage(e.target.value)}
-                  className="w-full h-9 px-2 rounded-[7px] text-[13px] outline-none"
+                  className="w-full h-9 px-2 rounded-[6px] text-[13px] outline-none"
                   style={inputStyle}
                 >
                   <option value="">Sin hito</option>
@@ -224,7 +224,7 @@ export function CreateTaskModal({
                 <select
                   value={status}
                   onChange={e => setStatus(e.target.value as Task['status'])}
-                  className="w-full h-9 px-2 rounded-[7px] text-[13px] outline-none"
+                  className="w-full h-9 px-2 rounded-[6px] text-[13px] outline-none"
                   style={inputStyle}
                 >
                   {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -234,7 +234,7 @@ export function CreateTaskModal({
                 <select
                   value={priority}
                   onChange={e => setPriority(e.target.value as Task['priority'])}
-                  className="w-full h-9 px-2 rounded-[7px] text-[13px] outline-none"
+                  className="w-full h-9 px-2 rounded-[6px] text-[13px] outline-none"
                   style={inputStyle}
                 >
                   {PRIORITIES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
@@ -247,7 +247,7 @@ export function CreateTaskModal({
                   value={estimate}
                   onChange={e => setEstimate(e.target.value)}
                   placeholder="0"
-                  className="w-full h-9 px-3 rounded-[7px] text-[13px] outline-none"
+                  className="w-full h-9 px-3 rounded-[6px] text-[13px] outline-none"
                   style={inputStyle}
                 />
               </Field>
@@ -260,7 +260,7 @@ export function CreateTaskModal({
                   type="date"
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
-                  className="w-full h-9 px-3 rounded-[7px] text-[13px] outline-none"
+                  className="w-full h-9 px-3 rounded-[6px] text-[13px] outline-none"
                   style={inputStyle}
                 />
               </Field>
@@ -269,7 +269,7 @@ export function CreateTaskModal({
                   type="date"
                   value={dueDate}
                   onChange={e => setDueDate(e.target.value)}
-                  className="w-full h-9 px-3 rounded-[7px] text-[13px] outline-none"
+                  className="w-full h-9 px-3 rounded-[6px] text-[13px] outline-none"
                   style={inputStyle}
                 />
               </Field>
@@ -312,7 +312,7 @@ export function CreateTaskModal({
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Contexto, alcance, entregable esperado…"
                 rows={2}
-                className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none resize-none"
+                className="w-full px-3 py-2 rounded-[6px] text-[13px] outline-none resize-none"
                 style={inputStyle}
               />
             </Field>
@@ -322,11 +322,11 @@ export function CreateTaskModal({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <ListChecks size={14} style={{ color: 'var(--ink-3)' }} />
-                  <span className="text-[12.5px] font-semibold" style={{ color: 'var(--ink)' }}>
+                  <span className="text-[12px] font-semibold" style={{ color: 'var(--ink)' }}>
                     Subtareas
                   </span>
                   {filledSubtasks > 0 && (
-                    <span className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
+                    <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
                       {filledSubtasks}
                     </span>
                   )}
@@ -397,7 +397,7 @@ export function CreateTaskModal({
 
             {error && (
               <div
-                className="px-3 py-2 rounded-[7px] text-[12px]"
+                className="px-3 py-2 rounded-[6px] text-[12px]"
                 style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}
               >
                 {error}

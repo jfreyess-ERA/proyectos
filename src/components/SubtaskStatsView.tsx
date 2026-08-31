@@ -175,7 +175,7 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
         <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--ink-3)' }}>
           <span className="font-medium">Cliente:</span>
           <select value={clientFilter} onChange={e => { setClientFilter(e.target.value); setProjectFilter('all'); }}
-            className="h-8 px-2 rounded-[7px] border text-[12px] outline-none"
+            className="h-8 px-2 rounded-[6px] border text-[12px] outline-none"
             style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
             <option value="all">Todos ({clients.length})</option>
             {clients.map(c => <option key={c} value={c}>{c}</option>)}
@@ -184,7 +184,7 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
         <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--ink-3)' }}>
           <span className="font-medium">Proyecto:</span>
           <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)}
-            className="h-8 px-2 rounded-[7px] border text-[12px] outline-none max-w-[220px]"
+            className="h-8 px-2 rounded-[6px] border text-[12px] outline-none max-w-[220px]"
             style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
             <option value="all">Todos</option>
             {clientFilter !== 'all'
@@ -197,7 +197,7 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
           </select>
         </label>
         <button onClick={exportCSV} disabled={!hasData}
-          className="ml-auto flex items-center gap-[6px] h-8 px-3 rounded-[7px] border text-[12px] transition-colors disabled:opacity-40"
+          className="ml-auto flex items-center gap-[6px] h-8 px-3 rounded-[6px] border text-[12px] transition-colors disabled:opacity-40"
           style={{ background: 'var(--bg-2)', color: 'var(--ink-3)', borderColor: 'var(--line)' }}>
           <Download size={12} /> CSV
         </button>
@@ -207,7 +207,7 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
         <div className="py-16 text-center rounded-[12px]" style={{ background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--ink-4)' }}>
           <ListChecks size={28} className="mx-auto mb-2" />
           <div className="text-[14px]" style={{ color: 'var(--ink-3)' }}>Todavía no hay subtareas para medir.</div>
-          <div className="text-[12.5px] mt-1">
+          <div className="text-[12px] mt-1">
             Las estadísticas se llenan a medida que las subtareas reciban fecha y responsable en el detalle de cada tarea.
           </div>
         </div>
@@ -224,7 +224,7 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
           {/* Por responsable */}
           <Card title="Cumplimiento por responsable">
             {byPerson.length === 0 ? (
-              <p className="text-[12.5px]" style={{ color: 'var(--ink-4)' }}>Ninguna subtarea tiene responsable asignado todavía.</p>
+              <p className="text-[12px]" style={{ color: 'var(--ink-4)' }}>Ninguna subtarea tiene responsable asignado todavía.</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {byPerson.map(({ user, tally }) => (
@@ -233,8 +233,8 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
                       {user!.initials}
                     </span>
                     <div className="w-[150px] min-w-0">
-                      <div className="text-[12.5px] truncate" style={{ color: 'var(--ink-2)' }}>{user!.name}</div>
-                      <div className="text-[10.5px]" style={{ color: 'var(--ink-4)' }}>
+                      <div className="text-[12px] truncate" style={{ color: 'var(--ink-2)' }}>{user!.name}</div>
+                      <div className="text-[10px]" style={{ color: 'var(--ink-4)' }}>
                         {tally.done}/{tally.total} hechas
                         {tally.overdue > 0 && <span style={{ color: 'var(--danger)' }}> · {tally.overdue} atrasada{tally.overdue > 1 ? 's' : ''}</span>}
                       </div>
@@ -242,7 +242,7 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
                     <div className="flex-1 h-[7px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
                       <div className="h-full rounded-full" style={{ width: `${pct(tally)}%`, background: 'var(--sem-green-2)' }} />
                     </div>
-                    <span className="text-[12.5px] w-[42px] text-right tabular-nums font-medium" style={{ color: 'var(--ink)' }}>{pct(tally)}%</span>
+                    <span className="text-[12px] w-[42px] text-right tabular-nums font-medium" style={{ color: 'var(--ink)' }}>{pct(tally)}%</span>
                   </div>
                 ))}
               </div>
@@ -271,7 +271,7 @@ export function SubtaskStatsView({ subtasks, tasks, projects, users, onOpenProje
           {/* Tabla por proyecto */}
           <Card title="Detalle por proyecto">
             <div className="overflow-x-auto -mx-4 px-4">
-              <table className="w-full text-[12.5px]" style={{ borderCollapse: 'collapse' }}>
+              <table className="w-full text-[12px]" style={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
                     <Th sortKey="name" current={sort} onSort={toggleSort}>Cliente / Proyecto</Th>

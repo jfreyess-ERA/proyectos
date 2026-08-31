@@ -209,7 +209,7 @@ export function TimelineView({ tasks, projects, onOpenTask }: Props) {
                 zIndex: 3,
               }}
             >
-              <span className="w-[10px] h-[10px] rounded-[3px] flex-shrink-0" style={{ background: g.project.color }} />
+              <span className="w-[10px] h-[10px] rounded-[2px] flex-shrink-0" style={{ background: g.project.color }} />
               <span style={{ color: 'var(--ink)' }}>{g.project.name}</span>
               <span
                 className="ml-auto text-[11px] tabular-nums"
@@ -291,7 +291,7 @@ export function TimelineView({ tasks, projects, onOpenTask }: Props) {
                     />
                     {/* Label */}
                     <span
-                      className="relative px-2 text-[11.5px] font-medium truncate"
+                      className="relative px-2 text-[11px] font-medium truncate"
                       style={{
                         color: '#fff',
                         textShadow: '0 1px 0 rgba(0,0,0,.15)',

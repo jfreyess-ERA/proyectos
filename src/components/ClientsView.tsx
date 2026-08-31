@@ -125,14 +125,14 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar cliente…"
-            className="h-8 pl-7 pr-3 rounded-[7px] text-[13px] outline-none"
+            className="h-8 pl-7 pr-3 rounded-[6px] text-[13px] outline-none"
             style={{ width: 240, border: '1px solid var(--line)', background: 'var(--bg-2)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
           />
         </div>
         <div className="flex gap-[3px] flex-wrap">
           <button
             onClick={() => setFilter('todos')}
-            className="h-8 px-3 rounded-[7px] text-[12.5px] border-0 transition-colors"
+            className="h-8 px-3 rounded-[6px] text-[12px] border-0 transition-colors"
             style={{
               background: filter === 'todos' ? 'var(--accent)' : 'var(--bg-3)',
               color: filter === 'todos' ? 'var(--on-accent)' : 'var(--ink-2)',
@@ -145,7 +145,7 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
             <button
               key={s}
               onClick={() => setFilter(s)}
-              className="h-8 px-3 rounded-[7px] text-[12.5px] border-0 transition-colors"
+              className="h-8 px-3 rounded-[6px] text-[12px] border-0 transition-colors"
               style={{
                 background: filter === s ? 'var(--accent)' : 'var(--bg-3)',
                 color: filter === s ? 'var(--on-accent)' : 'var(--ink-2)',
@@ -159,7 +159,7 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
       </div>
 
       {error && (
-        <div className="mb-4 px-3 py-2 rounded-[8px] text-[12.5px]"
+        <div className="mb-4 px-3 py-2 rounded-[8px] text-[12px]"
           style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
           {error}
         </div>
@@ -183,7 +183,7 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[13.5px] font-semibold truncate" style={{ color: 'var(--ink)' }}>{r.name}</span>
+                  <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--ink)' }}>{r.name}</span>
                 </div>
                 <div className="text-[12px] mt-[2px] flex items-center gap-2 flex-wrap" style={{ color: 'var(--ink-4)' }}>
                   <span>{r.projects.length} proyecto{r.projects.length !== 1 ? 's' : ''}</span>
@@ -202,7 +202,7 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
                       <button
                         key={p.id}
                         onClick={() => onOpenProject(p.id)}
-                        className="flex items-center gap-[5px] h-[22px] px-2 rounded-[6px] text-[11.5px] border-0"
+                        className="flex items-center gap-[5px] h-[22px] px-2 rounded-[6px] text-[11px] border-0"
                         style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}
                       >
                         <span className="w-[7px] h-[7px] rounded-[2px] flex-shrink-0" style={{ background: p.color }} />
@@ -210,7 +210,7 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
                       </button>
                     ))}
                     {r.projects.length > 6 && (
-                      <span className="text-[11.5px] self-center" style={{ color: 'var(--ink-4)' }}>
+                      <span className="text-[11px] self-center" style={{ color: 'var(--ink-4)' }}>
                         +{r.projects.length - 6}
                       </span>
                     )}
@@ -225,7 +225,7 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
                   <button
                     onClick={() => setOpenMenu(m => m === r.name ? null : r.name)}
                     disabled={saving === r.name}
-                    className="h-8 px-3 rounded-[7px] text-[12.5px] font-medium flex items-center gap-[6px] transition-colors"
+                    className="h-8 px-3 rounded-[6px] text-[12px] font-medium flex items-center gap-[6px] transition-colors"
                     style={{
                       border: `1px solid ${STATUS_META[r.status].border}`,
                       background: STATUS_META[r.status].bg,
@@ -248,7 +248,7 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
                           <button
                             key={s}
                             onClick={() => changeStatus(r.name, s)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-[12.5px] text-left border-0"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-left border-0"
                             style={{
                               background: s === r.status ? 'var(--bg-2)' : 'transparent',
                               color: s === r.status ? 'var(--ink)' : 'var(--ink-2)',
@@ -266,7 +266,7 @@ export function ClientsView({ clients, projects, tasks, onChanged, onOpenProject
 
                 <button
                   onClick={() => setDeleteTarget({ name: r.name, projects: r.projects, totalTasks: r.totalTasks })}
-                  className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 flex-shrink-0"
+                  className="w-8 h-8 flex items-center justify-center rounded-[6px] border-0 flex-shrink-0"
                   style={{ background: 'transparent', color: 'var(--ink-4)' }}
                   title="Eliminar cliente"
                   aria-label={`Eliminar ${r.name}`}
@@ -307,7 +307,7 @@ function DeleteClientModal({ target, deleting, onCancel, onConfirm }: {
       onClick={onCancel}
     >
       <div
-        className="flex flex-col gap-4 p-5 rounded-[14px] w-full"
+        className="flex flex-col gap-4 p-5 rounded-[12px] w-full"
         style={{ maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-pop)' }}
         onClick={e => e.stopPropagation()}
       >
@@ -317,7 +317,7 @@ function DeleteClientModal({ target, deleting, onCancel, onConfirm }: {
           </div>
           <div>
             <div className="text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>Eliminar {target.name}</div>
-            <p className="text-[12.5px] mt-1" style={{ color: 'var(--ink-3)' }}>
+            <p className="text-[12px] mt-1" style={{ color: 'var(--ink-3)' }}>
               Esto borra para siempre {target.projects.length === 0
                 ? 'este cliente'
                 : `${target.projects.length} proyecto${target.projects.length !== 1 ? 's' : ''} y ${target.totalTasks} tarea${target.totalTasks !== 1 ? 's' : ''}`}.
@@ -329,7 +329,7 @@ function DeleteClientModal({ target, deleting, onCancel, onConfirm }: {
         {target.projects.length > 0 && (
           <div className="flex flex-wrap gap-[6px] px-1">
             {target.projects.map(p => (
-              <span key={p.id} className="flex items-center gap-[5px] h-[22px] px-2 rounded-[6px] text-[11.5px]" style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}>
+              <span key={p.id} className="flex items-center gap-[5px] h-[22px] px-2 rounded-[6px] text-[11px]" style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}>
                 <span className="w-[7px] h-[7px] rounded-[2px] flex-shrink-0" style={{ background: p.color }} />
                 {p.name}
               </span>
@@ -338,7 +338,7 @@ function DeleteClientModal({ target, deleting, onCancel, onConfirm }: {
         )}
 
         <div className="flex flex-col gap-1">
-          <label className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
+          <label className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
             Escribí <strong style={{ color: 'var(--ink)' }}>{target.name}</strong> para confirmar
           </label>
           <input
@@ -346,7 +346,7 @@ function DeleteClientModal({ target, deleting, onCancel, onConfirm }: {
             value={confirmText}
             onChange={e => setConfirmText(e.target.value)}
             placeholder={target.name}
-            className="h-9 px-3 rounded-[7px] text-[13px] outline-none"
+            className="h-9 px-3 rounded-[6px] text-[13px] outline-none"
             style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
           />
         </div>

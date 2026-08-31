@@ -69,7 +69,7 @@ function Sel({ value, onChange, options, placeholder, render }: { value: string;
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-6 pl-2 pr-6 rounded-[5px] text-[12px] border-0 outline-none appearance-none"
+        className="h-6 pl-2 pr-6 rounded-[4px] text-[12px] border-0 outline-none appearance-none"
         style={{ background: 'var(--bg-3)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
       >
         {placeholder && <option value="">{placeholder}</option>}
@@ -104,7 +104,7 @@ function EditableText({ value, onSave, placeholder, multiline }: {
         onBlur={commit}
         autoFocus
         rows={3}
-        className="w-full text-[13px] px-2 py-1 rounded-[5px] outline-none resize-none"
+        className="w-full text-[13px] px-2 py-1 rounded-[4px] outline-none resize-none"
         style={{ border: '1px solid var(--accent)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
       />
     );
@@ -115,7 +115,7 @@ function EditableText({ value, onSave, placeholder, multiline }: {
         onBlur={commit}
         onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setEditing(false); setDraft(value ?? ''); } }}
         autoFocus
-        className="w-full text-[13px] px-2 py-[2px] rounded-[5px] outline-none"
+        className="w-full text-[13px] px-2 py-[2px] rounded-[4px] outline-none"
         style={{ border: '1px solid var(--accent)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
       />
     );
@@ -408,7 +408,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                 href={`/viabilidad/index.html?prospect_id=${prospect.id}&prospect_name=${encodeURIComponent(prospect.company)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="h-7 px-2 rounded-[6px] text-[11.5px] font-medium border-0 flex items-center gap-1 no-underline flex-shrink-0"
+                className="h-7 px-2 rounded-[6px] text-[11px] font-medium border-0 flex items-center gap-1 no-underline flex-shrink-0"
                 style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
                 title="Abrir análisis de viabilidad"
               >
@@ -453,7 +453,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                     style={{ background: isDone || isCurrent ? STAGE_STYLE[s] : 'var(--bg-3)' }}
                   />
                   <span
-                    className="text-[9.5px] font-medium whitespace-nowrap hidden sm:block"
+                    className="text-[9px] font-medium whitespace-nowrap hidden sm:block"
                     style={{ color: isCurrent ? STAGE_STYLE[s] : isDone ? 'var(--ink-3)' : 'var(--ink-4)' }}
                   >
                     {stageEs(s)}
@@ -582,7 +582,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                     <select
                       value={prospect.project_id ?? ''}
                       onChange={e => save({ project_id: e.target.value || undefined })}
-                      className="flex-1 h-7 px-2 rounded-[5px] text-[12px] outline-none"
+                      className="flex-1 h-7 px-2 rounded-[4px] text-[12px] outline-none"
                       style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
                     >
                       <option value="">— Ninguno —</option>
@@ -594,7 +594,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                     </select>
                     {prospect.project_id && (
                       <span
-                        className="w-3 h-3 rounded-[3px] flex-shrink-0"
+                        className="w-3 h-3 rounded-[2px] flex-shrink-0"
                         style={{ background: projects.find(p => p.id === prospect.project_id)?.color ?? 'var(--ink-4)' }}
                       />
                     )}
@@ -653,7 +653,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                     </div>
                   </div>
                   {editingIntId ? (
-                    <div className="mb-3 px-3 py-2 rounded-[8px] text-[11.5px]" style={{ background: 'var(--bg-3)', color: 'var(--ink-3)' }}>
+                    <div className="mb-3 px-3 py-2 rounded-[8px] text-[11px]" style={{ background: 'var(--bg-3)', color: 'var(--ink-3)' }}>
                       Estás editando el registro. La respuesta y su cadencia no cambian desde acá.
                     </div>
                   ) : (
@@ -739,7 +739,7 @@ export function ProspectDetail({ prospect, onClose, onUpdated, onDeleted, projec
                       </div>
                     )}
 
-                    <p className="text-[10.5px] mt-1.5" style={{ color: 'var(--ink-4)' }}>
+                    <p className="text-[10px] mt-1.5" style={{ color: 'var(--ink-4)' }}>
                       {targetNode
                         ? targetNode.tasks.length > 1
                           ? `Se van a crear ${targetNode.tasks.length} tareas con vencimiento ${anchorHint(targetNode)}.`
@@ -1004,7 +1004,7 @@ function InteractionCard({ interaction: i, onDelete, onEdit }: { interaction: Cr
         <span className="text-[15px]">{channelEmoji(i.channel)}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[12.5px] font-medium" style={{ color: 'var(--ink)' }}>
+            <span className="text-[12px] font-medium" style={{ color: 'var(--ink)' }}>
               {i.type ?? channelEs(i.channel) ?? 'Interacción'}
             </span>
             <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{fmtDate(i.date)}</span>
@@ -1024,7 +1024,7 @@ function InteractionCard({ interaction: i, onDelete, onEdit }: { interaction: Cr
       </div>
       {open && (
         <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--line)' }} onClick={e => e.stopPropagation()}>
-          {i.summary && <p className="text-[12.5px] mb-2" style={{ color: 'var(--ink-2)' }}>{i.summary}</p>}
+          {i.summary && <p className="text-[12px] mb-2" style={{ color: 'var(--ink-2)' }}>{i.summary}</p>}
           {i.next_step && (
             <div className="text-[12px] mb-1"><span style={{ color: 'var(--ink-4)' }}>Próximo paso: </span><span style={{ color: 'var(--ink)' }}>{i.next_step}</span></div>
           )}
@@ -1055,7 +1055,7 @@ function CrmTaskCard({ task, today, onToggle, onDelete }: { task: CrmTask; today
     >
       <button
         onClick={onToggle}
-        className="w-4 h-4 rounded-[3px] border flex items-center justify-center flex-shrink-0 mt-[2px] transition-colors"
+        className="w-4 h-4 rounded-[2px] border flex items-center justify-center flex-shrink-0 mt-[2px] transition-colors"
         style={{
           borderColor: isDone ? 'var(--sem-green)' : 'var(--line)',
           background: isDone ? 'var(--sem-green)' : 'transparent',
@@ -1097,7 +1097,7 @@ function TriggerCard({ trigger, onStatusChange }: { trigger: CrmTrigger; onStatu
         <span className="text-[15px] mt-[-1px]">⚡</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[12.5px] font-medium" style={{ color: 'var(--ink)' }}>{triggerTypeEs(trigger.trigger_type) || 'Trigger'}</span>
+            <span className="text-[12px] font-medium" style={{ color: 'var(--ink)' }}>{triggerTypeEs(trigger.trigger_type) || 'Trigger'}</span>
             <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{fmtDate(trigger.date_detected)}</span>
             <span
               className="ml-auto text-[10px] px-[6px] py-[2px] rounded-full cursor-pointer"
@@ -1113,7 +1113,7 @@ function TriggerCard({ trigger, onStatusChange }: { trigger: CrmTrigger; onStatu
           </div>
           {trigger.description && <p className="text-[12px] mb-1" style={{ color: 'var(--ink-2)' }}>{trigger.description}</p>}
           {trigger.action_suggested && (
-            <div className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>💡 {trigger.action_suggested}</div>
+            <div className="text-[11px]" style={{ color: 'var(--ink-3)' }}>💡 {trigger.action_suggested}</div>
           )}
           {trigger.source_url && (
             <a href={trigger.source_url} target="_blank" rel="noreferrer"
@@ -1200,7 +1200,7 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <span>{channelEmoji(i.channel)}</span>
-                            <span className="text-[12.5px] font-medium" style={{ color: 'var(--ink)' }}>
+                            <span className="text-[12px] font-medium" style={{ color: 'var(--ink)' }}>
                               {i.type ?? channelEs(i.channel) ?? 'Interacción'}
                             </span>
                             <span className="text-[11px] ml-auto" style={{ color: 'var(--ink-4)' }}>
@@ -1215,7 +1215,7 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                           )}
                           {i.summary && <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>{i.summary}</p>}
                           {i.next_step && (
-                            <p className="text-[11.5px] mt-1" style={{ color: 'var(--ink-4)' }}>
+                            <p className="text-[11px] mt-1" style={{ color: 'var(--ink-4)' }}>
                               → {i.next_step}
                             </p>
                           )}
@@ -1232,15 +1232,15 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                           <span className="text-[14px]">📋</span>
                           <div className="flex-1 min-w-0">
                             <span
-                              className="text-[12.5px]"
+                              className="text-[12px]"
                               style={{ color: isDone ? 'var(--ink-4)' : 'var(--ink)', textDecoration: isDone ? 'line-through' : 'none' }}
                             >
                               {taskTypeEs(t.task_type)}
                             </span>
-                            {t.notes && <div className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>{t.notes}</div>}
+                            {t.notes && <div className="text-[11px]" style={{ color: 'var(--ink-3)' }}>{t.notes}</div>}
                           </div>
                           <span
-                            className="text-[10.5px] px-[6px] py-[2px] rounded-full flex-shrink-0"
+                            className="text-[10px] px-[6px] py-[2px] rounded-full flex-shrink-0"
                             style={{
                               background: isDone ? 'var(--sem-green-bg)' : isOverdue ? 'var(--sem-red-bg-2)' : 'var(--bg-3)',
                               color: isDone ? 'var(--sem-green-dark)' : isOverdue ? 'var(--sem-red-dark)' : 'var(--ink-3)',
@@ -1259,7 +1259,7 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                           <span className="text-[14px]">⚡</span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-[12.5px] font-medium" style={{ color: 'var(--ink)' }}>
+                              <span className="text-[12px] font-medium" style={{ color: 'var(--ink)' }}>
                                 {triggerTypeEs(tr.trigger_type)}
                               </span>
                               <span
@@ -1274,7 +1274,7 @@ function TimelineTab({ interactions, tasks, triggers, today }: {
                             </div>
                             {tr.description && <p className="text-[12px] mt-1" style={{ color: 'var(--ink-3)' }}>{tr.description}</p>}
                             {tr.action_suggested && (
-                              <p className="text-[11.5px] mt-1" style={{ color: 'var(--ink-4)' }}>💡 {tr.action_suggested}</p>
+                              <p className="text-[11px] mt-1" style={{ color: 'var(--ink-4)' }}>💡 {tr.action_suggested}</p>
                             )}
                           </div>
                         </div>

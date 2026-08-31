@@ -419,7 +419,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
                 style={{ background: 'var(--bg-3)', border: '1px solid var(--line)' }}
               >
                 <div
-                  className="text-[10.5px] font-semibold text-center mb-1 truncate max-w-[90px]"
+                  className="text-[10px] font-semibold text-center mb-1 truncate max-w-[90px]"
                   style={{ color: STAGE_COLOR[s.stage] }}
                 >
                   {s.stage}
@@ -586,7 +586,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
             {byChannel.map(c => (
               <div key={c.channel} className="flex items-center gap-3">
                 <span className="text-[16px] flex-shrink-0">{CHANNEL_EMOJI[c.channel] ?? '📋'}</span>
-                <span className="text-[12.5px] w-[80px]" style={{ color: 'var(--ink-2)' }}>{c.channel}</span>
+                <span className="text-[12px] w-[80px]" style={{ color: 'var(--ink-2)' }}>{c.channel}</span>
                 <div className="flex-1 h-[8px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
                   <div
                     className="h-full rounded-full"
@@ -614,7 +614,7 @@ export function CrmReports({ prospects, interactions, crmTasks, triggers, users 
               {channelResults.map(c => (
                 <div key={c.channel} className="flex items-center gap-3">
                   <span className="text-[16px] flex-shrink-0">{CHANNEL_EMOJI[c.channel] ?? '📋'}</span>
-                  <span className="text-[12.5px] w-[80px]" style={{ color: 'var(--ink-2)' }}>{c.channel}</span>
+                  <span className="text-[12px] w-[80px]" style={{ color: 'var(--ink-2)' }}>{c.channel}</span>
                   <div className="flex-1 h-[8px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
                     <div
                       className="h-full rounded-full"

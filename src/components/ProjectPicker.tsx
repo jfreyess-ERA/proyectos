@@ -137,7 +137,7 @@ export function ProjectPicker({ projects, value, onChange, height = 36, placehol
         onClick={() => (open ? setOpen(false) : openMenu())}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="w-full flex items-center gap-2 px-2 rounded-[7px] text-[13px] outline-none text-left"
+        className="w-full flex items-center gap-2 px-2 rounded-[6px] text-[13px] outline-none text-left"
         style={{ height, border: '1px solid var(--line)', background: 'var(--bg-2)', color: selected ? 'var(--ink)' : 'var(--ink-4)' }}
       >
         <span className="flex-1 min-w-0 truncate">
@@ -152,7 +152,7 @@ export function ProjectPicker({ projects, value, onChange, height = 36, placehol
         <div
           ref={listRef}
           role="listbox"
-          className="fixed z-[80] flex flex-col rounded-[9px] overflow-hidden"
+          className="fixed z-[80] flex flex-col rounded-[8px] overflow-hidden"
           style={{
             left: rect.left, top: rect.top, width: Math.max(rect.width, 240),
             maxHeight: 320,
@@ -174,13 +174,13 @@ export function ProjectPicker({ projects, value, onChange, height = 36, placehol
 
           <div className="overflow-y-auto flex-1 py-1" onClick={onListClick}>
             {flat.length === 0 ? (
-              <div className="px-3 py-6 text-center text-[12.5px]" style={{ color: 'var(--ink-4)' }}>
+              <div className="px-3 py-6 text-center text-[12px]" style={{ color: 'var(--ink-4)' }}>
                 Ningún proyecto coincide con “{query}”.
               </div>
             ) : (
               groups.map(([client, ps]) => (
                 <div key={client}>
-                  <div className="px-3 pt-1.5 pb-0.5 text-[10.5px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
+                  <div className="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
                     {client}
                   </div>
                   {ps.map(p => {

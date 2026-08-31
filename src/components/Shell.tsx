@@ -133,7 +133,7 @@ export function Shell({
           {/* Espacio */}
           <div className="px-2 pt-3 pb-1">
             {!collapsed && (
-              <div className="px-2 pb-1.5 text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+              <div className="px-2 pb-1.5 text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
                 Espacio
               </div>
             )}
@@ -172,7 +172,7 @@ export function Shell({
           {me.is_admin && (
             <div className="px-2 pt-3 pb-1">
               {!collapsed && (
-                <div className="px-2 pb-1.5 text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+                <div className="px-2 pb-1.5 text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
                   Administración
                 </div>
               )}
@@ -219,7 +219,7 @@ export function Shell({
           {!collapsed && (
             <div className="px-2 pt-3 pb-1">
               <div className="flex items-center justify-between px-2 pb-1.5">
-                <span className="text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+                <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
                   Sprints
                 </span>
                 <button
@@ -257,7 +257,7 @@ export function Shell({
           {/* CRM */}
           {!collapsed && (
             <div className="px-2 pt-3 pb-1">
-              <div className="px-2 pb-1.5 text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+              <div className="px-2 pb-1.5 text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
                 CRM
               </div>
               {[
@@ -320,7 +320,7 @@ export function Shell({
           {/* Análisis de Viabilidad */}
           {!collapsed && (
             <div className="px-2 pt-3 pb-1">
-              <div className="px-2 pb-1.5 text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+              <div className="px-2 pb-1.5 text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
                 Herramientas
               </div>
               <a
@@ -355,7 +355,7 @@ export function Shell({
           {/* Vistas guardadas */}
           {!collapsed && (
             <div className="px-2 pt-3 pb-1">
-              <div className="px-2 pb-1.5 text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+              <div className="px-2 pb-1.5 text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
                 Vistas guardadas
               </div>
               {[
@@ -388,7 +388,7 @@ export function Shell({
             <Avatar userId={me.id} size="md" />
             {!collapsed && (
               <div className="min-w-0 overflow-hidden">
-                <div className="text-[12.5px] font-medium leading-tight truncate" style={{ color: 'var(--ink)' }}>{me.name}</div>
+                <div className="text-[12px] font-medium leading-tight truncate" style={{ color: 'var(--ink)' }}>{me.name}</div>
                 <div className="text-[11px] leading-tight" style={{ color: 'var(--ink-3)' }}>{me.role}</div>
               </div>
             )}
@@ -396,7 +396,7 @@ export function Shell({
           {!collapsed && (
             <button
               onClick={onOpenSettings}
-              className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors flex-shrink-0"
+              className="w-8 h-8 flex items-center justify-center rounded-[6px] border-0 bg-transparent transition-colors flex-shrink-0"
               style={{ color: 'var(--ink-2)' }}
               title="Configuración"
             >
@@ -416,7 +416,7 @@ export function Shell({
           {/* Hamburger — mobile only */}
           <button
             onClick={() => setMobileOpen(o => !o)}
-            className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors md:hidden"
+            className="w-8 h-8 flex items-center justify-center rounded-[6px] border-0 bg-transparent transition-colors md:hidden"
             style={{ color: 'var(--ink-2)' }}
           >
             <PanelLeft size={16} />
@@ -424,7 +424,7 @@ export function Shell({
           {/* Collapse — desktop only */}
           <button
             onClick={() => setCollapsed(c => !c)}
-            className="w-8 h-8 items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors hidden md:flex"
+            className="w-8 h-8 items-center justify-center rounded-[6px] border-0 bg-transparent transition-colors hidden md:flex"
             style={{ color: 'var(--ink-2)' }}
             title="Plegar barra lateral"
           >
@@ -451,7 +451,7 @@ export function Shell({
             <input
               readOnly
               placeholder="Buscar tareas, proyectos, personas…"
-              className="w-full h-8 pl-8 pr-10 rounded-[7px] text-[13px] outline-none transition-colors cursor-pointer"
+              className="w-full h-8 pl-8 pr-10 rounded-[6px] text-[13px] outline-none transition-colors cursor-pointer"
               style={{
                 border: '1px solid var(--line)',
                 background: 'var(--surface-2)',
@@ -484,7 +484,7 @@ export function Shell({
           {!isCrmView && (
             <button
               onClick={onCreateTask}
-              className="h-8 px-3 rounded-[7px] text-[13px] font-medium flex items-center gap-[6px] border-0"
+              className="h-8 px-3 rounded-[6px] text-[13px] font-medium flex items-center gap-[6px] border-0"
               style={{
                 background: 'var(--accent)',
                 color: 'var(--on-accent)',
@@ -504,11 +504,11 @@ export function Shell({
             style={{ padding: '10px 24px', background: 'var(--bg)' }}
           >
             <div className="flex items-center gap-[10px] min-w-0 flex-shrink-0">
-              <span className="w-[10px] h-[10px] rounded-[3px] flex-shrink-0" style={{ background: activeProject.color }} />
-              <span className="font-semibold text-[14.5px] whitespace-nowrap" style={{ color: 'var(--ink)' }}>
+              <span className="w-[10px] h-[10px] rounded-[2px] flex-shrink-0" style={{ background: activeProject.color }} />
+              <span className="font-semibold text-[14px] whitespace-nowrap" style={{ color: 'var(--ink)' }}>
                 {activeProject.name}
               </span>
-              <button className="w-[22px] h-[22px] flex items-center justify-center rounded-[5px] border-0 bg-transparent flex-shrink-0" style={{ color: 'var(--ink-4)' }}>
+              <button className="w-[22px] h-[22px] flex items-center justify-center rounded-[4px] border-0 bg-transparent flex-shrink-0" style={{ color: 'var(--ink-4)' }}>
                 <Star size={13} />
               </button>
             </div>
@@ -527,7 +527,7 @@ export function Shell({
                 <button
                   key={tab.id}
                   onClick={() => onViewChange?.(tab.id)}
-                  className="h-[26px] px-[10px] rounded-[6px] text-[12.5px] font-medium flex items-center gap-[6px] border-0 transition-colors"
+                  className="h-[26px] px-[10px] rounded-[6px] text-[12px] font-medium flex items-center gap-[6px] border-0 transition-colors"
                   style={{
                     color: activeView === tab.id ? 'var(--ink)' : 'var(--ink-2)',
                     background: activeView === tab.id ? 'var(--surface)' : 'transparent',
@@ -560,7 +560,7 @@ export function Shell({
                   <span>{chip.label}</span>
                 </button>
               ))}
-              <button className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent" style={{ color: 'var(--ink-2)' }}>
+              <button className="w-8 h-8 flex items-center justify-center rounded-[6px] border-0 bg-transparent" style={{ color: 'var(--ink-2)' }}>
                 <SlidersHorizontal size={15} />
               </button>
             </div>
@@ -639,7 +639,7 @@ function ProjectsSection({
         >
           <span className="w-[9px] h-[9px] rounded-[2px] flex-shrink-0" style={{ background: p.color }} />
           {!collapsed && (
-            <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-[12.5px]">{p.name}</span>
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-[12px]">{p.name}</span>
           )}
         </button>
         {!collapsed && onEditProject && (
@@ -660,14 +660,14 @@ function ProjectsSection({
     <div className="px-2 pt-3 pb-1">
       {!collapsed && (
         <div className="flex items-center justify-between px-2 pb-1.5">
-          <span className="text-[10.5px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
+          <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--ink-4)' }}>
             Proyectos
           </span>
           <div className="flex items-center gap-1">
             {/* Mine / All toggle — only shown if myProjectIds exists */}
             {myProjectIds && (
               <div
-                className="flex items-center rounded-[5px] overflow-hidden border"
+                className="flex items-center rounded-[4px] overflow-hidden border"
                 style={{ borderColor: 'var(--line)' }}
               >
                 <button
@@ -722,7 +722,7 @@ function ProjectsSection({
                   outlineOffset: 1,
                 }}
               >
-                <span className="w-[10px] h-[10px] rounded-[3px]" style={{ background: p.color }} />
+                <span className="w-[10px] h-[10px] rounded-[2px]" style={{ background: p.color }} />
               </button>
             </div>
           ))}
@@ -742,7 +742,7 @@ function ProjectsSection({
                 {/* Client header */}
                 <button
                   onClick={() => toggleClient(clientName)}
-                  className="w-full flex items-center gap-[6px] px-2 py-[4px] rounded-[5px] border-0 bg-transparent text-left transition-colors"
+                  className="w-full flex items-center gap-[6px] px-2 py-[4px] rounded-[4px] border-0 bg-transparent text-left transition-colors"
                   style={{ cursor: 'pointer' }}
                 >
                   <span style={{ color: 'var(--ink-4)', flexShrink: 0 }}>
@@ -752,7 +752,7 @@ function ProjectsSection({
                     }
                   </span>
                   <span
-                    className="text-[11.5px] font-semibold truncate min-w-0 flex-1"
+                    className="text-[11px] font-semibold truncate min-w-0 flex-1"
                     style={{ color: hasActiveProject ? 'var(--ink)' : 'var(--ink-3)' }}
                   >
                     {clientName}
@@ -782,7 +782,7 @@ function ProjectsSection({
             <div className="mt-1">
               {sortedClients.length > 0 && (
                 <div className="px-2 pt-1 pb-[3px]">
-                  <span className="text-[10.5px]" style={{ color: 'var(--ink-4)' }}>Sin cliente</span>
+                  <span className="text-[10px]" style={{ color: 'var(--ink-4)' }}>Sin cliente</span>
                 </div>
               )}
               {noClient.map(p => <ProjectRow key={p.id} p={p} />)}

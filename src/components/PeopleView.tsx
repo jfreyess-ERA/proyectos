@@ -82,7 +82,7 @@ export function PeopleView({ tasks, projects, users, datedSubtasks, onOpenTask, 
             <select
               value={personFilter}
               onChange={e => setPersonFilter(e.target.value)}
-              className="h-8 px-2 rounded-[7px] border text-[12px] outline-none"
+              className="h-8 px-2 rounded-[6px] border text-[12px] outline-none"
               style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
             >
               <option value="all">Todas</option>
@@ -240,7 +240,7 @@ function ViewTab({ active, onClick, children, border }: { active: boolean; onCli
   return (
     <button
       onClick={onClick}
-      className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
+      className="h-8 px-3 text-[12px] font-medium border-0 transition-colors"
       style={{
         background: active ? 'var(--surface)' : 'transparent',
         color: active ? 'var(--ink)' : 'var(--ink-3)',

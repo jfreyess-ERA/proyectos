@@ -182,7 +182,7 @@ export function WeekGrid({ weekStart, users, tasks, subtaskEvents, projects, sho
                     {row.user.initials}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[12.5px] font-semibold truncate" style={{ color: 'var(--ink)' }}>{row.user.name}</div>
+                    <div className="text-[12px] font-semibold truncate" style={{ color: 'var(--ink)' }}>{row.user.name}</div>
                     <div className="text-[11px] truncate" style={{ color: row.overdue.length > 0 ? 'var(--danger)' : 'var(--ink-4)' }}>
                       {row.total === 0 ? 'Sin pendientes' : `${row.total} pendiente${row.total > 1 ? 's' : ''}`}
                     </div>
@@ -261,7 +261,7 @@ function LoadBadge({ hours, capacity }: { hours: number; capacity: number }) {
       <div className="flex-1 h-[4px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
         <div className="h-full rounded-full" style={{ width: `${fillPct}%`, background: tone.fg }} />
       </div>
-      <span className="flex-shrink-0 flex items-center gap-[3px] text-[10.5px] font-medium px-[5px] py-[1px] rounded-full" style={{ background: tone.bg, color: tone.fg }}>
+      <span className="flex-shrink-0 flex items-center gap-[3px] text-[10px] font-medium px-[5px] py-[1px] rounded-full" style={{ background: tone.bg, color: tone.fg }}>
         {overloaded && <TriangleAlert size={9} />}
         {hours}h/{capacity}h
       </span>
@@ -294,7 +294,7 @@ function Cell({ items, tint, borderTop, onOpenTask, onOpenSubtask, onToggleSubta
           return (
             <div
               key={it.key}
-              className="w-full flex items-center gap-[5px] h-6 px-[6px] rounded-[5px] text-[11px]"
+              className="w-full flex items-center gap-[5px] h-6 px-[6px] rounded-[4px] text-[11px]"
               style={{ background: bg, color: fg }}
             >
               {/* La casilla reemplaza al punto de proyecto en las subtareas: es
@@ -302,7 +302,7 @@ function Cell({ items, tint, borderTop, onOpenTask, onOpenSubtask, onToggleSubta
               {sub && onToggleSubtask ? (
                 <button
                   onClick={() => onToggleSubtask(sub, it.parentTask, !sub.done)}
-                  className="flex items-center justify-center flex-shrink-0 rounded-[3px] border"
+                  className="flex items-center justify-center flex-shrink-0 rounded-[2px] border"
                   style={{ width: 11, height: 11, padding: 0, borderColor: 'var(--ink-4)', background: 'transparent' }}
                   title="Marcar como hecha"
                   aria-label={`Marcar como hecha: ${it.title}`}
@@ -327,7 +327,7 @@ function Cell({ items, tint, borderTop, onOpenTask, onOpenSubtask, onToggleSubta
                 {it.title}
               </button>
               {showDayTag && (
-                <span className="flex-shrink-0 text-[9.5px]" style={{ color: 'var(--ink-4)' }}>
+                <span className="flex-shrink-0 text-[9px]" style={{ color: 'var(--ink-4)' }}>
                   {DOW_SHORT[new Date(it.due + 'T12:00:00').getDay()]}
                 </span>
               )}

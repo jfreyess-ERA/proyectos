@@ -123,7 +123,7 @@ function PasswordField({
         )}
       </div>
       {show && value && (
-        <div className="text-[10.5px] mt-[2px]" style={{ color: 'var(--ink-4)', fontFamily: 'var(--font-mono)' }}>
+        <div className="text-[10px] mt-[2px]" style={{ color: 'var(--ink-4)', fontFamily: 'var(--font-mono)' }}>
           {value}
         </div>
       )}
@@ -410,7 +410,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
           <div className="flex gap-[2px] px-5 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--line)' }}>
             {(['profile', 'users', 'labels'] as Tab[]).map(t => (
               <button key={t} onClick={() => setTab(t)}
-                className="h-7 px-3 rounded-[6px] text-[12.5px] font-medium border-0 transition-colors"
+                className="h-7 px-3 rounded-[6px] text-[12px] font-medium border-0 transition-colors"
                 style={{ background: tab === t ? 'var(--bg-3)' : 'transparent', color: tab === t ? 'var(--ink)' : 'var(--ink-3)' }}>
                 {t === 'profile' ? 'Mi perfil' : t === 'users' ? 'Usuarios' : 'Etiquetas'}
               </button>
@@ -455,16 +455,16 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                     { label: 'Cargo', value: profileRole, onChange: (v: string) => { setProfileRole(v); setProfileOk(false); }, placeholder: 'Ej: Product Manager' },
                   ].map(f => (
                     <div key={f.label} className="flex flex-col gap-1">
-                      <label className="text-[11.5px] font-medium" style={{ color: 'var(--ink-3)' }}>{f.label}</label>
+                      <label className="text-[11px] font-medium" style={{ color: 'var(--ink-3)' }}>{f.label}</label>
                       <input type="text" value={f.value} onChange={e => f.onChange(e.target.value)}
                         placeholder={f.placeholder} required={f.label === 'Nombre completo'}
-                        className="h-8 px-3 rounded-[7px] text-[12.5px] outline-none"
+                        className="h-8 px-3 rounded-[6px] text-[12px] outline-none"
                         style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
                     </div>
                   ))}
                   <button type="submit"
                     disabled={savingProfile || (profileName === profile?.name && profileRole === profile?.role)}
-                    className="h-8 rounded-[7px] text-[12.5px] font-semibold border-0 flex items-center justify-center gap-1 transition-opacity"
+                    className="h-8 rounded-[6px] text-[12px] font-semibold border-0 flex items-center justify-center gap-1 transition-opacity"
                     style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: savingProfile || (profileName === profile?.name && profileRole === profile?.role) ? 0.45 : 1 }}>
                     <Check size={13} />{savingProfile ? 'Guardando…' : 'Guardar cambios'}
                   </button>
@@ -487,7 +487,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                         readOnly
                         value={`webcal://proyectos.nciconsultores.com/api/calendar/${profile.calendar_token}.ics`}
                         onFocus={e => e.target.select()}
-                        className="flex-1 h-8 px-2 rounded-[6px] text-[11.5px] outline-none"
+                        className="flex-1 h-8 px-2 rounded-[6px] text-[11px] outline-none"
                         style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink-3)', fontFamily: 'var(--font-mono)' }}
                       />
                       <button
@@ -504,13 +504,13 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                           }
                           setTimeout(() => setCalendarLinkCopied(false), 2000);
                         }}
-                        className="h-8 px-3 rounded-[6px] text-[11.5px] font-medium border-0 flex items-center gap-1 flex-shrink-0"
+                        className="h-8 px-3 rounded-[6px] text-[11px] font-medium border-0 flex items-center gap-1 flex-shrink-0"
                         style={{ background: calendarLinkCopied ? 'var(--sem-green)' : 'var(--accent)', color: 'white' }}
                       >
                         <Copy size={11} /> {calendarLinkCopied ? 'Copiado' : 'Copiar'}
                       </button>
                     </div>
-                    <p className="text-[10.5px]" style={{ color: 'var(--ink-4)' }}>
+                    <p className="text-[10px]" style={{ color: 'var(--ink-4)' }}>
                       💡 Es de solo lectura y Outlook lo actualiza cada 3 a 24 horas, no al instante — sirve
                       para ver el panorama, no para avisos urgentes. Este link es personal: no lo compartas.
                     </p>
@@ -527,12 +527,12 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                     placeholder="Nueva contraseña"
                     label="Nueva contraseña"
                   />
-                  {ownPwErr && <div className="text-[11.5px]" style={{ color: 'var(--danger)' }}>{ownPwErr}</div>}
-                  {ownPwOk && <div className="text-[11.5px]" style={{ color: 'var(--sem-green)' }}>✓ Contraseña actualizada</div>}
+                  {ownPwErr && <div className="text-[11px]" style={{ color: 'var(--danger)' }}>{ownPwErr}</div>}
+                  {ownPwOk && <div className="text-[11px]" style={{ color: 'var(--sem-green)' }}>✓ Contraseña actualizada</div>}
                   <button
                     onClick={handleChangeOwnPassword}
                     disabled={savingOwnPw || ownPw.length < 6}
-                    className="h-8 rounded-[7px] text-[12.5px] font-semibold border-0 flex items-center justify-center gap-1 transition-opacity"
+                    className="h-8 rounded-[6px] text-[12px] font-semibold border-0 flex items-center justify-center gap-1 transition-opacity"
                     style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: savingOwnPw || ownPw.length < 6 ? 0.45 : 1 }}
                   >
                     <KeyRound size={13} />{savingOwnPw ? 'Guardando…' : 'Actualizar contraseña'}
@@ -575,20 +575,20 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                 </div>
                 <form onSubmit={handleCreateLabel} className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11.5px] font-medium" style={{ color: 'var(--ink-3)' }}>Nombre</label>
+                    <label className="text-[11px] font-medium" style={{ color: 'var(--ink-3)' }}>Nombre</label>
                     <input
                       type="text"
                       value={newLabelText}
                       onChange={e => { setNewLabelText(e.target.value); setLabelErr(''); }}
                       placeholder="Ej: Urgente, Bug, Diseño…"
                       maxLength={40}
-                      className="h-8 px-3 rounded-[7px] text-[12.5px] outline-none"
+                      className="h-8 px-3 rounded-[6px] text-[12px] outline-none"
                       style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
                     />
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11.5px] font-medium" style={{ color: 'var(--ink-3)' }}>Color</label>
+                    <label className="text-[11px] font-medium" style={{ color: 'var(--ink-3)' }}>Color</label>
                     <div className="flex flex-wrap gap-2">
                       {LABEL_COLORS.map(c => (
                         <button
@@ -628,12 +628,12 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                     )}
                   </div>
 
-                  {labelErr && <div className="text-[11.5px]" style={{ color: 'var(--danger)' }}>{labelErr}</div>}
+                  {labelErr && <div className="text-[11px]" style={{ color: 'var(--danger)' }}>{labelErr}</div>}
 
                   <button
                     type="submit"
                     disabled={savingLabel || !newLabelText.trim()}
-                    className="h-8 rounded-[7px] text-[12.5px] font-semibold border-0 flex items-center justify-center gap-2 transition-opacity"
+                    className="h-8 rounded-[6px] text-[12px] font-semibold border-0 flex items-center justify-center gap-2 transition-opacity"
                     style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: savingLabel || !newLabelText.trim() ? 0.45 : 1 }}
                   >
                     <Plus size={13} />{savingLabel ? 'Creando…' : 'Crear etiqueta'}
@@ -672,7 +672,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                       </div>
                       <button
                         onClick={() => handleDeleteLabel(l.id)}
-                        className="w-6 h-6 flex items-center justify-center rounded-[5px] border-0 bg-transparent transition-colors"
+                        className="w-6 h-6 flex items-center justify-center rounded-[4px] border-0 bg-transparent transition-colors"
                         style={{ color: 'var(--ink-4)' }}
                         title="Eliminar etiqueta"
                       >
@@ -701,7 +701,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                   <div className="flex items-center gap-2">
                     {onInviteUser && (
                       <button onClick={onInviteUser}
-                        className="flex items-center gap-1 h-6 px-2 rounded-[6px] text-[11.5px] font-medium border-0"
+                        className="flex items-center gap-1 h-6 px-2 rounded-[6px] text-[11px] font-medium border-0"
                         style={{ background: 'var(--bg-3)', color: 'var(--ink-2)', border: '1px solid var(--line)' }}
                         title="Invitar por email">
                         <Mail size={11} /> Invitar
@@ -709,7 +709,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                     )}
                     <button
                       onClick={() => { setShowCreateForm(f => !f); setFormError(''); setFormOk(false); }}
-                      className="flex items-center gap-1 h-6 px-2 rounded-[6px] text-[11.5px] font-medium border-0"
+                      className="flex items-center gap-1 h-6 px-2 rounded-[6px] text-[11px] font-medium border-0"
                       style={{ background: showCreateForm ? 'var(--bg-3)' : 'var(--accent)', color: showCreateForm ? 'var(--ink-2)' : 'var(--on-accent)' }}>
                       <UserPlus size={11} /> {showCreateForm ? 'Cancelar' : 'Nuevo'}
                     </button>
@@ -721,7 +721,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                   <div className="mb-4 p-4 rounded-[10px] flex flex-col gap-3" style={{ background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
                     <div className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>Nuevo usuario</div>
                     {formError && (
-                      <div className="px-3 py-2 rounded-[8px] text-[11.5px]" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
+                      <div className="px-3 py-2 rounded-[8px] text-[11px]" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
                         {formError}
                       </div>
                     )}
@@ -755,7 +755,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                         onChange={v => setForm(f => ({ ...f, password: v }))}
                         placeholder="Mínimo 6 caracteres"
                       />
-                      <div className="text-[10.5px] px-1" style={{ color: 'var(--ink-4)' }}>
+                      <div className="text-[10px] px-1" style={{ color: 'var(--ink-4)' }}>
                         💡 Usa "Generar" para crear una contraseña segura y cópiala antes de guardar.
                       </div>
                       <div className="flex gap-2">
@@ -797,7 +797,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                               {u.initials}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-[12.5px] font-medium truncate" style={{ color: 'var(--ink)' }}>{u.name}</div>
+                              <div className="text-[12px] font-medium truncate" style={{ color: 'var(--ink)' }}>{u.name}</div>
                               <div className="text-[11px] truncate" style={{ color: 'var(--ink-3)' }}>{u.email ?? u.role}</div>
                             </div>
                             {u.is_admin && (
@@ -808,7 +808,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                             )}
                             <button
                               onClick={() => setExpandedUser(isExpanded ? null : u.id)}
-                              className="w-6 h-6 flex items-center justify-center rounded-[5px] border-0 bg-transparent flex-shrink-0"
+                              className="w-6 h-6 flex items-center justify-center rounded-[4px] border-0 bg-transparent flex-shrink-0"
                               style={{ color: 'var(--ink-3)' }}
                               title="Editar">
                               {isExpanded ? <ChevronDown size={13} /> : <Pencil size={12} />}
@@ -821,7 +821,7 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
 
                               {/* Datos básicos */}
                               <div className="pt-3 flex flex-col gap-2">
-                                <div className="text-[10.5px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-4)' }}>
+                                <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-4)' }}>
                                   Datos del usuario
                                 </div>
                                 <div className="flex gap-2">
@@ -856,20 +856,20 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                                       <div className="absolute top-[2px] w-3 h-3 rounded-full transition-all"
                                         style={{ background: 'white', left: ef.is_admin ? '18px' : '2px' }} />
                                     </div>
-                                    <span className="text-[11.5px]" style={{ color: 'var(--ink-2)' }}>Administrador</span>
+                                    <span className="text-[11px]" style={{ color: 'var(--ink-2)' }}>Administrador</span>
                                   </label>
                                 )}
 
                                 <div className="flex gap-2 pt-1">
                                   {!isSelf && (
                                     <button onClick={() => handleDeleteUser(u.id)}
-                                      className="h-7 px-2 rounded-[6px] text-[11.5px] border-0 flex items-center gap-1"
+                                      className="h-7 px-2 rounded-[6px] text-[11px] border-0 flex items-center gap-1"
                                       style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>
                                       <Trash2 size={11} /> Eliminar
                                     </button>
                                   )}
                                   <button onClick={() => handleSaveUser(u.id)} disabled={savingUser === u.id}
-                                    className="flex-1 h-7 rounded-[6px] text-[11.5px] font-semibold border-0 flex items-center justify-center gap-1 transition-opacity"
+                                    className="flex-1 h-7 rounded-[6px] text-[11px] font-semibold border-0 flex items-center justify-center gap-1 transition-opacity"
                                     style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: savingUser === u.id ? 0.6 : 1 }}>
                                     <Check size={11} />{savingUser === u.id ? 'Guardando…' : 'Guardar datos'}
                                   </button>
@@ -880,18 +880,18 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                               <div className="pt-3 border-t flex flex-col gap-2" style={{ borderColor: 'var(--line)' }}>
                                 <div className="flex items-center gap-2">
                                   <KeyRound size={12} style={{ color: 'var(--ink-4)' }} />
-                                  <span className="text-[10.5px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-4)' }}>
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-4)' }}>
                                     Cambiar contraseña
                                   </span>
                                 </div>
 
                                 {pwOk === u.id && (
-                                  <div className="px-3 py-2 rounded-[7px] text-[11.5px]" style={{ background: 'var(--sem-green-bg-2)', color: 'var(--sem-green-dark)', border: '1px solid oklch(0.75 0.12 160)' }}>
+                                  <div className="px-3 py-2 rounded-[6px] text-[11px]" style={{ background: 'var(--sem-green-bg-2)', color: 'var(--sem-green-dark)', border: '1px solid oklch(0.75 0.12 160)' }}>
                                     ✓ Contraseña actualizada correctamente
                                   </div>
                                 )}
                                 {userPwErr && (
-                                  <div className="px-3 py-2 rounded-[7px] text-[11.5px]" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
+                                  <div className="px-3 py-2 rounded-[6px] text-[11px]" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
                                     {userPwErr}
                                   </div>
                                 )}
@@ -905,13 +905,13 @@ export function SettingsPanel({ open, onClose, onInviteUser }: Props) {
                                 <button
                                   onClick={() => handleChangePassword(u.id)}
                                   disabled={savingPw === u.id || !isChangingPw}
-                                  className="h-7 rounded-[6px] text-[11.5px] font-semibold border-0 flex items-center justify-center gap-1 transition-opacity"
+                                  className="h-7 rounded-[6px] text-[11px] font-semibold border-0 flex items-center justify-center gap-1 transition-opacity"
                                   style={{ background: 'var(--sem-blue)', color: 'white', opacity: savingPw === u.id || !isChangingPw ? 0.4 : 1 }}>
                                   <KeyRound size={11} />
                                   {savingPw === u.id ? 'Actualizando…' : 'Actualizar contraseña'}
                                 </button>
 
-                                <div className="text-[10.5px]" style={{ color: 'var(--ink-4)' }}>
+                                <div className="text-[10px]" style={{ color: 'var(--ink-4)' }}>
                                   💡 Usa "Generar" para crear una contraseña segura. Cópiala antes de guardar.
                                 </div>
                               </div>

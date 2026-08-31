@@ -84,7 +84,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <span className="text-[13px] flex-1 truncate">{toast.message}</span>
           <button
             onClick={undo}
-            className="flex items-center gap-1.5 h-8 px-3 rounded-[7px] text-[13px] font-medium border-0 flex-shrink-0"
+            className="flex items-center gap-1.5 h-8 px-3 rounded-[6px] text-[13px] font-medium border-0 flex-shrink-0"
             style={{ background: 'rgba(255,255,255,.14)', color: 'var(--surface)' }}
           >
             <RotateCcw size={13} /> Deshacer

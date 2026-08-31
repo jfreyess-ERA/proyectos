@@ -77,14 +77,14 @@ export function NotificationBell({ onOpenTask, crmTasks = [], prospects = [], on
     <div ref={ref} className="relative">
       <button
         onClick={handleOpen}
-        className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent relative"
+        className="w-8 h-8 flex items-center justify-center rounded-[6px] border-0 bg-transparent relative"
         style={{ color: 'var(--ink-2)' }}
       >
         <Bell size={16} />
         {totalBadge > 0 && (
           <span
-            className="absolute top-[5px] right-[5px] min-w-[8px] h-[8px] rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-            style={{ background: 'var(--danger)', padding: totalBadge > 9 ? '0 2px' : 0 }}
+            className="absolute top-[5px] right-[5px] min-w-[8px] h-[8px] rounded-full flex items-center justify-center text-[9px] font-bold"
+            style={{ background: 'var(--danger)', padding: totalBadge > 9 ? '0 2px' : 0 , color: 'var(--on-danger)'}}
           >
             {totalBadge > 9 ? '9+' : ''}
           </span>
@@ -122,7 +122,7 @@ export function NotificationBell({ onOpenTask, crmTasks = [], prospects = [], on
           <div className="overflow-y-auto flex-1">
             {crmAlerts.length > 0 && (
               <div>
-                <div className="px-4 pt-2 pb-1 text-[10.5px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)', background: 'var(--bg-2)' }}>
+                <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)', background: 'var(--bg-2)' }}>
                   Alertas CRM
                 </div>
                 {crmAlerts.map(a => (
@@ -136,7 +136,7 @@ export function NotificationBell({ onOpenTask, crmTasks = [], prospects = [], on
                       {a.kind === 'crm_overdue' ? <Flame size={15} /> : <RotateCcw size={15} />}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12.5px] leading-snug font-medium" style={{ color: 'var(--ink)' }}>{a.title}</p>
+                      <p className="text-[12px] leading-snug font-medium" style={{ color: 'var(--ink)' }}>{a.title}</p>
                       <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{a.company}</span>
                     </div>
                   </button>
@@ -150,7 +150,7 @@ export function NotificationBell({ onOpenTask, crmTasks = [], prospects = [], on
             ) : (
               <>
                 {crmAlerts.length > 0 && notifications.length > 0 && (
-                  <div className="px-4 pt-2 pb-1 text-[10.5px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
+                  <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-4)' }}>
                     Notificaciones
                   </div>
                 )}
@@ -167,7 +167,7 @@ export function NotificationBell({ onOpenTask, crmTasks = [], prospects = [], on
                   >
                     <span className="text-[16px] flex-shrink-0 mt-[1px]">{TYPE_ICONS[n.type] ?? '🔔'}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12.5px] leading-snug" style={{ color: 'var(--ink)' }}>{n.message}</p>
+                      <p className="text-[12px] leading-snug" style={{ color: 'var(--ink)' }}>{n.message}</p>
                       <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>{fmtTime(n.created_at)}</span>
                     </div>
                   </button>

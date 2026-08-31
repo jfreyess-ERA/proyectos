@@ -26,12 +26,12 @@ export function EmptyState({ icon, title, hint, action, compact }: Props) {
       )}
       <div className="text-[14px] font-medium" style={{ color: 'var(--ink-2)' }}>{title}</div>
       {hint && (
-        <div className="text-[12.5px] mt-1 max-w-[360px]" style={{ color: 'var(--ink-4)' }}>{hint}</div>
+        <div className="text-[12px] mt-1 max-w-[360px]" style={{ color: 'var(--ink-4)' }}>{hint}</div>
       )}
       {action && (
         <button
           onClick={action.onClick}
-          className="mt-3 h-8 px-3 rounded-[7px] text-[12.5px] font-medium border-0 transition-colors"
+          className="mt-3 h-8 px-3 rounded-[6px] text-[12px] font-medium border-0 transition-colors"
           style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
         >
           {action.label}

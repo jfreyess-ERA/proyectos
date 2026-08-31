@@ -95,7 +95,7 @@ export function CrmDashboard({ prospects, interactions, crmTasks, triggers, onVi
         <select
           value={rangeDays}
           onChange={e => setRangeDays(Number(e.target.value))}
-          className="h-8 px-2 rounded-[7px] text-[12px] outline-none cursor-pointer flex-shrink-0"
+          className="h-8 px-2 rounded-[6px] text-[12px] outline-none cursor-pointer flex-shrink-0"
           style={{
             border: '1px solid var(--line)',
             background: 'var(--surface)',

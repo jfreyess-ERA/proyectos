@@ -169,7 +169,7 @@ function StageOverview({
                   {statusCounts.filter(s => s.count > 0).map(s => (
                     <span
                       key={s.id}
-                      className="flex items-center gap-[5px] text-[11.5px]"
+                      className="flex items-center gap-[5px] text-[11px]"
                       style={{ color: 'var(--ink-3)' }}
                     >
                       <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: s.tone }} />
@@ -178,7 +178,7 @@ function StageOverview({
                     </span>
                   ))}
                   {total === 0 && (
-                    <span className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>Sin tareas aún</span>
+                    <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Sin tareas aún</span>
                   )}
                 </div>
 
@@ -221,7 +221,7 @@ function StageOverview({
                     }
                   </div>
 
-                  <span className="flex items-center gap-1 text-[11.5px]" style={{ color: done > 0 ? 'var(--success, #22c55e)' : 'var(--ink-4)' }}>
+                  <span className="flex items-center gap-1 text-[11px]" style={{ color: done > 0 ? 'var(--success, #22c55e)' : 'var(--ink-4)' }}>
                     <CheckCircle2 size={13} />
                     {done}/{total} completadas
                   </span>
@@ -313,7 +313,7 @@ function StageKanban({
 
           {/* Stage indicator */}
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-[3px]" style={{ background: stage.color }} />
+            <span className="w-3 h-3 rounded-[2px]" style={{ background: stage.color }} />
             <span className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>{stage.label}</span>
           </div>
 
@@ -411,7 +411,7 @@ function KanbanColumn({
         </div>
         <button
           onClick={() => onCreateTask?.(status.id)}
-          className="w-6 h-6 flex items-center justify-center rounded-[5px] border-0 bg-transparent"
+          className="w-6 h-6 flex items-center justify-center rounded-[4px] border-0 bg-transparent"
           style={{ color: 'var(--ink-3)', cursor: 'pointer' }}
         >
           <Plus size={13} />
@@ -499,7 +499,7 @@ function MiniCard({ task, onOpen, overlay = false }: { task: Task; onOpen: (t: T
         <span className="w-2 h-2 rounded-full" style={{ background: priorityColors[task.priority] }} />
       </div>
 
-      <div className="text-[13.5px] font-medium leading-[1.35]" style={{ color: 'var(--ink)' }}>
+      <div className="text-[13px] font-medium leading-[1.35]" style={{ color: 'var(--ink)' }}>
         {task.title}
       </div>
 
@@ -531,7 +531,7 @@ function MiniCard({ task, onOpen, overlay = false }: { task: Task; onOpen: (t: T
 
       <div className="flex items-center justify-between">
         {task.due
-          ? <span className={`flex items-center gap-1 text-[11.5px] ${dueCls}`}><Clock size={12} />{fmtDate(task.due, { relative: true })}</span>
+          ? <span className={`flex items-center gap-1 text-[11px] ${dueCls}`}><Clock size={12} />{fmtDate(task.due, { relative: true })}</span>
           : <span />
         }
         <AvatarStack userIds={task.assignees} max={2} />

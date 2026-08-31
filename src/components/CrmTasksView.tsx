@@ -150,7 +150,7 @@ export function CrmTasksView({ crmTasks, prospects, onOpenProspect, onTasksChang
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
-                    className="text-[13.5px] font-medium"
+                    className="text-[13px] font-medium"
                     style={{ color: isDone ? 'var(--ink-4)' : 'var(--ink)', textDecoration: isDone ? 'line-through' : 'none' }}
                   >
                     {task.task_type ?? 'Tarea CRM'}
@@ -168,7 +168,7 @@ export function CrmTasksView({ crmTasks, prospects, onOpenProspect, onTasksChang
 
                   {task.due_date && (
                     <span
-                      className="text-[11.5px]"
+                      className="text-[11px]"
                       style={{
                         color: isOverdue ? 'var(--sem-red)' : isToday ? 'var(--sem-blue)' : 'var(--ink-4)',
                         fontWeight: isOverdue || isToday ? 600 : 400,
@@ -192,7 +192,7 @@ export function CrmTasksView({ crmTasks, prospects, onOpenProspect, onTasksChang
                 </div>
 
                 {task.notes && (
-                  <div className="mt-1 text-[12.5px]" style={{ color: 'var(--ink-3)' }}>{task.notes}</div>
+                  <div className="mt-1 text-[12px]" style={{ color: 'var(--ink-3)' }}>{task.notes}</div>
                 )}
               </div>
 

@@ -85,7 +85,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar empresa, contacto, resumen…"
-            className="h-8 pl-7 pr-3 rounded-[7px] text-[13px] outline-none"
+            className="h-8 pl-7 pr-3 rounded-[6px] text-[13px] outline-none"
             style={{ width: 260, border: '1px solid var(--line)', background: 'var(--surface-2)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
           />
         </div>
@@ -93,7 +93,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
         <div className="flex gap-[3px] flex-wrap">
           {CHANNELS.map(ch => (
             <button key={ch} onClick={() => setChannelF(ch)}
-              className="h-7 px-2 rounded-[6px] text-[11.5px] border-0 transition-colors"
+              className="h-7 px-2 rounded-[6px] text-[11px] border-0 transition-colors"
               style={{ background: channelF === ch ? 'var(--accent)' : 'var(--bg-3)', color: channelF === ch ? 'var(--on-accent)' : 'var(--ink-2)', fontWeight: channelF === ch ? 600 : 400 }}>
               {ch === 'Todos' ? ch : `${CHANNEL_EMOJI[ch]} ${channelEs(ch)}`}
             </button>
@@ -103,7 +103,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
         <div className="flex gap-[3px] flex-wrap">
           {OUTCOMES.map(o => (
             <button key={o} onClick={() => setOutcomeF(o)}
-              className="h-7 px-2 rounded-[6px] text-[11.5px] border-0 transition-colors"
+              className="h-7 px-2 rounded-[6px] text-[11px] border-0 transition-colors"
               style={{ background: outcomeF === o ? 'var(--accent)' : 'var(--bg-3)', color: outcomeF === o ? 'var(--on-accent)' : 'var(--ink-2)', fontWeight: outcomeF === o ? 600 : 400 }}>
               {o === 'Todos' ? o : outcomeEs(o)}
             </button>
@@ -187,7 +187,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
                       ) : <span style={{ color: 'var(--ink-4)' }}>—</span>}
                     </td>
                     <td className="px-4 py-[9px] max-w-[200px]">
-                      <span className="text-[12.5px] block truncate" style={{ color: 'var(--ink-3)' }}>
+                      <span className="text-[12px] block truncate" style={{ color: 'var(--ink-3)' }}>
                         {i.summary ?? '—'}
                       </span>
                     </td>
@@ -198,7 +198,7 @@ export function InteractionsView({ interactions, prospects, onOpenProspect }: Pr
                   {isExpanded && (
                     <tr style={{ borderBottom: '1px solid var(--line)', background: 'var(--bg-2)' }}>
                       <td colSpan={7} className="px-6 py-3">
-                        <div className="flex gap-8 text-[12.5px]">
+                        <div className="flex gap-8 text-[12px]">
                           {i.summary && (
                             <div className="flex-1"><span style={{ color: 'var(--ink-4)' }}>Resumen: </span><span style={{ color: 'var(--ink)' }}>{i.summary}</span></div>
                           )}

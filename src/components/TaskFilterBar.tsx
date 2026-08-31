@@ -184,7 +184,7 @@ export function TaskFilterBar({
       {showOverdue && (
         <button
           onClick={() => onChange({ ...filters, overdueOnly: !filters.overdueOnly })}
-          className="h-8 px-3 text-[12px] font-medium rounded-[7px] border transition-colors"
+          className="h-8 px-3 text-[12px] font-medium rounded-[6px] border transition-colors"
           style={
             filters.overdueOnly
               ? { background: 'var(--danger-bg)', borderColor: 'var(--danger)', color: 'var(--danger)' }
@@ -198,7 +198,7 @@ export function TaskFilterBar({
       {filtersActive(filters) && (
         <button
           onClick={() => onChange(EMPTY_FILTERS)}
-          className="h-8 px-3 text-[12px] rounded-[7px] border transition-colors"
+          className="h-8 px-3 text-[12px] rounded-[6px] border transition-colors"
           style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink-3)' }}
         >
           Limpiar filtros
@@ -216,7 +216,7 @@ function Select({ label, value, onChange, children }: { label: string; value: st
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-8 px-2 rounded-[7px] border text-[12px] outline-none max-w-[200px]"
+        className="h-8 px-2 rounded-[6px] border text-[12px] outline-none max-w-[200px]"
         style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
       >
         {children}

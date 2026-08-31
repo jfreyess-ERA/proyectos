@@ -119,7 +119,7 @@ export function SprintModal({ open, sprint, projects, defaultProjectId, onClose,
             <input
               value={name} onChange={e => setName(e.target.value)} required autoFocus
               placeholder="Sprint 1 · Mayo"
-              className="h-8 px-3 rounded-[7px] text-[13px] outline-none w-full"
+              className="h-8 px-3 rounded-[6px] text-[13px] outline-none w-full"
               style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
             />
           </Field>
@@ -134,7 +134,7 @@ export function SprintModal({ open, sprint, projects, defaultProjectId, onClose,
             <textarea
               value={goal} onChange={e => setGoal(e.target.value)} rows={2}
               placeholder="¿Qué entregamos en este sprint?"
-              className="px-3 py-2 rounded-[7px] text-[13px] outline-none w-full resize-none"
+              className="px-3 py-2 rounded-[6px] text-[13px] outline-none w-full resize-none"
               style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
             />
           </Field>
@@ -142,13 +142,13 @@ export function SprintModal({ open, sprint, projects, defaultProjectId, onClose,
           <div className="grid grid-cols-2 gap-3">
             <Field label="Fecha inicio">
               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                className="h-8 px-2 rounded-[7px] text-[12px] outline-none w-full"
+                className="h-8 px-2 rounded-[6px] text-[12px] outline-none w-full"
                 style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
               />
             </Field>
             <Field label="Fecha fin">
               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                className="h-8 px-2 rounded-[7px] text-[12px] outline-none w-full"
+                className="h-8 px-2 rounded-[6px] text-[12px] outline-none w-full"
                 style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
               />
             </Field>
@@ -156,7 +156,7 @@ export function SprintModal({ open, sprint, projects, defaultProjectId, onClose,
 
           <Field label="Estado">
             <select value={status} onChange={e => setStatus(e.target.value as Sprint['status'])}
-              className="h-8 px-2 rounded-[7px] text-[13px] outline-none w-full"
+              className="h-8 px-2 rounded-[6px] text-[13px] outline-none w-full"
               style={{ border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
             >
               {(Object.entries(STATUS_LABELS) as [Sprint['status'], string][]).map(([v, l]) => (
@@ -168,20 +168,20 @@ export function SprintModal({ open, sprint, projects, defaultProjectId, onClose,
           <div className="flex gap-2 pt-1">
             {sprint && (
               <button type="button" onClick={handleDelete}
-                className="h-8 px-3 rounded-[7px] text-[12.5px] border-0 flex items-center gap-1"
+                className="h-8 px-3 rounded-[6px] text-[12px] border-0 flex items-center gap-1"
                 style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}
               >
                 <Trash2 size={13} /> Eliminar
               </button>
             )}
             <button type="button" onClick={onClose}
-              className="flex-1 h-8 rounded-[7px] text-[12.5px] font-medium border-0"
+              className="flex-1 h-8 rounded-[6px] text-[12px] font-medium border-0"
               style={{ background: 'var(--bg-3)', color: 'var(--ink-3)' }}
             >
               Cancelar
             </button>
             <button type="submit" disabled={saving || !name.trim()}
-              className="flex-1 h-8 rounded-[7px] text-[12.5px] font-semibold border-0 transition-opacity"
+              className="flex-1 h-8 rounded-[6px] text-[12px] font-semibold border-0 transition-opacity"
               style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: saving || !name.trim() ? 0.5 : 1 }}
             >
               {saving ? 'Guardando…' : sprint ? 'Guardar' : 'Crear sprint'}
@@ -196,7 +196,7 @@ export function SprintModal({ open, sprint, projects, defaultProjectId, onClose,
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11.5px] font-medium" style={{ color: 'var(--ink-3)' }}>{label}</label>
+      <label className="text-[11px] font-medium" style={{ color: 'var(--ink-3)' }}>{label}</label>
       {children}
     </div>
   );

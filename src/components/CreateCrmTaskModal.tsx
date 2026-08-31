@@ -165,7 +165,7 @@ export function CreateCrmTaskModal({ open, prospects, defaultProspectId, onClose
           </div>
 
           {error && (
-            <div className="text-[12px] px-3 py-2 rounded-[7px]" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
+            <div className="text-[12px] px-3 py-2 rounded-[6px]" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
               {error}
             </div>
           )}

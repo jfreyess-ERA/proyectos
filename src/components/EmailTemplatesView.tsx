@@ -84,7 +84,7 @@ export function EmailTemplatesView({ templates, prospects = [], onTemplatesChang
     setTimeout(() => setCopied(null), 2000);
   }
 
-  const inp = "w-full h-8 px-3 rounded-[7px] text-[13px] outline-none";
+  const inp = "w-full h-8 px-3 rounded-[6px] text-[13px] outline-none";
   const inpStyle = { border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' };
 
   return (
@@ -170,17 +170,17 @@ export function EmailTemplatesView({ templates, prospects = [], onTemplatesChang
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button onClick={() => copyToClipboard(selected)}
-                  className="h-8 px-3 rounded-[7px] text-[12px] flex items-center gap-1 border-0 font-medium"
+                  className="h-8 px-3 rounded-[6px] text-[12px] flex items-center gap-1 border-0 font-medium"
                   style={{ background: copied === selected.id ? 'var(--sem-green-bg)' : 'var(--bg-3)', color: copied === selected.id ? 'var(--sem-green-dark)' : 'var(--ink-2)' }}>
                   {copied === selected.id ? <><Check size={13} /> Copiado</> : <><Copy size={13} /> Copiar</>}
                 </button>
                 <button onClick={() => openEdit(selected)}
-                  className="h-8 px-3 rounded-[7px] text-[12px] flex items-center gap-1 border-0"
+                  className="h-8 px-3 rounded-[6px] text-[12px] flex items-center gap-1 border-0"
                   style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}>
                   <Edit2 size={13} /> Editar
                 </button>
                 <button onClick={() => handleDelete(selected)}
-                  className="h-8 px-3 rounded-[7px] text-[12px] flex items-center gap-1 border-0"
+                  className="h-8 px-3 rounded-[6px] text-[12px] flex items-center gap-1 border-0"
                   style={{ background: 'var(--bg-3)', color: 'var(--sem-red)' }}>
                   <Trash2 size={13} />
                 </button>
@@ -192,7 +192,7 @@ export function EmailTemplatesView({ templates, prospects = [], onTemplatesChang
               <div className="flex items-center gap-2 mb-4 p-3 rounded-[8px]" style={{ background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
                 <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>Previsualizar con:</span>
                 <select value={previewProspectId} onChange={e => { setPreviewProspectId(e.target.value); setPreviewTab('preview'); }}
-                  className="flex-1 h-7 px-2 rounded-[5px] text-[12px] outline-none"
+                  className="flex-1 h-7 px-2 rounded-[4px] text-[12px] outline-none"
                   style={{ border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
                   <option value="">— Variables sin reemplazar —</option>
                   {prospects.map(p => <option key={p.id} value={p.id}>{p.company}{p.contact_name ? ` · ${p.contact_name}` : ''}</option>)}
@@ -225,7 +225,7 @@ export function EmailTemplatesView({ templates, prospects = [], onTemplatesChang
             )}
 
             {selected.body && (
-              <div className="p-4 rounded-[8px] whitespace-pre-wrap text-[13.5px] leading-relaxed" style={{ background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--ink-2)' }}>
+              <div className="p-4 rounded-[8px] whitespace-pre-wrap text-[13px] leading-relaxed" style={{ background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--ink-2)' }}>
                 {previewTab === 'preview' ? fillTemplate(selected.body, previewProspect) : selected.body}
               </div>
             )}
@@ -264,7 +264,7 @@ function TemplateForm({
   onSave: () => void;
   onCancel: () => void;
 }) {
-  const inp = "w-full h-8 px-3 rounded-[7px] text-[13px] outline-none";
+  const inp = "w-full h-8 px-3 rounded-[6px] text-[13px] outline-none";
   const inpStyle = { border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' };
 
   return (
@@ -296,7 +296,7 @@ function TemplateForm({
             onChange={e => setDraft(d => ({ ...d, body: e.target.value }))}
             placeholder="Escribe el cuerpo del email. Usa [Nombre], [empresa], etc. para personalizar."
             rows={12}
-            className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none resize-y"
+            className="w-full px-3 py-2 rounded-[6px] text-[13px] outline-none resize-y"
             style={{ ...inpStyle, height: 240 }}
           />
         </div>
@@ -304,13 +304,13 @@ function TemplateForm({
           <button
             onClick={onSave}
             disabled={saving || !draft.name?.trim()}
-            className="h-8 px-4 rounded-[7px] text-[13px] font-medium border-0"
+            className="h-8 px-4 rounded-[6px] text-[13px] font-medium border-0"
             style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: saving || !draft.name?.trim() ? 0.5 : 1 }}
           >
             {saving ? 'Guardando…' : 'Guardar'}
           </button>
           <button onClick={onCancel}
-            className="h-8 px-3 rounded-[7px] text-[13px] border-0"
+            className="h-8 px-3 rounded-[6px] text-[13px] border-0"
             style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}>
             Cancelar
           </button>

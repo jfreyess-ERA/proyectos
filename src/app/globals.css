@@ -18,12 +18,25 @@
   --line:       #DDE5EF;   /* ERA canónico */
   --line-2:     #EBF0F7;
 
-  /* ── Texto: rampa navy. Conserva los escalones de luminosidad
-        de la rampa anterior, así ningún contraste empeora.      ── */
-  --ink:        #0B1E38;   /* ERA canónico · 16.7:1 sobre --surface */
-  --ink-2:      #33506F;   /* 7.6:1 sobre --bg */
-  --ink-3:      #566E89;   /* 4.8:1 sobre --bg */
-  --ink-4:      #6B8199;   /* 3.7:1 — ver nota de jerarquía, Fase 3 */
+  /* ── Texto: rampa navy de 4 niveles, TODOS sobre WCAG AA (4.5:1)
+        contra --bg, que es el fondo más exigente (sobre --surface
+        blanco cada uno gana ~0.4).
+        Fase 3 cerró la duda que dejó la Fase 2: --ink-4 no era un
+        token decorativo — 290 de sus 292 usos son color de texto
+        (encabezados de sección, labels de KPI, estados vacíos), así
+        que tenía que ser legible. Para que los 4 niveles pasen AA y
+        sigan distinguiéndose entre sí, la rampa entera baja de
+        luminosidad; el conjunto se ve algo más denso que antes.
+        Los ratios son contra --bg-2 (el sidebar), no contra --bg: es
+        el fondo sobre el que de hecho vive la mayoría del texto
+        atenuado. Efecto colateral honesto: --ink-3 y --ink-4 quedan
+        muy cerca. Con fondo claro no caben 4 niveles legibles Y
+        distinguibles, así que en la práctica la rampa son 3 niveles
+        más un matiz; no agregar un 5º.                           ── */
+  --ink:        #0B1E38;   /* ERA canónico · 15.3:1 sobre --bg */
+  --ink-2:      #24405E;   /*  9.8:1 */
+  --ink-3:      #3E5876;   /*  6.3:1 */
+  --ink-4:      #556D86;   /*  4.6:1 */
 
   /* ── Marca: teal ERA en dos tiers ───────────────────────────────
         --accent   teal profundo: seguro como TEXTO (5.6:1 sobre
@@ -44,6 +57,7 @@
   --warn:      #9A6108;    /* 5.1:1 · familia ERA #F5A623 */
   --warn-bg:   #FBF0DC;
   --danger:    #C0392B;    /* 5.4:1 · ERA canónico */
+  --on-danger: #FFFFFF;    /* 5.4:1 sobre --danger */
   --danger-bg: #FBEAE8;
 
   /* ── Tokens semánticos de componente (Fase 1 los hizo
@@ -102,11 +116,33 @@
   --sem-purple-bg:    #F2E8F7;
   --sem-pink:         #A63A73;
 
+  /* ── Tipografía ──────────────────────────────────────────────────
+        Se mantiene Inter en lugar del 'Segoe UI' del canon ERA a
+        propósito: Segoe UI solo existe en Windows, así que la pila de
+        ERA cae a system-ui en Mac y Linux y la marca se vería distinta
+        en cada equipo. Inter es del mismo género humanista neutro, ya
+        viene optimizada por next/font y renderiza igual en todas
+        partes. Los entregables HTML de ERA sí usan Segoe UI: ahí es un
+        archivo suelto que se abre en Windows, aquí es una app.     ── */
   --font:      var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
 
+  /* ── Escala tipográfica ──────────────────────────────────────────
+        10 · 11 · 12 · 13 · 14 · 15 · 16 · 18 · 20 · 22 · 24 · 28 · 32
+        La Fase 3 eliminó los medios píxeles (10.5, 11.5, 12.5, 13.5,
+        14.5): duplicaban la escala sin diferencia perceptible. Al
+        agregar texto nuevo, usar un escalón existente.
+        9px queda solo en badges numéricos; no usarlo para texto.  ── */
+
+  /* ── Radios ──────────────────────────────────────────────────────
+        2 micro-swatch · 4 chip · 6 input · 8 control · 10 card ERA
+        · 12 card · 16 modal · rounded-full pill.
+        --radius-l se queda en 12 y no en los 10 del canon ERA: 10 ya
+        se usa y cambiar todas las tarjetas por 2px no compensa.   ── */
   --row-h:    36px;
   --gap:      10px;
+  --radius-xs: 2px;
+  --radius-s:  4px;
   --radius:   8px;
   --radius-l: 12px;
   /* Sombras teñidas de navy ERA en lugar del tinte cálido anterior */
@@ -149,6 +185,7 @@
   --ok:        #3DD168;  --ok-bg:     rgba(29,185,84,.16);
   --warn:      #F0A340;  --warn-bg:   rgba(245,166,35,.16);
   --danger:    #E8776A;  --danger-bg: rgba(231,76,60,.16);
+  --on-danger: #3B0D07;  /* en oscuro --danger es claro: el blanco daba 2.9:1 */
 
   --sem-red:          #E8776A;
   --sem-red-2:        #EE8879;

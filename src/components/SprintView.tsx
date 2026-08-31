@@ -69,7 +69,7 @@ export function SprintView({ sprint, tasks, projects, onOpenTask, onSprintUpdate
           </div>
           <button
             onClick={() => setEditing(true)}
-            className="h-8 px-3 rounded-[7px] text-[12px] font-medium border-0 flex items-center gap-1"
+            className="h-8 px-3 rounded-[6px] text-[12px] font-medium border-0 flex items-center gap-1"
             style={{ background: 'var(--bg-3)', color: 'var(--ink-3)' }}
           >
             <Pencil size={12} /> Editar sprint
@@ -107,7 +107,7 @@ export function SprintView({ sprint, tasks, projects, onOpenTask, onSprintUpdate
                         >
                           <div className="flex items-start gap-2">
                             <span className="w-[6px] h-[6px] rounded-sm flex-shrink-0 mt-[5px]" style={{ background: proj?.color }} />
-                            <span className="text-[12.5px] font-medium leading-snug" style={{ color: 'var(--ink)' }}>{t.title}</span>
+                            <span className="text-[12px] font-medium leading-snug" style={{ color: 'var(--ink)' }}>{t.title}</span>
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[10px]" style={{ color: 'var(--ink-4)', fontFamily: 'var(--font-mono)' }}>{t.ref}</span>

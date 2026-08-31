@@ -104,7 +104,7 @@ export function ProjectModal({ open, project, existingClients = [], onClose, onS
         onClick={onClose}
       />
       <div
-        className="fixed z-50 flex flex-col rounded-[14px] overflow-hidden"
+        className="fixed z-50 flex flex-col rounded-[12px] overflow-hidden"
         style={{
           top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
@@ -134,7 +134,7 @@ export function ProjectModal({ open, project, existingClients = [], onClose, onS
 
           {/* Preview */}
           <div className="flex items-center gap-3 px-3 py-[10px] rounded-[10px]" style={{ background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
-            <span className="w-[28px] h-[28px] rounded-[7px] flex-shrink-0" style={{ background: color }} />
+            <span className="w-[28px] h-[28px] rounded-[6px] flex-shrink-0" style={{ background: color }} />
             <div className="min-w-0">
               {client && (
                 <div className="text-[10px] font-medium mb-[1px] truncate" style={{ color: 'var(--ink-4)' }}>{client}</div>

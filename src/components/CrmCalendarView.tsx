@@ -96,18 +96,18 @@ export function CrmCalendarView({ crmTasks, interactions, prospects, onOpenProsp
           Calendario CRM
         </h1>
         <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0" style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}>
+          <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-[6px] border-0" style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}>
             <ChevronLeft size={15} />
           </button>
           <span className="text-[14px] font-semibold capitalize w-[160px] text-center" style={{ color: 'var(--ink)' }}>{monthName}</span>
-          <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0" style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}>
+          <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-[6px] border-0" style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}>
             <ChevronRight size={15} />
           </button>
         </div>
         {/* Legend */}
         <div className="flex items-center gap-3 ml-4">
-          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-[3px]" style={{ background: 'var(--sem-blue-bg)' }} /><span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Tarea CRM</span></div>
-          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-[3px]" style={{ background: 'var(--sem-purple-bg)' }} /><span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Follow-up</span></div>
+          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-[2px]" style={{ background: 'var(--sem-blue-bg)' }} /><span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Tarea CRM</span></div>
+          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-[2px]" style={{ background: 'var(--sem-purple-bg)' }} /><span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Follow-up</span></div>
         </div>
       </div>
 
@@ -116,7 +116,7 @@ export function CrmCalendarView({ crmTasks, interactions, prospects, onOpenProsp
         {/* Day headers */}
         <div className="grid grid-cols-7" style={{ borderBottom: '1px solid var(--line)', background: 'var(--bg-2)' }}>
           {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
-            <div key={d} className="text-center py-2 text-[11.5px] font-semibold" style={{ color: 'var(--ink-4)' }}>{d}</div>
+            <div key={d} className="text-center py-2 text-[11px] font-semibold" style={{ color: 'var(--ink-4)' }}>{d}</div>
           ))}
         </div>
 
@@ -191,7 +191,7 @@ export function CrmCalendarView({ crmTasks, interactions, prospects, onOpenProsp
                 {item.prospect && (
                   <button
                     onClick={() => onOpenProspect(item.prospect!)}
-                    className="text-[11px] px-2 py-[2px] rounded-[5px] border-0"
+                    className="text-[11px] px-2 py-[2px] rounded-[4px] border-0"
                     style={{ background: 'rgba(255,255,255,0.6)', color: item.color }}
                   >
                     Ver prospecto ↗

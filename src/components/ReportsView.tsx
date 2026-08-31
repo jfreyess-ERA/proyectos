@@ -111,7 +111,7 @@ function FilterSelect({ label, value, onChange, children }: { label: string; val
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-8 px-2 rounded-[7px] border text-[12px] outline-none"
+        className="h-8 px-2 rounded-[6px] border text-[12px] outline-none"
         style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
       >
         {children}
@@ -139,7 +139,7 @@ function ProjectProgressRow({
     <div className="flex flex-col gap-[6px]">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="w-[10px] h-[10px] rounded-[3px] flex-shrink-0" style={{ background: p.color }} />
+          <span className="w-[10px] h-[10px] rounded-[2px] flex-shrink-0" style={{ background: p.color }} />
           <span className="text-[13px] font-medium truncate" style={{ color: 'var(--ink)' }}>
             {showClient && p.client && (
               <span className="font-normal" style={{ color: 'var(--ink-4)' }}>{p.client} · </span>
@@ -506,7 +506,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
             {(progressClient !== 'all' || progressStatus !== 'all') && (
               <button
                 onClick={() => { setProgressClient('all'); setProgressStatus('all'); }}
-                className="h-8 px-3 text-[12px] rounded-[7px] border transition-colors"
+                className="h-8 px-3 text-[12px] rounded-[6px] border transition-colors"
                 style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink-3)' }}
               >
                 Limpiar filtros
@@ -542,7 +542,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                 return (
                   <div key={client} className="flex flex-col gap-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[13.5px] font-bold" style={{ color: 'var(--ink)' }}>{client}</span>
+                      <span className="text-[13px] font-bold" style={{ color: 'var(--ink)' }}>{client}</span>
                       <span className="text-[11px] tabular-nums" style={{ color: 'var(--ink-4)' }}>
                         {rows.length} proyecto{rows.length !== 1 ? 's' : ''} ·{' '}
                         {progressStatus === 'all' ? `${clientDone}/${clientTotal} tareas` : `${clientStatusCount} ${statusDef?.label.toLowerCase()}`} ·{' '}
@@ -898,7 +898,7 @@ export function ReportsView({ tasks, projects, users: propUsers }: Props) {
                     <div className="flex items-center justify-between mb-[4px]">
                       <div className="min-w-0 flex items-center gap-2">
                         <span
-                          className="text-[12.5px] font-medium truncate"
+                          className="text-[12px] font-medium truncate"
                           style={{ color: 'var(--ink)' }}
                         >
                           {shortName(u, allPeople)}

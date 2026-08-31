@@ -173,7 +173,7 @@ export function MyTasksView({ tasks, projects, datedSubtasks, onOpenTask, onOpen
                         value={status}
                         onClick={e => e.stopPropagation()}
                         onChange={e => handleStatusChange(task.id, e.target.value as Task['status'])}
-                        className="flex-shrink-0 h-[26px] pl-2 pr-1 rounded-[6px] text-[11.5px] font-medium border outline-none cursor-pointer"
+                        className="flex-shrink-0 h-[26px] pl-2 pr-1 rounded-[6px] text-[11px] font-medium border outline-none cursor-pointer"
                         style={{
                           background: 'var(--bg-2)',
                           borderColor: 'var(--line)',
@@ -280,7 +280,7 @@ function ViewTab({ active, onClick, children, border }: { active: boolean; onCli
   return (
     <button
       onClick={onClick}
-      className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
+      className="h-8 px-3 text-[12px] font-medium border-0 transition-colors"
       style={{
         background: active ? 'var(--surface)' : 'transparent',
         color: active ? 'var(--ink)' : 'var(--ink-3)',

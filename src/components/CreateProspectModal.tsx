@@ -63,14 +63,14 @@ export function CreateProspectModal({ open, onClose, onCreated, existingProspect
     }
   }
 
-  const inp = "w-full h-8 px-3 rounded-[7px] text-[13px] outline-none";
+  const inp = "w-full h-8 px-3 rounded-[6px] text-[13px] outline-none";
   const inpStyle = { border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--font)' };
 
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
         <div
-          className="relative w-full max-w-[560px] rounded-[14px] overflow-hidden shadow-2xl flex flex-col"
+          className="relative w-full max-w-[560px] rounded-[12px] overflow-hidden shadow-2xl flex flex-col"
           style={{ background: 'var(--bg)', border: '1px solid var(--line)', maxHeight: '90vh' }}
         >
           {/* Header */}
@@ -95,7 +95,7 @@ export function CreateProspectModal({ open, onClose, onCreated, existingProspect
                   style={inpStyle}
                 />
                 {duplicates.length > 0 && (
-                  <div className="mt-1 flex items-start gap-1 text-[11.5px]" style={{ color: 'oklch(0.50 0.14 85)' }}>
+                  <div className="mt-1 flex items-start gap-1 text-[11px]" style={{ color: 'oklch(0.50 0.14 85)' }}>
                     <span>⚠️</span>
                     <span>Ya existe un prospecto similar: <strong>{duplicates.map(d => d.company).join(', ')}</strong></span>
                   </div>
@@ -146,7 +146,7 @@ export function CreateProspectModal({ open, onClose, onCreated, existingProspect
                     <select
                       value={form[field as keyof typeof form] as string}
                       onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
-                      className="w-full h-8 px-2 rounded-[7px] text-[13px] outline-none"
+                      className="w-full h-8 px-2 rounded-[6px] text-[13px] outline-none"
                       style={inpStyle}
                     >
                       {opts.map(o => <option key={o} value={o}>{ES_BY_FIELD[field]?.(o) ?? o}</option>)}
@@ -165,7 +165,7 @@ export function CreateProspectModal({ open, onClose, onCreated, existingProspect
                 <label className="text-[12px] font-medium mb-1 block" style={{ color: 'var(--ink-2)' }}>Dolores / Necesidades</label>
                 <textarea value={form.pain_points} onChange={e => setForm(f => ({ ...f, pain_points: e.target.value }))}
                   placeholder="¿Qué problemas enfrenta esta empresa?" rows={2}
-                  className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none resize-none"
+                  className="w-full px-3 py-2 rounded-[6px] text-[13px] outline-none resize-none"
                   style={inpStyle} />
               </div>
 
@@ -173,7 +173,7 @@ export function CreateProspectModal({ open, onClose, onCreated, existingProspect
                 <label className="text-[12px] font-medium mb-1 block" style={{ color: 'var(--ink-2)' }}>Notas</label>
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                   placeholder="Contexto adicional, observaciones…" rows={2}
-                  className="w-full px-3 py-2 rounded-[7px] text-[13px] outline-none resize-none"
+                  className="w-full px-3 py-2 rounded-[6px] text-[13px] outline-none resize-none"
                   style={inpStyle} />
               </div>
             </div>

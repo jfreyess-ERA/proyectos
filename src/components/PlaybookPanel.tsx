@@ -103,7 +103,7 @@ export function PlaybookPanel({ prospect, nodes, edges }: Props) {
 
       {/* Fechas ancla que gobiernan los plazos de esta rama */}
       {(prospect.meeting_at || prospect.reconnect_at) && (
-        <div className="flex flex-wrap gap-x-4 gap-y-px mb-2 text-[11.5px]" style={{ color: 'var(--ink-2)' }}>
+        <div className="flex flex-wrap gap-x-4 gap-y-px mb-2 text-[11px]" style={{ color: 'var(--ink-2)' }}>
           {prospect.meeting_at && (
             <span className="flex items-center gap-1">
               <CalendarClock size={12} style={{ color: 'var(--accent)' }} />
@@ -129,7 +129,7 @@ export function PlaybookPanel({ prospect, nodes, edges }: Props) {
           {current.alert_label && (
             <div className="text-[11px] mt-px" style={{ color: 'var(--danger)' }}>⚠ {current.alert_label}</div>
           )}
-          <div className="text-[11.5px] mt-1 flex flex-col gap-px" style={{ color: 'var(--ink-3)' }}>
+          <div className="text-[11px] mt-1 flex flex-col gap-px" style={{ color: 'var(--ink-3)' }}>
             {current.tasks.map((t, i) => (
               <span key={i}>· {t.detail}</span>
             ))}
@@ -139,7 +139,7 @@ export function PlaybookPanel({ prospect, nodes, edges }: Props) {
 
       {/* A dónde lleva cada respuesta posible */}
       {current.is_terminal ? (
-        <div className="text-[11.5px] pt-2" style={{ color: 'var(--ink-3)', borderTop: '1px solid var(--line)' }}>
+        <div className="text-[11px] pt-2" style={{ color: 'var(--ink-3)', borderTop: '1px solid var(--line)' }}>
           Fin de la rama. La próxima respuesta que registres arranca una cadencia nueva.
         </div>
       ) : next.length > 0 && (
@@ -147,7 +147,7 @@ export function PlaybookPanel({ prospect, nodes, edges }: Props) {
           <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--ink-4)' }}>Según lo que responda:</div>
           <div className="flex flex-col gap-px">
             {next.map(({ response, to }) => (
-              <div key={response} className="text-[11.5px] flex items-center gap-1.5 min-w-0">
+              <div key={response} className="text-[11px] flex items-center gap-1.5 min-w-0">
                 <span className="font-medium flex-shrink-0" style={{ color: 'var(--ink-2)' }}>
                   {RESPONSE_LABELS[response]}
                 </span>
@@ -188,7 +188,7 @@ export function PlaybookPanel({ prospect, nodes, edges }: Props) {
                   {n.position}
                 </span>
                 <div className="min-w-0">
-                  <div className="text-[11.5px] font-medium" style={{ color: isCurrent ? 'var(--accent)' : 'var(--ink-2)' }}>
+                  <div className="text-[11px] font-medium" style={{ color: isCurrent ? 'var(--accent)' : 'var(--ink-2)' }}>
                     {n.label}
                     {n.is_terminal && <span className="ml-1 font-normal" style={{ color: 'var(--ink-4)' }}>· fin</span>}
                   </div>
@@ -209,7 +209,7 @@ export function PlaybookPanel({ prospect, nodes, edges }: Props) {
 function Card({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="rounded-[9px] p-3"
+      className="rounded-[8px] p-3"
       style={{ background: 'var(--bg-2)', border: '1px solid var(--line)' }}
     >
       {children}

@@ -147,7 +147,7 @@ export function PhaseDurationView({ tasks, projects, onOpenProject }: Props) {
         <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--ink-3)' }}>
           <span className="font-medium">Cliente:</span>
           <select value={clientFilter} onChange={e => setClientFilter(e.target.value)}
-            className="h-8 px-2 rounded-[7px] border text-[12px] outline-none"
+            className="h-8 px-2 rounded-[6px] border text-[12px] outline-none"
             style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
             <option value="all">Todos ({clients.length})</option>
             {clients.map(c => <option key={c} value={c}>{c}</option>)}
@@ -167,7 +167,7 @@ export function PhaseDurationView({ tasks, projects, onOpenProject }: Props) {
           <input type="checkbox" checked={measurableOnly} onChange={e => setMeasurableOnly(e.target.checked)} />
           Solo con duración medible
         </label>
-        <button onClick={exportCSV} className="ml-auto flex items-center gap-[6px] h-8 px-3 rounded-[7px] border text-[12px] transition-colors"
+        <button onClick={exportCSV} className="ml-auto flex items-center gap-[6px] h-8 px-3 rounded-[6px] border text-[12px] transition-colors"
           style={{ background: 'var(--bg-2)', color: 'var(--ink-3)', borderColor: 'var(--line)' }}>
           <Download size={12} /> CSV
         </button>
@@ -191,13 +191,13 @@ export function PhaseDurationView({ tasks, projects, onOpenProject }: Props) {
               <div key={s.key} className="flex items-center gap-3">
                 <span className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0" style={{ background: s.color }} />
                 <div className="w-[170px]">
-                  <div className="text-[12.5px]" style={{ color: 'var(--ink-2)' }}>{s.label}</div>
-                  <div className="text-[10.5px]" style={{ color: 'var(--ink-4)' }}>{s.sub}</div>
+                  <div className="text-[12px]" style={{ color: 'var(--ink-2)' }}>{s.label}</div>
+                  <div className="text-[10px]" style={{ color: 'var(--ink-4)' }}>{s.sub}</div>
                 </div>
                 <div className="flex-1 h-[7px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
                   <div className="h-full rounded-full" style={{ width: `${((v ?? 0) / max) * 100}%`, background: s.color }} />
                 </div>
-                <span className="text-[12.5px] w-[64px] text-right tabular-nums font-medium" style={{ color: 'var(--ink)' }}>{fmtDays(v)}</span>
+                <span className="text-[12px] w-[64px] text-right tabular-nums font-medium" style={{ color: 'var(--ink)' }}>{fmtDays(v)}</span>
               </div>
             );
           })}
@@ -207,7 +207,7 @@ export function PhaseDurationView({ tasks, projects, onOpenProject }: Props) {
       {/* Table */}
       <Card title="Detalle por proyecto">
         <div className="overflow-x-auto -mx-4 px-4">
-          <table className="w-full text-[12.5px]" style={{ borderCollapse: 'collapse' }}>
+          <table className="w-full text-[12px]" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ color: 'var(--ink-4)' }}>
                 <Th sortKey="client" current={sort} onSort={toggleSort}>Cliente / Proyecto</Th>

@@ -97,7 +97,7 @@ export function SubtaskDetail({ subtask, task, project, users, onClose, onChange
             <span className="text-[12px] flex-shrink-0" style={{ color: 'var(--ink-4)' }}>Subtarea de</span>
             <button
               onClick={() => { onClose(); onOpenParent(task); }}
-              className="flex items-center gap-1 min-w-0 text-[12.5px] font-medium border-0 bg-transparent truncate"
+              className="flex items-center gap-1 min-w-0 text-[12px] font-medium border-0 bg-transparent truncate"
               style={{ color: 'var(--accent)' }}
               title={`Abrir ${task.title}`}
             >
@@ -127,7 +127,7 @@ export function SubtaskDetail({ subtask, task, project, users, onClose, onChange
           <div className="flex items-start gap-3">
             <button
               onClick={toggleDone}
-              className="w-5 h-5 rounded-[5px] border flex items-center justify-center flex-shrink-0 mt-[3px]"
+              className="w-5 h-5 rounded-[4px] border flex items-center justify-center flex-shrink-0 mt-[3px]"
               style={{
                 borderColor: draft.done ? 'var(--sem-green)' : 'var(--line)',
                 background: draft.done ? 'var(--sem-green)' : 'transparent',
@@ -177,7 +177,7 @@ export function SubtaskDetail({ subtask, task, project, users, onClose, onChange
                 type="date"
                 value={draft.due_date ?? ''}
                 onChange={e => patch({ due_date: e.target.value || null })}
-                className="h-9 px-3 rounded-[7px] text-[13px] outline-none"
+                className="h-9 px-3 rounded-[6px] text-[13px] outline-none"
                 style={inputStyle}
               />
             </div>
@@ -188,7 +188,7 @@ export function SubtaskDetail({ subtask, task, project, users, onClose, onChange
               <select
                 value={draft.assignee ?? ''}
                 onChange={e => patch({ assignee: e.target.value || null })}
-                className="h-9 px-2 rounded-[7px] text-[13px] outline-none"
+                className="h-9 px-2 rounded-[6px] text-[13px] outline-none"
                 style={inputStyle}
               >
                 <option value="">Sin asignar</option>
@@ -203,14 +203,14 @@ export function SubtaskDetail({ subtask, task, project, users, onClose, onChange
         <div className="flex items-center justify-between px-5 py-3 border-t flex-shrink-0" style={{ borderColor: 'var(--line)' }}>
           <button
             onClick={handleDelete}
-            className="h-8 px-3 rounded-[7px] text-[12.5px] font-medium border-0 flex items-center gap-[6px]"
+            className="h-8 px-3 rounded-[6px] text-[12px] font-medium border-0 flex items-center gap-[6px]"
             style={{ background: 'transparent', color: 'var(--danger)' }}
           >
             <Trash2 size={13} /> Eliminar
           </button>
           <button
             onClick={onClose}
-            className="h-8 px-4 rounded-[7px] text-[12.5px] font-medium border"
+            className="h-8 px-4 rounded-[6px] text-[12px] font-medium border"
             style={{ border: '1px solid var(--line)', background: 'var(--surface-2)', color: 'var(--ink-2)' }}
           >
             Listo

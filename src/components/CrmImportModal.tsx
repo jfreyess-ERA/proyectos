@@ -203,7 +203,7 @@ export function CrmImportModal({ open, onClose, onImported, existingProspects }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
-      <div className="relative w-full rounded-[14px] overflow-hidden flex flex-col shadow-2xl"
+      <div className="relative w-full rounded-[12px] overflow-hidden flex flex-col shadow-2xl"
         style={{ maxWidth: 700, maxHeight: '88vh', background: 'var(--bg)', border: '1px solid var(--line)' }}>
 
         {/* Header */}
@@ -282,7 +282,7 @@ export function CrmImportModal({ open, onClose, onImported, existingProspects }:
               <div className="flex flex-col gap-2 mb-4">
                 {headers.map((h, i) => (
                   <div key={i} className="flex items-center gap-3 rounded-[8px] px-3 py-2" style={{ background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
-                    <div className="w-[160px] text-[12.5px] font-medium truncate" style={{ color: 'var(--ink)' }}>{h}</div>
+                    <div className="w-[160px] text-[12px] font-medium truncate" style={{ color: 'var(--ink)' }}>{h}</div>
                     <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>→</span>
                     <select
                       value={mapping[i] ?? 'skip'}
@@ -326,7 +326,7 @@ export function CrmImportModal({ open, onClose, onImported, existingProspects }:
               {duplicates.length > 0 && (
                 <div className="flex items-start gap-2 mb-4 p-3 rounded-[8px]" style={{ background: 'oklch(0.97 0.04 85)', border: '1px solid oklch(0.85 0.08 85)' }}>
                   <AlertTriangle size={15} style={{ color: 'var(--sem-amber-2)', flexShrink: 0, marginTop: 1 }} />
-                  <div className="text-[12.5px]" style={{ color: 'oklch(0.42 0.12 85)' }}>
+                  <div className="text-[12px]" style={{ color: 'oklch(0.42 0.12 85)' }}>
                     <strong>{duplicates.length} empresa{duplicates.length !== 1 ? 's' : ''} ya existe{duplicates.length === 1 ? '' : 'n'}:</strong>{' '}
                     {duplicates.map(d => d.company).join(', ')}. Se importarán de todas formas (puedes eliminar duplicados después).
                   </div>

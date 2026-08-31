@@ -188,21 +188,21 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
           <div className="flex items-center gap-2">
             <button
               onClick={() => setWeekStart(w => addDays(w, -7))}
-              className="w-8 h-8 flex items-center justify-center rounded-[7px] border transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-[6px] border transition-colors"
               style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
               aria-label="Semana anterior"
             >
               <ChevronLeft size={15} />
             </button>
             <div
-              className="h-8 px-3 flex items-center rounded-[7px] border text-[12.5px] font-medium"
+              className="h-8 px-3 flex items-center rounded-[6px] border text-[12px] font-medium"
               style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink)', minWidth: 220, justifyContent: 'center' }}
             >
               {fmtRange(weekStart)}
             </div>
             <button
               onClick={() => setWeekStart(w => addDays(w, 7))}
-              className="w-8 h-8 flex items-center justify-center rounded-[7px] border transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-[6px] border transition-colors"
               style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
               aria-label="Semana siguiente"
             >
@@ -212,12 +212,12 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
               type="date"
               value={weekStartISO}
               onChange={e => e.target.value && setWeekStart(startOfWeek(new Date(e.target.value + 'T00:00:00')))}
-              className="h-8 px-2 rounded-[7px] border text-[12px] outline-none"
+              className="h-8 px-2 rounded-[6px] border text-[12px] outline-none"
               style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
             />
             <button
               onClick={() => setWeekStart(startOfWeek(new Date()))}
-              className="h-8 px-3 rounded-[7px] border text-[12.5px] font-medium transition-colors"
+              className="h-8 px-3 rounded-[6px] border text-[12px] font-medium transition-colors"
               style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
             >
               Hoy
@@ -288,7 +288,7 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
           <div className="inline-flex rounded-[8px] border overflow-hidden" style={{ borderColor: 'var(--line)' }}>
             <button
               onClick={() => setGroupBy('person')}
-              className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
+              className="h-8 px-3 text-[12px] font-medium border-0 transition-colors"
               style={{
                 background: groupBy === 'person' ? 'var(--surface)' : 'transparent',
                 color: groupBy === 'person' ? 'var(--ink)' : 'var(--ink-3)',
@@ -299,7 +299,7 @@ export function TeamWeekView({ tasks, projects, users, datedSubtasks, onOpenTask
             </button>
             <button
               onClick={() => setGroupBy('project')}
-              className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
+              className="h-8 px-3 text-[12px] font-medium border-0 transition-colors"
               style={{
                 background: groupBy === 'project' ? 'var(--surface)' : 'transparent',
                 color: groupBy === 'project' ? 'var(--ink)' : 'var(--ink-3)',
@@ -445,7 +445,7 @@ function EntityCard({ collapsed, onToggle, buckets, projects, users, onOpenTask,
         )}
         {variant === 'project' && project && (
           <>
-            <span className="w-3 h-3 rounded-[3px] flex-shrink-0" style={{ background: project.color }} />
+            <span className="w-3 h-3 rounded-[2px] flex-shrink-0" style={{ background: project.color }} />
             <div className="min-w-0 flex-1">
               <div className="text-[14px] font-semibold" style={{ color: 'var(--ink)' }}>
                 <span
@@ -586,7 +586,7 @@ function TaskRow({ task, firstBorder, variant, projects, users, onOpenTask, onOp
         </span>
       )}
       <span
-        className="inline-flex items-center gap-1 h-5 px-2 rounded-[4px] text-[10.5px] font-medium flex-shrink-0"
+        className="inline-flex items-center gap-1 h-5 px-2 rounded-[4px] text-[10px] font-medium flex-shrink-0"
         style={{ background: 'transparent', color: STATUS_TONES[task.status] ?? 'var(--ink-3)', border: `1px solid ${STATUS_TONES[task.status] ?? 'var(--line)'}` }}
       >
         {STATUS_LABELS[task.status]}
@@ -621,7 +621,7 @@ function ViewTab({ active, onClick, children, border }: { active: boolean; onCli
   return (
     <button
       onClick={onClick}
-      className="h-8 px-3 text-[12.5px] font-medium border-0 transition-colors"
+      className="h-8 px-3 text-[12px] font-medium border-0 transition-colors"
       style={{
         background: active ? 'var(--surface)' : 'transparent',
         color: active ? 'var(--ink)' : 'var(--ink-3)',

@@ -248,7 +248,7 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
             <button onClick={() => { setStatusFilter('Todos'); setSearch(''); }}
               className="flex flex-col items-center px-4 py-1">
               <span className="text-[18px] font-bold tabular-nums" style={{ color: STAGE_STYLE[s.stage] }}>{s.count}</span>
-              <span className="text-[10.5px] whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>{stageEs(s.stage)}</span>
+              <span className="text-[10px] whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>{stageEs(s.stage)}</span>
             </button>
             {i < stageCounts.length - 1 && <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>›</span>}
           </div>
@@ -261,7 +261,7 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
           <Search size={13} className="absolute left-[8px] top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-4)' }} />
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar empresa, contacto…"
-            className="h-8 pl-7 pr-3 rounded-[7px] text-[13px] outline-none"
+            className="h-8 pl-7 pr-3 rounded-[6px] text-[13px] outline-none"
             style={{ width: 220, border: '1px solid var(--line)', background: 'var(--surface-2)', color: 'var(--ink)', fontFamily: 'var(--font)' }} />
         </div>
 
@@ -269,7 +269,7 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
         <div className="flex gap-[2px] flex-wrap">
           {STATUS_TABS.map(tab => (
             <button key={tab} onClick={() => setStatusFilter(tab)}
-              className="h-7 px-2 rounded-[6px] text-[11.5px] border-0 transition-colors"
+              className="h-7 px-2 rounded-[6px] text-[11px] border-0 transition-colors"
               style={{ background: statusFilter === tab ? 'var(--accent)' : 'var(--bg-3)', color: statusFilter === tab ? 'var(--on-accent)' : 'var(--ink-2)', fontWeight: statusFilter === tab ? 600 : 400 }}>
               {tab === 'Todos' ? tab : statusEs(tab)}
             </button>
@@ -279,7 +279,7 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
         {/* Owner filter */}
         {ownerIds.length > 0 && (
           <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}
-            className="h-8 px-2 rounded-[7px] text-[12px] outline-none"
+            className="h-8 px-2 rounded-[6px] text-[12px] outline-none"
             style={{ border: '1px solid var(--line)', background: 'var(--surface-2)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
             <option value="">Todos los dueños</option>
             {ownerIds.map(id => (
@@ -290,12 +290,12 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
 
         <div className="flex items-center gap-2 ml-auto">
           <button onClick={onImport}
-            className="h-8 px-3 rounded-[7px] text-[12px] font-medium flex items-center gap-1 border-0"
+            className="h-8 px-3 rounded-[6px] text-[12px] font-medium flex items-center gap-1 border-0"
             style={{ background: 'var(--bg-3)', color: 'var(--ink-2)', border: '1px solid var(--line)' }}>
             <Upload size={13} /> Importar CSV
           </button>
           <button onClick={onCreateProspect}
-            className="h-8 px-3 rounded-[7px] text-[13px] font-medium flex items-center gap-[6px] border-0"
+            className="h-8 px-3 rounded-[6px] text-[13px] font-medium flex items-center gap-[6px] border-0"
             style={{ background: 'var(--accent)', color: 'var(--on-accent)', boxShadow: '0 1px 0 rgba(255,255,255,.2) inset, var(--shadow-1)' }}>
             + Nuevo prospecto
           </button>
@@ -400,7 +400,7 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
                   <td className="px-4 py-[10px]">
                     <div className="flex items-center gap-[6px]">
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STAGE_STYLE[p.stage] ?? 'var(--ink-4)' }} />
-                      <span className="text-[12.5px]" style={{ color: 'var(--ink-2)' }}>{stageEs(p.stage)}</span>
+                      <span className="text-[12px]" style={{ color: 'var(--ink-2)' }}>{stageEs(p.stage)}</span>
                     </div>
                   </td>
 
@@ -425,7 +425,7 @@ export function ProspectsView({ prospects, interactions, crmTasks, triggers, use
                       {fmtDate(lastC)}
                     </span>
                     {daysSince !== null && (
-                      <div className="text-[10.5px]" style={{ color: isStale ? 'var(--sem-red)' : 'var(--ink-4)' }}>
+                      <div className="text-[10px]" style={{ color: isStale ? 'var(--sem-red)' : 'var(--ink-4)' }}>
                         {daysSince}d atrás
                       </div>
                     )}

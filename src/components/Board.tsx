@@ -201,7 +201,7 @@ export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }
             style={{ background: 'var(--ink)', color: 'var(--bg)', border: '1px solid var(--ink-2)', minWidth: 340 }}
           >
             <CheckSquare size={14} style={{ color: 'var(--accent)' }} />
-            <span className="text-[12.5px] font-semibold mr-1">{selectedIds.size} seleccionada{selectedIds.size !== 1 ? 's' : ''}</span>
+            <span className="text-[12px] font-semibold mr-1">{selectedIds.size} seleccionada{selectedIds.size !== 1 ? 's' : ''}</span>
 
             <div className="w-px h-4 mx-1" style={{ background: 'rgba(255,255,255,.2)' }} />
 
@@ -210,7 +210,7 @@ export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }
               onChange={e => e.target.value && handleBulkStatus(e.target.value as Task['status'])}
               value=""
               disabled={bulkSaving}
-              className="h-6 px-2 rounded-[5px] text-[11px] border-0 cursor-pointer"
+              className="h-6 px-2 rounded-[4px] text-[11px] border-0 cursor-pointer"
               style={{ background: 'rgba(255,255,255,.12)', color: 'var(--bg)', fontFamily: 'var(--font)' }}
             >
               <option value="">Cambiar…</option>
@@ -222,7 +222,7 @@ export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }
               onChange={e => e.target.value && handleBulkPriority(e.target.value as Task['priority'])}
               value=""
               disabled={bulkSaving}
-              className="h-6 px-2 rounded-[5px] text-[11px] border-0 cursor-pointer"
+              className="h-6 px-2 rounded-[4px] text-[11px] border-0 cursor-pointer"
               style={{ background: 'rgba(255,255,255,.12)', color: 'var(--bg)', fontFamily: 'var(--font)' }}
             >
               <option value="">Cambiar…</option>
@@ -231,7 +231,7 @@ export function Board({ tasks: propTasks, users = [], onOpenTask, onCreateTask }
 
             <button
               onClick={() => setSelectedIds(new Set())}
-              className="ml-auto w-6 h-6 flex items-center justify-center rounded-[5px] border-0"
+              className="ml-auto w-6 h-6 flex items-center justify-center rounded-[4px] border-0"
               style={{ background: 'rgba(255,255,255,.12)', color: 'var(--bg)', cursor: 'pointer' }}
             >
               <X size={12} />
@@ -286,13 +286,13 @@ function KanbanColumn({
         </div>
         <div className="flex gap-[2px]">
           <button
-            className="w-6 h-6 flex items-center justify-center rounded-[5px] border-0 bg-transparent"
+            className="w-6 h-6 flex items-center justify-center rounded-[4px] border-0 bg-transparent"
             style={{ color: 'var(--ink-3)' }}
           >
             <Plus size={13} />
           </button>
           <button
-            className="w-6 h-6 flex items-center justify-center rounded-[5px] border-0 bg-transparent"
+            className="w-6 h-6 flex items-center justify-center rounded-[4px] border-0 bg-transparent"
             style={{ color: 'var(--ink-3)' }}
           >
             <MoreHorizontal size={13} />
@@ -402,7 +402,7 @@ function TaskCard({
           {/* Checkbox */}
           <button
             onClick={e => { e.stopPropagation(); onToggleSelect?.(task.id); }}
-            className="w-4 h-4 rounded-[3px] border flex items-center justify-center flex-shrink-0 transition-all opacity-0 group-hover:opacity-100"
+            className="w-4 h-4 rounded-[2px] border flex items-center justify-center flex-shrink-0 transition-all opacity-0 group-hover:opacity-100"
             style={{
               borderColor: selected ? 'var(--accent)' : 'var(--line)',
               background: selected ? 'var(--accent)' : 'transparent',
@@ -424,7 +424,7 @@ function TaskCard({
       </div>
 
       {/* Title */}
-      <div className="text-[13.5px] font-medium leading-[1.35]" style={{ color: 'var(--ink)' }}>
+      <div className="text-[13px] font-medium leading-[1.35]" style={{ color: 'var(--ink)' }}>
         {task.title}
       </div>
 
@@ -467,7 +467,7 @@ function TaskCard({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-[10px]">
           {task.due && (
-            <span className={`flex items-center gap-1 text-[11.5px] ${dueCls}`}>
+            <span className={`flex items-center gap-1 text-[11px] ${dueCls}`}>
               <Clock size={12} />
               {fmtDate(task.due, { relative: true })}
             </span>

@@ -155,7 +155,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
         <div className="flex items-center gap-[6px]">
           <button
             onClick={prev}
-            className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-[6px] border-0 bg-transparent transition-colors"
             style={{ color: 'var(--ink-2)' }}
           >
             <ChevronLeft size={16} />
@@ -169,7 +169,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
           </button>
           <button
             onClick={next}
-            className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-[6px] border-0 bg-transparent transition-colors"
             style={{ color: 'var(--ink-2)' }}
           >
             <ChevronRight size={16} />
@@ -269,7 +269,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                 return (
                   <div
                     key={item.key}
-                    className="min-w-0 flex items-center gap-[5px] rounded-[4px] px-[6px] py-[3px] text-[11.5px] transition-colors w-full"
+                    className="min-w-0 flex items-center gap-[5px] rounded-[4px] px-[6px] py-[3px] text-[11px] transition-colors w-full"
                     style={{
                       borderLeft: `3px ${isSub ? 'dashed' : 'solid'} ${proj?.color ?? 'var(--ink-3)'}`,
                       background: bg,
@@ -281,7 +281,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                     {isSub && onToggleSubtask ? (
                       <button
                         onClick={e => { e.stopPropagation(); onToggleSubtask(sub!, item.task, !sub!.done); }}
-                        className="flex items-center justify-center flex-shrink-0 rounded-[3px] border"
+                        className="flex items-center justify-center flex-shrink-0 rounded-[2px] border"
                         style={{
                           width: 11, height: 11, padding: 0,
                           borderColor: isDone ? 'var(--sem-green)' : 'var(--ink-4)',
@@ -306,7 +306,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                         else onOpenTask(item.task);
                       }}
                       title={isSub ? `${item.title} — subtarea de: ${item.task.title}` : item.title}
-                      className="flex-1 min-w-0 truncate text-left border-0 bg-transparent p-0 text-[11.5px]"
+                      className="flex-1 min-w-0 truncate text-left border-0 bg-transparent p-0 text-[11px]"
                       style={{ color: 'inherit', textDecoration: isDone ? 'line-through' : 'none', opacity: isDone ? 0.6 : 1 }}
                     >
                       {item.title}
@@ -359,7 +359,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
             </div>
             <button
               onClick={() => setSelectedISO(null)}
-              className="w-7 h-7 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-[6px] border-0 bg-transparent transition-colors"
               style={{ color: 'var(--ink-3)' }}
             >
               <X size={15} />
@@ -396,7 +396,7 @@ export function CalendarView({ tasks, onOpenTask, viewMode = 'month', showAssign
                     {isSub && onToggleSubtask ? (
                       <button
                         onClick={() => onToggleSubtask(sub!, item.task, !sub!.done)}
-                        className="w-5 h-5 rounded-[5px] border flex items-center justify-center flex-shrink-0"
+                        className="w-5 h-5 rounded-[4px] border flex items-center justify-center flex-shrink-0"
                         style={{
                           borderColor: isDone ? 'var(--sem-green)' : 'var(--line)',
                           background: isDone ? 'var(--sem-green)' : 'transparent',

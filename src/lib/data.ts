@@ -86,7 +86,9 @@ export function getPriority(id: string) { return PRIORITIES.find(p => p.id === i
 export function getStatus(id: string) { return STATUSES.find(s => s.id === id); }
 
 export function avatarBg(hue: number) {
-  return `oklch(0.55 0.14 ${hue})`;
+  // 0.50 y no 0.55: con 0.55 el blanco de las iniciales quedaba en
+  // 4.4:1, justo bajo el mínimo AA. A 0.50 pasa en toda la rueda de hue.
+  return `oklch(0.50 0.14 ${hue})`;
 }
 
 /**

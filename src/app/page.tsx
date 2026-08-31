@@ -485,7 +485,7 @@ export default function Home() {
           <div className="flex items-center gap-2 px-6 pt-3 pb-0">
             <button
               onClick={handleShare}
-              className="flex items-center gap-1 h-7 px-3 rounded-[7px] text-[12px] font-medium border-0 transition-colors"
+              className="flex items-center gap-1 h-7 px-3 rounded-[6px] text-[12px] font-medium border-0 transition-colors"
               style={{ background: shareCopied ? 'var(--sem-green-bg-2)' : 'var(--bg-3)', color: shareCopied ? 'var(--sem-green-dark)' : 'var(--ink-3)' }}
             >
               {shareCopied ? '✓ Enlace copiado' : '🔗 Compartir con cliente'}

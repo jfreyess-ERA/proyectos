@@ -309,7 +309,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
         <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--line)' }}>
           <div className="flex items-center gap-[10px]">
             <span className="w-2 h-2 rounded-[2px]" style={{ background: project?.color }} />
-            <span className="text-[12.5px]" style={{ color: 'var(--ink-3)' }}>
+            <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
               {project?.client && `${project.client} · `}{project?.name} · {task.ref}
             </span>
             {saving && <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Guardando…</span>}
@@ -356,12 +356,12 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                   onChange={e => setEdited(prev => prev ? { ...prev, description: e.target.value } : prev)}
                   onBlur={() => { setEditingDesc(false); save({ description: edited.description }, 'Actualizó la descripción'); }}
                   autoFocus rows={5}
-                  className="w-full text-[13.5px] leading-relaxed resize-none rounded-[8px] px-3 py-2 border outline-none"
+                  className="w-full text-[13px] leading-relaxed resize-none rounded-[8px] px-3 py-2 border outline-none"
                   style={{ color: 'var(--ink-2)', fontFamily: 'var(--font)', background: 'var(--bg-2)', borderColor: 'var(--accent)' }}
                 />
               ) : (
                 <p
-                  className="text-[13.5px] leading-relaxed min-h-[40px] rounded-[6px] p-1 -mx-1 cursor-text"
+                  className="text-[13px] leading-relaxed min-h-[40px] rounded-[6px] p-1 -mx-1 cursor-text"
                   style={{ color: edited.description ? 'var(--ink-2)' : 'var(--ink-4)' }}
                   onClick={() => setEditingDesc(true)}
                 >
@@ -420,7 +420,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                       <select
                         value={sub.assignee ?? ''}
                         onChange={e => handleSubtaskField(sub, { assignee: e.target.value || null })}
-                        className="h-[24px] max-w-[110px] pl-1 pr-1 rounded-[5px] text-[11px] border outline-none flex-shrink-0"
+                        className="h-[24px] max-w-[110px] pl-1 pr-1 rounded-[4px] text-[11px] border outline-none flex-shrink-0"
                         style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: sub.assignee ? 'var(--ink-2)' : 'var(--ink-4)', fontFamily: 'var(--font)' }}
                         title="Responsable"
                       >
@@ -432,7 +432,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                         type="date"
                         value={sub.due_date ?? ''}
                         onChange={e => handleSubtaskField(sub, { due_date: e.target.value || null })}
-                        className="h-[24px] px-1 rounded-[5px] text-[11px] border outline-none flex-shrink-0"
+                        className="h-[24px] px-1 rounded-[4px] text-[11px] border outline-none flex-shrink-0"
                         style={{
                           background: isOverdue ? 'var(--danger-bg)' : 'var(--bg-2)',
                           borderColor: isOverdue ? 'var(--danger)' : 'var(--line)',
@@ -458,7 +458,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                     value={newSubtask}
                     onChange={e => setNewSubtask(e.target.value)}
                     placeholder="Agregar subtarea…"
-                    className="flex-1 text-[12.5px] border-0 bg-transparent outline-none"
+                    className="flex-1 text-[12px] border-0 bg-transparent outline-none"
                     style={{ color: 'var(--ink)', fontFamily: 'var(--font)' }}
                     disabled={addingSubtask}
                   />
@@ -511,7 +511,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                       <span style={{ color: 'var(--ink-3)' }}>
                         {isImage(att.name) ? <ImageIcon size={14} /> : <FileText size={14} />}
                       </span>
-                      <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 truncate text-[12.5px]" style={{ color: 'var(--accent)' }}>
+                      <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 truncate text-[12px]" style={{ color: 'var(--accent)' }}>
                         {att.name}
                       </a>
                       {att.size && <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--ink-4)' }}>{fmtSize(att.size)}</span>}
@@ -537,7 +537,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                       <Avatar userId={c.user_id} size="md" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2 mb-1">
-                          <span className="text-[12.5px] font-semibold" style={{ color: 'var(--ink)' }}>{author?.name ?? 'Usuario'}</span>
+                          <span className="text-[12px] font-semibold" style={{ color: 'var(--ink)' }}>{author?.name ?? 'Usuario'}</span>
                           <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
                             {dt.toLocaleDateString('es', { day: 'numeric', month: 'short' })} {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
                           </span>
@@ -764,7 +764,7 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                   {!timerRunning ? (
                     <button
                       onClick={() => setTimerRunning(true)}
-                      className="flex-1 h-8 rounded-[7px] text-[12px] font-medium border-0 transition-colors"
+                      className="flex-1 h-8 rounded-[6px] text-[12px] font-medium border-0 transition-colors"
                       style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
                     >
                       ▶ Iniciar
@@ -773,14 +773,14 @@ export function TaskDetail({ task, users = [], sprints = [], onClose, onUpdated,
                     <>
                       <button
                         onClick={stopTimerAndLog}
-                        className="flex-1 h-8 rounded-[7px] text-[12px] font-medium border-0"
+                        className="flex-1 h-8 rounded-[6px] text-[12px] font-medium border-0"
                         style={{ background: 'var(--sem-green)', color: 'white' }}
                       >
                         ■ Parar y guardar
                       </button>
                       <button
                         onClick={() => { setTimerRunning(false); setTimerElapsed(0); }}
-                        className="h-8 px-3 rounded-[7px] text-[12px] border-0"
+                        className="h-8 px-3 rounded-[6px] text-[12px] border-0"
                         style={{ background: 'var(--bg-3)', color: 'var(--ink-3)' }}
                         title="Cancelar"
                       >
@@ -861,7 +861,7 @@ function IconBtn({ children, onClick, title, danger }: { children: React.ReactNo
       onClick={onClick}
       title={title}
       aria-label={title}
-      className="w-8 h-8 flex items-center justify-center rounded-[7px] border-0 bg-transparent transition-colors"
+      className="w-8 h-8 flex items-center justify-center rounded-[6px] border-0 bg-transparent transition-colors"
       style={{ color: danger ? 'var(--ink-4)' : 'var(--ink-2)' }}
       onMouseEnter={e => { if (danger) { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; } }}
       onMouseLeave={e => { if (danger) { e.currentTarget.style.color = 'var(--ink-4)'; e.currentTarget.style.background = 'transparent'; } }}

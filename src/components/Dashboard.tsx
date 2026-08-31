@@ -96,7 +96,7 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
         <select
           value={rangeDays}
           onChange={e => setRangeDays(Number(e.target.value))}
-          className="h-8 px-2 rounded-[7px] text-[12px] outline-none cursor-pointer flex-shrink-0"
+          className="h-8 px-2 rounded-[6px] text-[12px] outline-none cursor-pointer flex-shrink-0"
           style={{
             border: '1px solid var(--line)',
             background: 'var(--surface)',
@@ -190,7 +190,7 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
           </div>
           {overdue.length > 0 && (
             <div
-              className="flex items-center gap-[6px] text-[11px] font-medium px-2 py-1 rounded-[5px] mt-3"
+              className="flex items-center gap-[6px] text-[11px] font-medium px-2 py-1 rounded-[4px] mt-3"
               style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }}
             >
               <Flag size={12} /> {overdue.length} tarea{overdue.length !== 1 ? 's' : ''} atrasada{overdue.length !== 1 ? 's' : ''}
@@ -204,7 +204,7 @@ export function Dashboard({ tasks, projects, onOpenTask, onCreateTask }: Props) 
           <div className="flex flex-col gap-3">
             {projectStats.filter(p => p.total > 0).map(p => (
               <div key={p.id} className="flex items-center gap-4">
-                <span className="w-[10px] h-[10px] rounded-[3px] flex-shrink-0" style={{ background: p.color }} />
+                <span className="w-[10px] h-[10px] rounded-[2px] flex-shrink-0" style={{ background: p.color }} />
                 <span className="text-[13px] w-[220px] truncate" style={{ color: 'var(--ink)' }}>
                   {p.client && (
                     <span style={{ color: 'var(--ink-4)' }}>{p.client} · </span>
@@ -243,7 +243,7 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 function CardHead({ title, meta }: { title: string; meta?: string }) {
   return (
     <div className="flex items-center justify-between mb-4">
-      <h3 className="text-[13.5px] font-semibold" style={{ color: 'var(--ink)' }}>{title}</h3>
+      <h3 className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{title}</h3>
       {meta && <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>{meta}</span>}
     </div>
   );

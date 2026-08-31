@@ -158,7 +158,7 @@ export function ListView({ tasks, onOpenTask }: Props) {
                         {/* Status */}
                         <div>
                           <span
-                            className="inline-flex items-center gap-[6px] h-[22px] px-2 rounded-[5px] text-[11.5px] font-medium border"
+                            className="inline-flex items-center gap-[6px] h-[22px] px-2 rounded-[4px] text-[11px] font-medium border"
                             style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}
                           >
                             <span className="w-[7px] h-[7px] rounded-full" style={{ background: g.status.tone }} />
@@ -208,7 +208,7 @@ export function ListView({ tasks, onOpenTask }: Props) {
                   })}
 
                   <button
-                    className="flex items-center gap-[6px] w-full px-[14px] py-2 border-0 bg-transparent text-[12.5px] text-left transition-colors"
+                    className="flex items-center gap-[6px] w-full px-[14px] py-2 border-0 bg-transparent text-[12px] text-left transition-colors"
                     style={{ color: 'var(--ink-4)' }}
                     onMouseEnter={e => (e.currentTarget.style.color = 'var(--ink)')}
                     onMouseLeave={e => (e.currentTarget.style.color = 'var(--ink-4)')}

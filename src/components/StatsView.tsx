@@ -256,7 +256,7 @@ export function StatsView({ tasks, projects, users, onOpenProject }: Props) {
         {(clientFilter !== 'all' || stageFilter !== 'all' || analystFilter !== 'all') && (
           <button
             onClick={() => { setClientFilter('all'); setStageFilter('all'); setAnalystFilter('all'); }}
-            className="ml-auto h-8 px-3 text-[12px] rounded-[7px] border transition-colors"
+            className="ml-auto h-8 px-3 text-[12px] rounded-[6px] border transition-colors"
             style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink-3)' }}
           >
             Limpiar filtros
@@ -284,7 +284,7 @@ export function StatsView({ tasks, projects, users, onOpenProject }: Props) {
               return (
                 <div key={g.stage} className="flex items-center gap-3">
                   <span className="w-[8px] h-[8px] rounded-[2px] flex-shrink-0" style={{ background: color }} />
-                  <span className="text-[12.5px] w-[110px]" style={{ color: 'var(--ink-2)' }}>{STAGE_LABELS[g.stage]}</span>
+                  <span className="text-[12px] w-[110px]" style={{ color: 'var(--ink-2)' }}>{STAGE_LABELS[g.stage]}</span>
                   <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
                     <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
                   </div>
@@ -305,7 +305,7 @@ export function StatsView({ tasks, projects, users, onOpenProject }: Props) {
               return (
                 <div key={s} className="flex items-center gap-3">
                   <span className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: STATUS_COLORS[s] }} />
-                  <span className="text-[12.5px] w-[110px]" style={{ color: 'var(--ink-2)' }}>{STATUS_LABELS[s]}</span>
+                  <span className="text-[12px] w-[110px]" style={{ color: 'var(--ink-2)' }}>{STATUS_LABELS[s]}</span>
                   <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
                     <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: STATUS_COLORS[s] }} />
                   </div>
@@ -333,7 +333,7 @@ export function StatsView({ tasks, projects, users, onOpenProject }: Props) {
         }
       >
         <div className="overflow-x-auto -mx-4 px-4">
-          <table className="w-full text-[12.5px]" style={{ borderCollapse: 'collapse' }}>
+          <table className="w-full text-[12px]" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ color: 'var(--ink-4)' }}>
                 <Th sortKey="client"      current={projectSort} onSort={toggleProjectSort}>Cliente / Proyecto</Th>
@@ -418,7 +418,7 @@ export function StatsView({ tasks, projects, users, onOpenProject }: Props) {
       {/* Analysts table */}
       <Card title="Carga por analista">
         <div className="overflow-x-auto -mx-4 px-4">
-          <table className="w-full text-[12.5px]" style={{ borderCollapse: 'collapse' }}>
+          <table className="w-full text-[12px]" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ color: 'var(--ink-4)' }}>
                 <Th sortKey="name"     current={analystSort} onSort={toggleAnalystSort}>Analista</Th>
@@ -565,7 +565,7 @@ function FilterSelect({ label, value, onChange, children }: { label: string; val
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-8 px-2 rounded-[7px] border text-[12px] outline-none"
+        className="h-8 px-2 rounded-[6px] border text-[12px] outline-none"
         style={{ background: 'var(--bg-2)', borderColor: 'var(--line)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
       >
         {children}

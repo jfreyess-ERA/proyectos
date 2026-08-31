@@ -9,7 +9,7 @@ interface Props {
   size?: 'sm' | 'md' | 'lg';
 }
 
-const sizes = { sm: 'w-5 h-5 text-[9px]', md: 'w-6 h-6 text-[10px]', lg: 'w-8 h-8 text-[11.5px]' };
+const sizes = { sm: 'w-5 h-5 text-[9px]', md: 'w-6 h-6 text-[10px]', lg: 'w-8 h-8 text-[11px]' };
 
 export function Avatar({ userId, name, hue, size = 'md' }: Props) {
   const users = useUsers();

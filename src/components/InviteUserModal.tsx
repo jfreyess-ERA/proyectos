@@ -70,7 +70,7 @@ export function InviteUserModal({ open, onClose, onInvited }: Props) {
 
   if (!open) return null;
 
-  const inp = "w-full h-9 px-3 rounded-[7px] text-[13px] outline-none";
+  const inp = "w-full h-9 px-3 rounded-[6px] text-[13px] outline-none";
   const inpStyle = {
     border: '1px solid var(--line)',
     background: 'var(--surface)',
@@ -126,14 +126,14 @@ export function InviteUserModal({ open, onClose, onInvited }: Props) {
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={reset}
-                  className="h-8 px-4 rounded-[7px] text-[13px] border-0"
+                  className="h-8 px-4 rounded-[6px] text-[13px] border-0"
                   style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}
                 >
                   Invitar otro
                 </button>
                 <button
                   onClick={() => { reset(); onClose(); }}
-                  className="h-8 px-4 rounded-[7px] text-[13px] font-medium border-0"
+                  className="h-8 px-4 rounded-[6px] text-[13px] font-medium border-0"
                   style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
                 >
                   Cerrar
@@ -190,7 +190,7 @@ export function InviteUserModal({ open, onClose, onInvited }: Props) {
 
               {error && (
                 <div
-                  className="px-3 py-2 rounded-[7px] text-[12.5px]"
+                  className="px-3 py-2 rounded-[6px] text-[12px]"
                   style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}
                 >
                   {error}
@@ -201,7 +201,7 @@ export function InviteUserModal({ open, onClose, onInvited }: Props) {
                 <button
                   type="submit"
                   disabled={sending || !email.trim() || !name.trim()}
-                  className="flex-1 h-9 rounded-[7px] text-[13px] font-medium border-0 flex items-center justify-center gap-2"
+                  className="flex-1 h-9 rounded-[6px] text-[13px] font-medium border-0 flex items-center justify-center gap-2"
                   style={{
                     background: 'var(--accent)',
                     color: 'var(--on-accent)',
@@ -214,7 +214,7 @@ export function InviteUserModal({ open, onClose, onInvited }: Props) {
                 <button
                   type="button"
                   onClick={() => { reset(); onClose(); }}
-                  className="h-9 px-4 rounded-[7px] text-[13px] border-0"
+                  className="h-9 px-4 rounded-[6px] text-[13px] border-0"
                   style={{ background: 'var(--bg-3)', color: 'var(--ink-2)' }}
                 >
                   Cancelar

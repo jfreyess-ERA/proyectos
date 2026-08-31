@@ -248,7 +248,7 @@ export function CommandPalette({ open, onClose, onNav, onOpenTask, onOpenProspec
           {groups.map(g => (
             <div key={g.k} className="py-1">
               <div
-                className="px-[10px] py-[6px] text-[10.5px] font-semibold tracking-widest uppercase"
+                className="px-[10px] py-[6px] text-[10px] font-semibold tracking-widest uppercase"
                 style={{ color: 'var(--ink-4)' }}
               >
                 {GROUP_LABELS[g.k]}
@@ -262,7 +262,7 @@ export function CommandPalette({ open, onClose, onNav, onOpenTask, onOpenProspec
                     data-active={isActive}
                     onMouseEnter={() => setActiveIdx(idx)}
                     onClick={() => { it.action(); onClose(); }}
-                    className="w-full flex items-center gap-[10px] px-[10px] py-2 rounded-[8px] border-0 text-[13.5px] text-left transition-colors"
+                    className="w-full flex items-center gap-[10px] px-[10px] py-2 rounded-[8px] border-0 text-[13px] text-left transition-colors"
                     style={{
                       background: isActive ? 'var(--accent-bg)' : 'transparent',
                       color: 'var(--ink)',
@@ -278,7 +278,7 @@ export function CommandPalette({ open, onClose, onNav, onOpenTask, onOpenProspec
                         <span className="w-2 h-2 rounded-full" style={{ background: PRIORITY_COLORS[it.priority ?? 'med'] }} />
                       )}
                       {it.kind === 'proj' && (
-                        <span className="w-[10px] h-[10px] rounded-[3px]" style={{ background: it.color }} />
+                        <span className="w-[10px] h-[10px] rounded-[2px]" style={{ background: it.color }} />
                       )}
                       {it.kind === 'user' && it.userId && (
                         <Avatar userId={it.userId} size="sm" />
@@ -318,7 +318,7 @@ export function CommandPalette({ open, onClose, onNav, onOpenTask, onOpenProspec
 
         {/* Footer */}
         <div
-          className="flex gap-4 px-[14px] py-2 border-t text-[11.5px] flex-shrink-0"
+          className="flex gap-4 px-[14px] py-2 border-t text-[11px] flex-shrink-0"
           style={{
             borderColor: 'var(--line)',
             background: 'var(--bg-2)',
